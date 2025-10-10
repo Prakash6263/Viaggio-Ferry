@@ -1,0 +1,311 @@
+{
+  "info": {
+    "name": "Shipment Backend API",
+    "_postman_id": "1c1a8b70-8e0e-4f8e-9e1e-collection-rbac",
+    "description": "Postman collection for Shipment Backend APIs: Health, Meta, Modules, Companies, Access Groups.\nUse the accompanying environment to set baseUrl and IDs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "{{baseUrl}}" },
+    { "key": "companyId", "value": "{{companyId}}" },
+    { "key": "accessGroupId", "value": "{{accessGroupId}}" },
+    { "key": "moduleId", "value": "{{moduleId}}" },
+    { "key": "portId", "value": "{{portId}}" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /api/health",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Meta",
+      "item": [
+        {
+          "name": "GET /api/meta/layers",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/meta/layers", "host": ["{{baseUrl}}"], "path": ["meta", "layers"] }
+          }
+        },
+        {
+          "name": "GET /api/meta/modules",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/meta/modules", "host": ["{{baseUrl}}"], "path": ["meta", "modules"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Modules",
+      "item": [
+        {
+          "name": "GET /api/modules (active)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/modules", "host": ["{{baseUrl}}"], "path": ["modules"] }
+          }
+        },
+        {
+          "name": "POST /api/modules",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"sales-bookings\",\n  \"name\": \"Sales & Bookings\",\n  \"isActive\": true,\n  \"submodules\": [\n    { \"code\": \"tickets\", \"name\": \"Tickets\" },\n    { \"code\": \"invoices\", \"name\": \"Invoices\" }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/modules", "host": ["{{baseUrl}}"], "path": ["modules"] }
+          }
+        },
+        {
+          "name": "POST /api/modules/seed",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/modules/seed", "host": ["{{baseUrl}}"], "path": ["modules", "seed"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Companies",
+      "item": [
+        {
+          "name": "GET /api/companies",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/companies", "host": ["{{baseUrl}}"], "path": ["companies"] }
+          }
+        },
+        {
+          "name": "POST /api/companies (form-data + optional logo file)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "companyName", "value": "Company A", "type": "text" },
+                { "key": "registrationNumber", "value": "REG-001", "type": "text" },
+                { "key": "contact[email]", "value": "info@company-a.com", "type": "text" },
+                { "key": "contact[mainPhoneNumber]", "value": "+1 555 0100", "type": "text" },
+                { "key": "operational[defaultCurrency]", "value": "USD", "type": "text" },
+                { "key": "subdomain", "value": "companya", "type": "text" },
+                { "key": "logo", "type": "file", "src": "" }
+              ]
+            },
+            "url": { "raw": "{{baseUrl}}/companies", "host": ["{{baseUrl}}"], "path": ["companies"] }
+          }
+        },
+        {
+          "name": "GET /api/companies/:id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/companies/:id/logo",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}/logo",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}", "logo"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /api/companies/:id",
+          "request": {
+            "method": "PATCH",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "companyName", "value": "Company A Updated", "type": "text" },
+                { "key": "logo", "type": "file", "src": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/companies/:id",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{companyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["companies", "{{companyId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Access Groups",
+      "item": [
+        {
+          "name": "GET /api/access-groups?companyId=..",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/access-groups?companyId={{companyId}}&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["access-groups"],
+              "query": [
+                { "key": "companyId", "value": "{{companyId}}" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/access-groups",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company\": \"{{companyId}}\",\n  \"groupName\": \"Sales Manager\",\n  \"groupCode\": \"SAL-MGR\",\n  \"moduleCode\": \"sales-bookings\",\n  \"layer\": \"selling-agent\",\n  \"isActive\": true,\n  \"permissions\": [\n    { \"submoduleCode\": \"tickets\", \"canRead\": true, \"canWrite\": true, \"canEdit\": true, \"canDelete\": false }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/access-groups", "host": ["{{baseUrl}}"], "path": ["access-groups"] }
+          }
+        },
+        {
+          "name": "GET /api/access-groups/:id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/access-groups/{{accessGroupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["access-groups", "{{accessGroupId}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /api/access-groups/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"groupName\": \"Sales Supervisor\",\n  \"isActive\": true,\n  \"permissions\": [\n    { \"submoduleCode\": \"tickets\", \"canRead\": true, \"canWrite\": true, \"canEdit\": true, \"canDelete\": true }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/access-groups/{{accessGroupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["access-groups", "{{accessGroupId}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/access-groups/:id",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/access-groups/{{accessGroupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["access-groups", "{{accessGroupId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ports",
+      "item": [
+        {
+          "name": "GET /api/ports",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/ports?page=1&limit=10&q=&status=&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["ports"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "q", "value": "" },
+                { "key": "status", "value": "" },
+                { "key": "sortBy", "value": "createdAt" },
+                { "key": "sortOrder", "value": "desc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/ports",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Port Sudan\",\n  \"code\": \"PSD\",\n  \"country\": \"Sudan\",\n  \"timezone\": \"UTC+02:00\",\n  \"status\": \"Active\",\n  \"notes\": \"Red Sea port\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ports",
+              "host": ["{{baseUrl}}"],
+              "path": ["ports"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/ports/:id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/ports/{{portId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ports", "{{portId}}"]
+            }
+          }
+        },
+        {
+          "name": "PUT /api/ports/:id",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jeddah Islamic Port\",\n  \"code\": \"JED\",\n  \"country\": \"Saudi Arabia\",\n  \"timezone\": \"UTC+03:00\",\n  \"status\": \"Active\",\n  \"notes\": \"Updated notes\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ports/{{portId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ports", "{{portId}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/ports/:id",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/ports/{{portId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ports", "{{portId}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

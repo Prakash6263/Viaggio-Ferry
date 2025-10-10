@@ -1,0 +1,67 @@
+{
+  "info": {
+    "name": "Shipment Backend - Cabins",
+    "_postman_id": "c2f1c1e8-5f4a-4a8d-9a9f-1b8cabin0001",
+    "description": "Cabins management API (Passengers, Vehicles, Cargo).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:3001/api" }, { "key": "cabinId", "value": "" }],
+  "item": [
+    {
+      "name": "List Cabins",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/cabins?page=1&limit=10&type=Passengers&status=Active&q=",
+          "host": ["{{baseUrl}}"],
+          "path": ["cabins"],
+          "query": [
+            { "key": "page", "value": "1" },
+            { "key": "limit", "value": "10" },
+            { "key": "type", "value": "Passengers" },
+            { "key": "status", "value": "Active" },
+            { "key": "q", "value": "" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create Cabin (Passengers)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"1A\",\n  \"description\": \"Window side passenger cabin\",\n  \"remarks\": \"Deck 1\",\n  \"type\": \"Passengers\",\n  \"status\": \"Inactive\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/cabins", "host": ["{{baseUrl}}"], "path": ["cabins"] }
+      }
+    },
+    {
+      "name": "Get Cabin By ID",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/cabins/{{cabinId}}", "host": ["{{baseUrl}}"], "path": ["cabins", "{{cabinId}}"] }
+      }
+    },
+    {
+      "name": "Update Cabin",
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"1A - Updated\",\n  \"status\": \"Active\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/cabins/{{cabinId}}", "host": ["{{baseUrl}}"], "path": ["cabins", "{{cabinId}}"] }
+      }
+    },
+    {
+      "name": "Delete Cabin",
+      "request": {
+        "method": "DELETE",
+        "url": { "raw": "{{baseUrl}}/cabins/{{cabinId}}", "host": ["{{baseUrl}}"], "path": ["cabins", "{{cabinId}}"] }
+      }
+    }
+  ]
+}
