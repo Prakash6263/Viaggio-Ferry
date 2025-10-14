@@ -10,6 +10,7 @@ function handleValidation(req) {
     throw err
   }
 }
+//
 
 async function index(req, res) {
   handleValidation(req)
