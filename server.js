@@ -2,6 +2,7 @@ const express = require("express")
 const helmet = require("helmet")
 const cors = require("cors")
 const morgan = require("morgan")
+require("dotenv").config() // load environment variables for local development
 
 const connectDB = require("./src/config/db")
 const companyRoutes = require("./src/routes/companyRoutes")
@@ -11,6 +12,12 @@ const metaRoutes = require("./src/routes/metaRoutes")
 const portRoutes = require("./src/routes/portRoutes") // import ports routes
 const cabinRoutes = require("./src/routes/cabinRoutes") // import cabin routes
 const payloadTypeRoutes = require("./src/routes/payloadTypeRoutes") // add payload types route import
+const userRoutes = require("./src/routes/userRoutes") // add user routes import
+const agentRoutes = require("./src/routes/agentRoutes") // add agent routes import
+const currencyRoutes = require("./src/routes/currencyRoutes") // import currency routes
+const taxRoutes = require("./src/routes/taxRoutes") // import tax routes
+const promotionRoutes = require("./src/routes/promotionRoutes") // import promotions routes
+const contactMessageRoutes = require("./src/routes/contactMessageRoutes") // import contact message routes
 const { notFound, errorHandler } = require("./src/middleware/errorHandler")
 
 const app = express()
@@ -35,6 +42,12 @@ app.use("/api/meta", metaRoutes)
 app.use("/api/ports", portRoutes) // mount /api/ports
 app.use("/api/cabins", cabinRoutes) // mount /api/cabins
 app.use("/api/payload-types", payloadTypeRoutes) // mount /api/payload-types
+app.use("/api/users", userRoutes) // mount /api/users
+app.use("/api/agents", agentRoutes) // mount /api/agents
+app.use("/api/currencies", currencyRoutes) // mount /api/currencies
+app.use("/api/taxes", taxRoutes) // mount /api/taxes
+app.use("/api/promotions", promotionRoutes) // mount /api/promotions
+app.use("/api/contact-messages", contactMessageRoutes) // mount /api/contact-messages
 
 // 404 and error handling
 app.use(notFound)
