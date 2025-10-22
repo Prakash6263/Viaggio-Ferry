@@ -17,7 +17,8 @@ const agentRoutes = require("./src/routes/agentRoutes") // add agent routes impo
 const currencyRoutes = require("./src/routes/currencyRoutes") // import currency routes
 const taxRoutes = require("./src/routes/taxRoutes") // import tax routes
 const promotionRoutes = require("./src/routes/promotionRoutes") // import promotions routes
-const contactMessageRoutes = require("./src/routes/contactMessageRoutes") // import contact message routes
+const partnerRoutes = require("./src/routes/partnerRoutes") // add partner routes import
+const b2cCustomerRoutes = require("./src/routes/b2cCustomerRoutes") // add b2c customer routes import
 const { notFound, errorHandler } = require("./src/middleware/errorHandler")
 
 const app = express()
@@ -47,7 +48,8 @@ app.use("/api/agents", agentRoutes) // mount /api/agents
 app.use("/api/currencies", currencyRoutes) // mount /api/currencies
 app.use("/api/taxes", taxRoutes) // mount /api/taxes
 app.use("/api/promotions", promotionRoutes) // mount /api/promotions
-app.use("/api/contact-messages", contactMessageRoutes) // mount /api/contact-messages
+app.use("/api/partners", partnerRoutes) // mount /api/partners
+app.use("/api/b2c-customers", b2cCustomerRoutes) // mount b2c customer routes
 
 // 404 and error handling
 app.use(notFound)

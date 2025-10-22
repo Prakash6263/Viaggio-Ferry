@@ -2,7 +2,7 @@
   "info": {
     "name": "Shipment Backend API",
     "_postman_id": "1c1a8b70-8e0e-4f8e-9e1e-collection-rbac",
-    "description": "Postman collection for Shipment Backend APIs: Health, Meta, Modules, Companies, Access Groups.\nUse the accompanying environment to set baseUrl and IDs.",
+    "description": "Unified Postman collection for Shipment Backend APIs: Health, Meta, Modules, Companies, Access Groups, Ports, Cabins, Payload Types, Agents, Users, Currencies, Taxes, Promotions, Partners, B2C Customers.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -10,7 +10,19 @@
     { "key": "companyId", "value": "{{companyId}}" },
     { "key": "accessGroupId", "value": "{{accessGroupId}}" },
     { "key": "moduleId", "value": "{{moduleId}}" },
-    { "key": "portId", "value": "{{portId}}" }
+    { "key": "portId", "value": "{{portId}}" },
+    { "key": "cabinId", "value": "{{cabinId}}" },
+    { "key": "payloadTypeId", "value": "{{payloadTypeId}}" },
+    { "key": "agentId", "value": "{{agentId}}" },
+    { "key": "userId", "value": "{{userId}}" },
+    { "key": "currencyId", "value": "{{currencyId}}" },
+    { "key": "currencyCode", "value": "{{currencyCode}}" },
+    { "key": "taxId", "value": "{{taxId}}" },
+    { "key": "promotionId", "value": "{{promotionId}}" },
+    { "key": "partnerId", "value": "{{partnerId}}" },
+    { "key": "b2cCustomerId", "value": "{{b2cCustomerId}}" },
+    { "key": "tripId", "value": "{{tripId}}" },
+    { "key": "nowISO", "value": "{{nowISO}}" }
   ],
   "item": [
     {
@@ -86,10 +98,9 @@
           }
         },
         {
-          "name": "POST /api/companies (form-data + optional logo file)",
+          "name": "POST /api/companies (form-data + optional logo)",
           "request": {
             "method": "POST",
-            "header": [],
             "body": {
               "mode": "formdata",
               "formdata": [
@@ -162,7 +173,7 @@
       "name": "Access Groups",
       "item": [
         {
-          "name": "GET /api/access-groups?companyId=..",
+          "name": "GET /api/access-groups",
           "request": {
             "method": "GET",
             "url": {
@@ -260,22 +271,14 @@
               "mode": "raw",
               "raw": "{\n  \"name\": \"Port Sudan\",\n  \"code\": \"PSD\",\n  \"country\": \"Sudan\",\n  \"timezone\": \"UTC+02:00\",\n  \"status\": \"Active\",\n  \"notes\": \"Red Sea port\"\n}"
             },
-            "url": {
-              "raw": "{{baseUrl}}/ports",
-              "host": ["{{baseUrl}}"],
-              "path": ["ports"]
-            }
+            "url": { "raw": "{{baseUrl}}/ports", "host": ["{{baseUrl}}"], "path": ["ports"] }
           }
         },
         {
           "name": "GET /api/ports/:id",
           "request": {
             "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/ports/{{portId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["ports", "{{portId}}"]
-            }
+            "url": { "raw": "{{baseUrl}}/ports/{{portId}}", "host": ["{{baseUrl}}"], "path": ["ports", "{{portId}}"] }
           }
         },
         {
@@ -287,21 +290,801 @@
               "mode": "raw",
               "raw": "{\n  \"name\": \"Jeddah Islamic Port\",\n  \"code\": \"JED\",\n  \"country\": \"Saudi Arabia\",\n  \"timezone\": \"UTC+03:00\",\n  \"status\": \"Active\",\n  \"notes\": \"Updated notes\"\n}"
             },
-            "url": {
-              "raw": "{{baseUrl}}/ports/{{portId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["ports", "{{portId}}"]
-            }
+            "url": { "raw": "{{baseUrl}}/ports/{{portId}}", "host": ["{{baseUrl}}"], "path": ["ports", "{{portId}}"] }
           }
         },
         {
           "name": "DELETE /api/ports/:id",
           "request": {
             "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/ports/{{portId}}", "host": ["{{baseUrl}}"], "path": ["ports", "{{portId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cabins",
+      "item": [
+        {
+          "name": "GET /api/cabins",
+          "request": {
+            "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/ports/{{portId}}",
+              "raw": "{{baseUrl}}/cabins?page=1&limit=10&type=&status=&q=",
               "host": ["{{baseUrl}}"],
-              "path": ["ports", "{{portId}}"]
+              "path": ["cabins"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "type", "value": "" },
+                { "key": "status", "value": "" },
+                { "key": "q", "value": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/cabins",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"1A\",\n  \"description\": \"Window side passenger cabin\",\n  \"remarks\": \"Deck 1\",\n  \"type\": \"Passengers\",\n  \"status\": \"Inactive\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/cabins", "host": ["{{baseUrl}}"], "path": ["cabins"] }
+          }
+        },
+        {
+          "name": "GET /api/cabins/:id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/cabins/{{cabinId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["cabins", "{{cabinId}}"]
+            }
+          }
+        },
+        {
+          "name": "PUT /api/cabins/:id",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"1A - Updated\",\n  \"status\": \"Active\"\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/cabins/{{cabinId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["cabins", "{{cabinId}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/cabins/:id",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/cabins/{{cabinId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["cabins", "{{cabinId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payload Types",
+      "item": [
+        {
+          "name": "GET /api/payload-types",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/payload-types?page=1&limit=10&q=&category=&status=&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["payload-types"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "q", "value": "" },
+                { "key": "category", "value": "" },
+                { "key": "status", "value": "" },
+                { "key": "sortBy", "value": "createdAt" },
+                { "key": "sortOrder", "value": "desc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/payload-types",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Passenger\",\n  \"code\": \"PAX\",\n  \"category\": \"Passenger\",\n  \"maxWeightKg\": 0,\n  \"dimensions\": \"N/A\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/payload-types", "host": ["{{baseUrl}}"], "path": ["payload-types"] }
+          }
+        },
+        {
+          "name": "GET /api/payload-types/:id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/payload-types/{{payloadTypeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["payload-types", "{{payloadTypeId}}"]
+            }
+          }
+        },
+        {
+          "name": "PUT /api/payload-types/:id",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Passenger Updated\",\n  \"status\": \"Inactive\"\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/payload-types/{{payloadTypeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["payload-types", "{{payloadTypeId}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/payload-types/:id",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/payload-types/{{payloadTypeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["payload-types", "{{payloadTypeId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Agents",
+      "item": [
+        {
+          "name": "GET /api/agents",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/agents?page=1&limit=20&q=",
+              "host": ["{{baseUrl}}"],
+              "path": ["agents"],
+              "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }, { "key": "q", "value": "" }]
+            }
+          }
+        },
+        {
+          "name": "GET /api/agents/options (grouped)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/agents/options", "host": ["{{baseUrl}}"], "path": ["agents", "options"] }
+          }
+        },
+        {
+          "name": "GET /api/agents/tree",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/agents/tree", "host": ["{{baseUrl}}"], "path": ["agents", "tree"] }
+          }
+        },
+        {
+          "name": "POST /api/agents",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Commercial Agent A1.1\",\n  \"type\": \"commercial\",\n  \"parent\": null\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/agents", "host": ["{{baseUrl}}"], "path": ["agents"] }
+          }
+        },
+        {
+          "name": "GET /api/agents/:id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/agents/{{agentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["agents", "{{agentId}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /api/agents/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Commercial Agent A1.1 Updated\"\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/agents/{{agentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["agents", "{{agentId}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/agents/:id",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/agents/{{agentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["agents", "{{agentId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "GET /api/users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/users?page=1&limit=10&q=&status=&isSalesman=&agentId=",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "q", "value": "" },
+                { "key": "status", "value": "" },
+                { "key": "isSalesman", "value": "" },
+                { "key": "agentId", "value": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/users",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"John Smith\",\n  \"email\": \"john@example.com\",\n  \"position\": \"Finance Manager\",\n  \"agentId\": \"{{agentId}}\",\n  \"isSalesman\": false,\n  \"remarks\": \"\",\n  \"status\": \"Active\",\n  \"accessGroups\": []\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] }
+          }
+        },
+        {
+          "name": "GET /api/users/:id",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users", "{{userId}}"] }
+          }
+        },
+        {
+          "name": "PATCH /api/users/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"position\": \"Operations Manager\",\n  \"isSalesman\": true\n}" },
+            "url": { "raw": "{{baseUrl}}/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users", "{{userId}}"] }
+          }
+        },
+        {
+          "name": "DELETE /api/users/:id",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Currencies",
+      "item": [
+        {
+          "name": "GET /api/currencies",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/currencies?page=1&limit=10&q=&sortBy=code&sortOrder=asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["currencies"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "q", "value": "" },
+                { "key": "sortBy", "value": "code" },
+                { "key": "sortOrder", "value": "asc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/currencies",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"SAR\",\n  \"name\": \"Saudi Riyal\",\n  \"rates\": [\n    { \"at\": \"2024-09-09T12:00:00.000Z\", \"rateUSD\": 3.75 }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/currencies", "host": ["{{baseUrl}}"], "path": ["currencies"] }
+          }
+        },
+        {
+          "name": "GET /api/currencies/:id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/currencies/{{currencyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["currencies", "{{currencyId}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /api/currencies/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Saudi Riyal Updated\"\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/currencies/{{currencyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["currencies", "{{currencyId}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/currencies/:id",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/currencies/{{currencyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["currencies", "{{currencyId}}"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/currencies/:id/rates (add row)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"at\": \"2024-09-11T06:30:00.000Z\",\n  \"rateUSD\": 3.76\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/currencies/{{currencyId}}/rates",
+              "host": ["{{baseUrl}}"],
+              "path": ["currencies", "{{currencyId}}", "rates"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/currencies/:id/rates/:rateId (remove row)",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/currencies/{{currencyId}}/rates/{{rateId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["currencies", "{{currencyId}}", "rates", "{{rateId}}"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/currencies/:code/effective-rate?at=",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/currencies/{{currencyCode}}/effective-rate?at=2024-09-11T06:30:00.000Z",
+              "host": ["{{baseUrl}}"],
+              "path": ["currencies", "{{currencyCode}}", "effective-rate"],
+              "query": [{ "key": "at", "value": "2024-09-11T06:30:00.000Z" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Taxes",
+      "item": [
+        {
+          "name": "GET /api/taxes",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/taxes?page=1&limit=10&q=&status=&type=&form=&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["taxes"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "q", "value": "" },
+                { "key": "status", "value": "" },
+                { "key": "type", "value": "" },
+                { "key": "form", "value": "" },
+                { "key": "sortBy", "value": "createdAt" },
+                { "key": "sortOrder", "value": "desc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/taxes",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"VAT\",\n  \"name\": \"Value Added Tax\",\n  \"ledgerCode\": \"21500\",\n  \"value\": 15,\n  \"type\": \"%\",\n  \"form\": \"Refundable\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/taxes", "host": ["{{baseUrl}}"], "path": ["taxes"] }
+          }
+        },
+        {
+          "name": "GET /api/taxes/:id",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/taxes/{{taxId}}", "host": ["{{baseUrl}}"], "path": ["taxes", "{{taxId}}"] }
+          }
+        },
+        {
+          "name": "PUT /api/taxes/:id",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"VAT Updated\",\n  \"value\": 5,\n  \"type\": \"Fixed\",\n  \"status\": \"Inactive\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/taxes/{{taxId}}", "host": ["{{baseUrl}}"], "path": ["taxes", "{{taxId}}"] }
+          }
+        },
+        {
+          "name": "DELETE /api/taxes/:id",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/taxes/{{taxId}}", "host": ["{{baseUrl}}"], "path": ["taxes", "{{taxId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Promotions",
+      "item": [
+        {
+          "name": "GET /api/promotions",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/promotions?page=1&limit=10&q=&status=&basis=&tripId=&activeOn={{nowISO}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["promotions"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "q", "value": "" },
+                { "key": "status", "value": "" },
+                { "key": "basis", "value": "" },
+                { "key": "tripId", "value": "" },
+                { "key": "activeOn", "value": "{{nowISO}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/promotions (PERIOD + QUANTITY)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Weekend PAX BOGO\",\n  \"description\": \"Buy 2 get 1 free on weekends\",\n  \"status\": \"Active\",\n  \"basis\": \"PERIOD\",\n  \"period\": { \"startAt\": \"2025-10-01T00:00:00.000Z\", \"endAt\": \"2025-10-31T23:59:59.000Z\" },\n  \"passengerTickets\": { \"enabled\": true, \"ruleType\": \"QUANTITY\", \"quantityRule\": { \"buyX\": 2, \"getY\": 1 } },\n  \"eligibilityConditions\": [ { \"passengerType\": \"Adult\", \"cabinClass\": \"Economy\" } ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/promotions", "host": ["{{baseUrl}}"], "path": ["promotions"] }
+          }
+        },
+        {
+          "name": "POST /api/promotions (PERIOD + TOTAL_VALUE)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Spend 500 Save 10%\",\n  \"description\": \"Percentage off for spend threshold\",\n  \"status\": \"Active\",\n  \"basis\": \"PERIOD\",\n  \"period\": { \"startAt\": \"2025-10-01T00:00:00.000Z\", \"endAt\": \"2025-10-31T23:59:59.000Z\" },\n  \"passengerTickets\": { \"enabled\": true, \"ruleType\": \"TOTAL_VALUE\", \"totalValueRule\": { \"minAmount\": 500, \"discount\": { \"type\": \"PERCENT\", \"value\": 10 } } },\n  \"eligibilityConditions\": [ { \"passengerType\": \"Adult\", \"cabinClass\": \"Business\" } ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/promotions", "host": ["{{baseUrl}}"], "path": ["promotions"] }
+          }
+        },
+        {
+          "name": "POST /api/promotions (TRIP + QUANTITY)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Trip Special B2G1\",\n  \"description\": \"Buy2Get1 on selected trip\",\n  \"status\": \"Active\",\n  \"basis\": \"TRIP\",\n  \"tripId\": \"{{tripId}}\",\n  \"passengerTickets\": { \"enabled\": true, \"ruleType\": \"QUANTITY\", \"quantityRule\": { \"buyX\": 2, \"getY\": 1 } },\n  \"eligibilityConditions\": [ { \"passengerType\": \"Adult\", \"cabinClass\": \"Economy\" } ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/promotions", "host": ["{{baseUrl}}"], "path": ["promotions"] }
+          }
+        },
+        {
+          "name": "GET /api/promotions/:id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/promotions/{{promotionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["promotions", "{{promotionId}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /api/promotions/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated description\",\n  \"eligibilityConditions\": [ { \"passengerType\": \"Adult\", \"cabinClass\": \"Suite\" } ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/{{promotionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["promotions", "{{promotionId}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/promotions/:id",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/promotions/{{promotionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["promotions", "{{promotionId}}"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/promotions/apply",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"basisContext\": { \"at\": \"{{nowISO}}\", \"tripId\": \"{{tripId}}\" },\n  \"cart\": {\n    \"items\": [\n      { \"type\": \"PASSENGER\", \"quantity\": 3, \"unitPrice\": 120, \"passengerType\": \"Adult\", \"cabinClass\": \"Economy\" }\n    ]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/apply",
+              "host": ["{{baseUrl}}"],
+              "path": ["promotions", "apply"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/promotions (PERIOD + CARGO QUANTITY)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cargo B2G1\",\n  \"description\": \"Buy 2 cargo get 1 free\",\n  \"status\": \"Active\",\n  \"basis\": \"PERIOD\",\n  \"period\": { \"startAt\": \"2025-10-01T00:00:00.000Z",
+              "endAt": "2025-10-31T23:59:59.000Z\" },\n  \"cargoTickets\": { \"enabled\": true, \"ruleType\": \"QUANTITY\", \"quantityRule\": { \"buyX\": 2, \"getY\": 1 } },\n  \"cargoEligibilityConditions\": [ { \"cargoType\": \"General Goods\" } ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/promotions", "host": ["{{baseUrl}}"], "path": ["promotions"] }
+          }
+        },
+        {
+          "name": "POST /api/promotions (PERIOD + VEHICLE TOTAL_VALUE)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Vehicle Spend 1000 Save 15%\",\n  \"description\": \"15% off vehicles over 1000\",\n  \"status\": \"Active\",\n  \"basis\": \"PERIOD\",\n  \"period\": { \"startAt\": \"2025-10-01T00:00:00.000Z\", \"endAt\": \"2025-10-31T23:59:59.000Z\" },\n  \"vehicleTickets\": { \"enabled\": true, \"ruleType\": \"TOTAL_VALUE\", \"totalValueRule\": { \"minAmount\": 1000, \"discount\": { \"type\": \"PERCENT\", \"value\": 15 } } },\n  \"vehicleEligibilityConditions\": [ { \"vehicleType\": \"Car\" } ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/promotions", "host": ["{{baseUrl}}"], "path": ["promotions"] }
+          }
+        },
+        {
+          "name": "POST /api/promotions/apply (mixed cart)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"basisContext\": { \"at\": \"{{nowISO}}\", \"tripId\": \"{{tripId}}\" },\n  \"cart\": {\n    \"items\": [\n      { \"type\": \"PASSENGER\", \"quantity\": 3, \"unitPrice\": 120, \"passengerType\": \"Adult\", \"cabinClass\": \"Economy\" },\n      { \"type\": \"CARGO\", \"quantity\": 2, \"unitPrice\": 300, \"cargoType\": \"General Goods\" },\n      { \"type\": \"VEHICLE\", \"quantity\": 1, \"unitPrice\": 1500, \"vehicleType\": \"Car\" }\n    ]\n  }\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/promotions/apply", "host": ["{{baseUrl}}"], "path": ["promotions", "apply"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Partners",
+      "item": [
+        {
+          "name": "GET /api/partners",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/partners?page=1&limit=10&q=&layer=&status=&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["partners"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "q", "value": "" },
+                { "key": "layer", "value": "" },
+                { "key": "status", "value": "" },
+                { "key": "sortBy", "value": "createdAt" },
+                { "key": "sortOrder", "value": "desc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/partners",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Marine Transport Co.\",\n  \"phone\": \"+123456789\",\n  \"address\": \"123 Ocean St.\",\n  \"layer\": \"Marine\",\n  \"parentAccount\": null,\n  \"partnerStatus\": \"Active\",\n  \"priceList\": \"Standard\",\n  \"creditLimit\": {\n    \"limitAmount\": 50000,\n    \"limitTicket\": \"CL-001\"\n  },\n  \"contactInformation\": {\n    \"name\": \"John Doe\",\n    \"title\": \"Operations Manager\",\n    \"phone\": \"+123456789\",\n    \"email\": \"john@marine-transport.com\",\n    \"hotline\": \"+123456700\"\n  },\n  \"users\": []\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/partners", "host": ["{{baseUrl}}"], "path": ["partners"] }
+          }
+        },
+        {
+          "name": "GET /api/partners/:id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/partners/{{partnerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["partners", "{{partnerId}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /api/partners/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Marine Transport Co. Updated\",\n  \"partnerStatus\": \"Active\",\n  \"creditLimit\": {\n    \"limitAmount\": 75000,\n    \"limitTicket\": \"CL-002\"\n  },\n  \"contactInformation\": {\n    \"name\": \"Jane Smith\",\n    \"title\": \"Director\",\n    \"phone\": \"+123456789\",\n    \"email\": \"jane@marine-transport.com\",\n    \"hotline\": \"+123456700\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/partners/{{partnerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["partners", "{{partnerId}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/partners/:id",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/partners/{{partnerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["partners", "{{partnerId}}"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/partners/by-layer/:layer",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/partners/by-layer/Marine",
+              "host": ["{{baseUrl}}"],
+              "path": ["partners", "by-layer", "Marine"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/partners/options",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/partners/options",
+              "host": ["{{baseUrl}}"],
+              "path": ["partners", "options"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "B2C Customers",
+      "item": [
+        {
+          "name": "GET /api/b2c-customers",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/b2c-customers?page=1&limit=10&q=&partner=&status=&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["b2c-customers"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "q", "value": "" },
+                { "key": "partner", "value": "" },
+                { "key": "status", "value": "" },
+                { "key": "sortBy", "value": "createdAt" },
+                { "key": "sortOrder", "value": "desc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/b2c-customers",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"partnerId\": \"{{partnerId}}\",\n  \"nationality\": \"USA\",\n  \"password\": \"SecurePassword123!\",\n  \"whatsappNumber\": \"+1 555-123-4567\",\n  \"status\": \"Active\",\n  \"address\": {\n    \"street\": \"123 Main St\",\n    \"city\": \"Anytown\",\n    \"country\": \"USA\"\n  },\n  \"notes\": \"VIP Customer\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/b2c-customers", "host": ["{{baseUrl}}"], "path": ["b2c-customers"] }
+          }
+        },
+        {
+          "name": "GET /api/b2c-customers/:id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/b2c-customers/{{b2cCustomerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["b2c-customers", "{{b2cCustomerId}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /api/b2c-customers/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe Updated\",\n  \"whatsappNumber\": \"+1 555-123-4568\",\n  \"status\": \"Active\",\n  \"address\": {\n    \"street\": \"456 Oak Ave\",\n    \"city\": \"Somewhere\",\n    \"country\": \"USA\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/b2c-customers/{{b2cCustomerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["b2c-customers", "{{b2cCustomerId}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/b2c-customers/:id",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/b2c-customers/{{b2cCustomerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["b2c-customers", "{{b2cCustomerId}}"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/b2c-customers/by-partner/:partnerId",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/b2c-customers/by-partner/{{partnerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["b2c-customers", "by-partner", "{{partnerId}}"]
             }
           }
         }
