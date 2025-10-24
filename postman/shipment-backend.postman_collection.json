@@ -2,7 +2,7 @@
   "info": {
     "name": "Shipment Backend API",
     "_postman_id": "1c1a8b70-8e0e-4f8e-9e1e-collection-rbac",
-    "description": "Unified Postman collection for Shipment Backend APIs: Health, Meta, Modules, Companies, Access Groups, Ports, Cabins, Payload Types, Agents, Users, Currencies, Taxes, Promotions, Partners, B2C Customers.",
+    "description": "Unified Postman collection for Shipment Backend APIs: Health, Meta, Modules, Companies, Access Groups, Ports, Cabins, Payload Types, Agents, Users, Currencies, Taxes, Promotions, Partners, B2C Customers, Markup/Discount Rules, Commission Rules.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -22,7 +22,9 @@
     { "key": "partnerId", "value": "{{partnerId}}" },
     { "key": "b2cCustomerId", "value": "{{b2cCustomerId}}" },
     { "key": "tripId", "value": "{{tripId}}" },
-    { "key": "nowISO", "value": "{{nowISO}}" }
+    { "key": "nowISO", "value": "{{nowISO}}" },
+    { "key": "markupDiscountRuleId", "value": "{{markupDiscountRuleId}}" },
+    { "key": "commissionRuleId", "value": "{{commissionRuleId}}" }
   ],
   "item": [
     {
@@ -1085,6 +1087,227 @@
               "raw": "{{baseUrl}}/b2c-customers/by-partner/{{partnerId}}",
               "host": ["{{baseUrl}}"],
               "path": ["b2c-customers", "by-partner", "{{partnerId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Markup/Discount Rules",
+      "item": [
+        {
+          "name": "GET /api/markup-discount-rules",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/markup-discount-rules?page=1&limit=10&q=&ruleType=&layer=&partner=&status=&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["markup-discount-rules"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "q", "value": "" },
+                { "key": "ruleType", "value": "" },
+                { "key": "layer", "value": "" },
+                { "key": "partner", "value": "" },
+                { "key": "status", "value": "" },
+                { "key": "sortBy", "value": "createdAt" },
+                { "key": "sortOrder", "value": "desc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/markup-discount-rules",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Marine Agent Markup\",\n  \"ruleType\": \"Markup\",\n  \"provider\": \"{{partnerId}}\",\n  \"appliedToLayer\": \"Company\",\n  \"partner\": \"All Child Partners\",\n  \"commissionValue\": 5,\n  \"serviceTypes\": [\"Passenger\", \"Cargo\", \"Vehicle\"],\n  \"passengerCabins\": [\"Economy\", \"Business\"],\n  \"passengerTypes\": [\"Adult\", \"Child\"],\n  \"cargoTypes\": [\"General Cargo\"],\n  \"vehicleTypes\": [\"Car\", \"Truck\"],\n  \"visaType\": \"Tourist\",\n  \"routes\": [\n    { \"from\": \"Muscat\", \"to\": \"Dubai\" },\n    { \"from\": \"Dubai\", \"to\": \"Abu Dhabi\" }\n  ],\n  \"value\": 7,\n  \"valueType\": \"PERCENT\",\n  \"effectiveDate\": \"2025-10-01T00:00:00.000Z\",\n  \"expiryDate\": \"2025-12-31T23:59:59.000Z\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/markup-discount-rules",
+              "host": ["{{baseUrl}}"],
+              "path": ["markup-discount-rules"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/markup-discount-rules/:id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/markup-discount-rules/{{markupDiscountRuleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["markup-discount-rules", "{{markupDiscountRuleId}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /api/markup-discount-rules/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Marine Agent Markup Updated\",\n  \"value\": 8,\n  \"status\": \"Active\",\n  \"passengerCabins\": [\"Economy\", \"Business\", \"First\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/markup-discount-rules/{{markupDiscountRuleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["markup-discount-rules", "{{markupDiscountRuleId}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/markup-discount-rules/:id",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/markup-discount-rules/{{markupDiscountRuleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["markup-discount-rules", "{{markupDiscountRuleId}}"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/markup-discount-rules/find-applicable",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceType\": \"Passenger\",\n  \"passengerType\": \"Adult\",\n  \"cabinClass\": \"Economy\",\n  \"cargoType\": null,\n  \"vehicleType\": null,\n  \"route\": { \"from\": \"Muscat\", \"to\": \"Dubai\" },\n  \"visaType\": \"Tourist\",\n  \"layer\": \"Company\",\n  \"partner\": \"{{partnerId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/markup-discount-rules/find-applicable",
+              "host": ["{{baseUrl}}"],
+              "path": ["markup-discount-rules", "find-applicable"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/markup-discount-rules/apply",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"basePrice\": 500,\n  \"serviceType\": \"Passenger\",\n  \"passengerType\": \"Adult\",\n  \"cabinClass\": \"Economy\",\n  \"cargoType\": null,\n  \"vehicleType\": null,\n  \"route\": { \"from\": \"Muscat\", \"to\": \"Dubai\" },\n  \"visaType\": \"Tourist\",\n  \"layer\": \"Company\",\n  \"partner\": \"{{partnerId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/markup-discount-rules/apply",
+              "host": ["{{baseUrl}}"],
+              "path": ["markup-discount-rules", "apply"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Commission Rules",
+      "item": [
+        {
+          "name": "GET /api/commission-rules",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/commission-rules?page=1&limit=10&q=&layer=&provider=&status=&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["commission-rules"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "q", "value": "" },
+                { "key": "layer", "value": "" },
+                { "key": "provider", "value": "" },
+                { "key": "status", "value": "" },
+                { "key": "sortBy", "value": "createdAt" },
+                { "key": "sortOrder", "value": "desc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/commission-rules",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Company to Marine Commission\",\n  \"provider\": \"{{partnerId}}\",\n  \"appliedToLayer\": \"Company\",\n  \"partner\": \"All Child Partners\",\n  \"commissionValue\": 5,\n  \"serviceTypes\": [\"Passenger\", \"Cargo\", \"Vehicle\"],\n  \"commissionFlow\": [\"Company\", \"Marine Agent\"],\n  \"routes\": [\n    { \"from\": \"Muscat\", \"to\": \"Dubai\" }\n  ],\n  \"visaType\": \"Tourist\",\n  \"effectiveDate\": \"2025-10-01T00:00:00.000Z\",\n  \"expiryDate\": \"2025-12-31T23:59:59.000Z\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/commission-rules", "host": ["{{baseUrl}}"], "path": ["commission-rules"] }
+          }
+        },
+        {
+          "name": "GET /api/commission-rules/:id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/commission-rules/{{commissionRuleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["commission-rules", "{{commissionRuleId}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /api/commission-rules/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Company to Marine Commission Updated\",\n  \"commissionValue\": 6,\n  \"status\": \"Active\",\n  \"commissionFlow\": [\"Company\", \"Marine Agent\", \"Commercial Agent\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/commission-rules/{{commissionRuleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["commission-rules", "{{commissionRuleId}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/commission-rules/:id",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/commission-rules/{{commissionRuleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["commission-rules", "{{commissionRuleId}}"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/commission-rules/find-applicable",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceType\": \"Passenger\",\n  \"route\": { \"from\": \"Muscat\", \"to\": \"Dubai\" },\n  \"visaType\": \"Tourist\",\n  \"layer\": \"Company\",\n  \"partner\": \"{{partnerId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/commission-rules/find-applicable",
+              "host": ["{{baseUrl}}"],
+              "path": ["commission-rules", "find-applicable"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/commission-rules/calculate",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"baseAmount\": 1000,\n  \"serviceType\": \"Passenger\",\n  \"route\": { \"from\": \"Muscat\", \"to\": \"Dubai\" },\n  \"visaType\": \"Tourist\",\n  \"layer\": \"Company\",\n  \"partner\": \"{{partnerId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/commission-rules/calculate",
+              "host": ["{{baseUrl}}"],
+              "path": ["commission-rules", "calculate"]
             }
           }
         }

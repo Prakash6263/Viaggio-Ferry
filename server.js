@@ -2,23 +2,25 @@ const express = require("express")
 const helmet = require("helmet")
 const cors = require("cors")
 const morgan = require("morgan")
-require("dotenv").config() // load environment variables for local development
+require("dotenv").config()
 
 const connectDB = require("./src/config/db")
 const companyRoutes = require("./src/routes/companyRoutes")
 const moduleRoutes = require("./src/routes/moduleRoutes")
 const accessGroupRoutes = require("./src/routes/accessGroupRoutes")
 const metaRoutes = require("./src/routes/metaRoutes")
-const portRoutes = require("./src/routes/portRoutes") // import ports routes
-const cabinRoutes = require("./src/routes/cabinRoutes") // import cabin routes
-const payloadTypeRoutes = require("./src/routes/payloadTypeRoutes") // add payload types route import
-const userRoutes = require("./src/routes/userRoutes") // add user routes import
-const agentRoutes = require("./src/routes/agentRoutes") // add agent routes import
-const currencyRoutes = require("./src/routes/currencyRoutes") // import currency routes
-const taxRoutes = require("./src/routes/taxRoutes") // import tax routes
-const promotionRoutes = require("./src/routes/promotionRoutes") // import promotions routes
-const partnerRoutes = require("./src/routes/partnerRoutes") // add partner routes import
-const b2cCustomerRoutes = require("./src/routes/b2cCustomerRoutes") // add b2c customer routes import
+const portRoutes = require("./src/routes/portRoutes")
+const cabinRoutes = require("./src/routes/cabinRoutes")
+const payloadTypeRoutes = require("./src/routes/payloadTypeRoutes")
+const userRoutes = require("./src/routes/userRoutes")
+const agentRoutes = require("./src/routes/agentRoutes")
+const currencyRoutes = require("./src/routes/currencyRoutes")
+const taxRoutes = require("./src/routes/taxRoutes")
+const promotionRoutes = require("./src/routes/promotionRoutes")
+const partnerRoutes = require("./src/routes/partnerRoutes")
+const b2cCustomerRoutes = require("./src/routes/b2cCustomerRoutes")
+const markupDiscountRuleRoutes = require("./src/routes/markupDiscountRuleRoutes")
+const commissionRuleRoutes = require("./src/routes/commissionRuleRoutes")
 const { notFound, errorHandler } = require("./src/middleware/errorHandler")
 
 const app = express()
@@ -40,16 +42,18 @@ app.use("/api/companies", companyRoutes)
 app.use("/api/modules", moduleRoutes)
 app.use("/api/access-groups", accessGroupRoutes)
 app.use("/api/meta", metaRoutes)
-app.use("/api/ports", portRoutes) // mount /api/ports
-app.use("/api/cabins", cabinRoutes) // mount /api/cabins
-app.use("/api/payload-types", payloadTypeRoutes) // mount /api/payload-types
-app.use("/api/users", userRoutes) // mount /api/users
-app.use("/api/agents", agentRoutes) // mount /api/agents
-app.use("/api/currencies", currencyRoutes) // mount /api/currencies
-app.use("/api/taxes", taxRoutes) // mount /api/taxes
-app.use("/api/promotions", promotionRoutes) // mount /api/promotions
-app.use("/api/partners", partnerRoutes) // mount /api/partners
-app.use("/api/b2c-customers", b2cCustomerRoutes) // mount b2c customer routes
+app.use("/api/ports", portRoutes)
+app.use("/api/cabins", cabinRoutes)
+app.use("/api/payload-types", payloadTypeRoutes)
+app.use("/api/users", userRoutes)
+app.use("/api/agents", agentRoutes)
+app.use("/api/currencies", currencyRoutes)
+app.use("/api/taxes", taxRoutes)
+app.use("/api/promotions", promotionRoutes)
+app.use("/api/partners", partnerRoutes)
+app.use("/api/b2c-customers", b2cCustomerRoutes)
+app.use("/api/markup-discount-rules", markupDiscountRuleRoutes)
+app.use("/api/commission-rules", commissionRuleRoutes)
 
 // 404 and error handling
 app.use(notFound)
