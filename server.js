@@ -22,6 +22,7 @@ const b2cCustomerRoutes = require("./src/routes/b2cCustomerRoutes")
 const markupDiscountRuleRoutes = require("./src/routes/markupDiscountRuleRoutes")
 const commissionRuleRoutes = require("./src/routes/commissionRuleRoutes")
 const priceListRoutes = require("./src/routes/priceListRoutes")
+const tripRoutes = require("./src/routes/tripRoutes")
 const { notFound, errorHandler } = require("./src/middleware/errorHandler")
 
 const app = express()
@@ -56,14 +57,16 @@ app.use("/api/b2c-customers", b2cCustomerRoutes)
 app.use("/api/markup-discount-rules", markupDiscountRuleRoutes)
 app.use("/api/commission-rules", commissionRuleRoutes)
 app.use("/api/price-lists", priceListRoutes)
+app.use("/api/trips", tripRoutes)
 
 // 404 and error handling
 app.use(notFound)
 app.use(errorHandler)
 
 // Start
-const PORT = process.env.PORT || 3001
-;(async () => {
+const PORT = process.env.PORT || 3001;
+
+(async () => {
   await connectDB()
   app.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`)
