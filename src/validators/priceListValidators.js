@@ -18,6 +18,7 @@ const createPriceListValidator = [
     .isISO8601()
     .withMessage("Invalid date format"),
   body("taxBase").optional().isIn(["Fare Only", "Fare & Taxes"]).withMessage("Invalid tax base"),
+  body("ticketForm").optional().isIn(["Refundable", "Non Refundable"]).withMessage("Invalid ticket form"),
   body("currency").optional().trim().isLength({ min: 2, max: 3 }).withMessage("Currency must be 2-3 characters"),
 ]
 
@@ -25,6 +26,7 @@ const updatePriceListValidator = [
   body("name").optional().trim().isLength({ min: 3 }).withMessage("Name must be at least 3 characters"),
   body("effectiveDate").optional().isISO8601().withMessage("Invalid date format"),
   body("taxBase").optional().isIn(["Fare Only", "Fare & Taxes"]).withMessage("Invalid tax base"),
+  body("ticketForm").optional().isIn(["Refundable", "Non Refundable"]).withMessage("Invalid ticket form"),
   body("status").optional().isIn(["Active", "Inactive", "Draft"]).withMessage("Invalid status"),
 ]
 

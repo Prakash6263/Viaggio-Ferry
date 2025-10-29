@@ -2,7 +2,7 @@
   "info": {
     "name": "Shipment Backend API",
     "_postman_id": "1c1a8b70-8e0e-4f8e-9e1e-collection-rbac",
-    "description": "Unified Postman collection for Shipment Backend APIs: Health, Meta, Modules, Companies, Access Groups, Ports, Cabins, Payload Types, Agents, Users, Currencies, Taxes, Promotions, Partners, B2C Customers, Markup/Discount Rules, Commission Rules, Trips.",
+    "description": "Unified Postman collection for Shipment Backend APIs: Health, Meta, Modules, Companies, Access Groups, Ports, Cabins, Payload Types, Agents, Users, Currencies, Taxes, Promotions, Partners, B2C Customers, Markup/Discount Rules, Commission Rules, Ships, Trips.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -27,7 +27,8 @@
     { "key": "commissionRuleId", "value": "{{commissionRuleId}}" },
     { "key": "availabilityId", "value": "{{availabilityId}}" },
     { "key": "allocationId", "value": "{{allocationId}}" },
-    { "key": "ruleId", "value": "{{ruleId}}" }
+    { "key": "ruleId", "value": "{{ruleId}}" },
+    { "key": "shipId", "value": "{{shipId}}" }
   ],
   "item": [
     {
@@ -756,6 +757,177 @@
           "request": {
             "method": "DELETE",
             "url": { "raw": "{{baseUrl}}/taxes/{{taxId}}", "host": ["{{baseUrl}}"], "path": ["taxes", "{{taxId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ships",
+      "item": [
+        {
+          "name": "GET /api/ships",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/ships?page=1&limit=10&q=&status=&shipType=&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["ships"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "q", "value": "" },
+                { "key": "status", "value": "" },
+                { "key": "shipType", "value": "" },
+                { "key": "sortBy", "value": "createdAt" },
+                { "key": "sortOrder", "value": "desc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/ships (Create Ship)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipName\": \"MS Ocean Explorer\",\n  \"shipIMONumber\": \"1234567\",\n  \"shipMMSINumber\": \"123456789\",\n  \"flagState\": \"Panama\",\n  \"shipType\": \"Passenger Ferry\",\n  \"yearBuilt\": 2015,\n  \"classificationSociety\": \"Lloyd's Register\",\n  \"status\": \"Active\",\n  \"remarks\": \"Modern passenger ferry with advanced facilities\",\n  \"technicalSpecifications\": {\n    \"grossTonnage\": 45000,\n    \"netTonnage\": 35000,\n    \"lengthOverall\": 220.5,\n    \"beam\": 32.2,\n    \"draft\": 8.5\n  },\n  \"passengerCapacity\": [\n    {\n      \"cabin\": \"First Class\",\n      \"totalWeightKg\": 150000,\n      \"numberOfSeats\": 500\n    },\n    {\n      \"cabin\": \"Economy\",\n      \"totalWeightKg\": 300000,\n      \"numberOfSeats\": 1500\n    }\n  ],\n  \"cargoCapacity\": [\n    {\n      \"type\": \"Pallet\",\n      \"totalWeight\": 500,\n      \"spots\": 1000\n    },\n    {\n      \"type\": \"Container\",\n      \"totalWeight\": 1000,\n      \"spots\": 500\n    }\n  ],\n  \"vehicleCapacity\": [\n    {\n      \"type\": \"Car\",\n      \"totalWeight\": 200,\n      \"spots\": 300\n    },\n    {\n      \"type\": \"Truck\",\n      \"totalWeight\": 500,\n      \"spots\": 100\n    }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/ships", "host": ["{{baseUrl}}"], "path": ["ships"] }
+          }
+        },
+        {
+          "name": "GET /api/ships/:id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/ships/{{shipId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ships", "{{shipId}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /api/ships/:id (Update Ship)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipName\": \"MS Ocean Explorer Updated\",\n  \"status\": \"Maintenance\",\n  \"remarks\": \"Updated remarks\",\n  \"technicalSpecifications\": {\n    \"grossTonnage\": 46000,\n    \"netTonnage\": 36000\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ships/{{shipId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ships", "{{shipId}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/ships/:id",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/ships/{{shipId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ships", "{{shipId}}"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/ships/:id/passenger-capacity (Add Passenger Capacity)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cabin\": \"Business Class\",\n  \"totalWeightKg\": 200000,\n  \"numberOfSeats\": 800\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ships/{{shipId}}/passenger-capacity",
+              "host": ["{{baseUrl}}"],
+              "path": ["ships", "{{shipId}}", "passenger-capacity"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/ships/:id/passenger-capacity (Remove Passenger Capacity)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cabin\": \"Business Class\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ships/{{shipId}}/passenger-capacity",
+              "host": ["{{baseUrl}}"],
+              "path": ["ships", "{{shipId}}", "passenger-capacity"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/ships/:id/cargo-capacity (Add Cargo Capacity)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"Breakbulk\",\n  \"totalWeight\": 750,\n  \"spots\": 200\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ships/{{shipId}}/cargo-capacity",
+              "host": ["{{baseUrl}}"],
+              "path": ["ships", "{{shipId}}", "cargo-capacity"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/ships/:id/cargo-capacity (Remove Cargo Capacity)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"Breakbulk\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ships/{{shipId}}/cargo-capacity",
+              "host": ["{{baseUrl}}"],
+              "path": ["ships", "{{shipId}}", "cargo-capacity"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/ships/:id/vehicle-capacity (Add Vehicle Capacity)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"Bus\",\n  \"totalWeight\": 300,\n  \"spots\": 50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ships/{{shipId}}/vehicle-capacity",
+              "host": ["{{baseUrl}}"],
+              "path": ["ships", "{{shipId}}", "vehicle-capacity"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/ships/:id/vehicle-capacity (Remove Vehicle Capacity)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"Bus\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ships/{{shipId}}/vehicle-capacity",
+              "host": ["{{baseUrl}}"],
+              "path": ["ships", "{{shipId}}", "vehicle-capacity"]
+            }
           }
         }
       ]

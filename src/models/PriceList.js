@@ -26,6 +26,11 @@ const priceListSchema = new mongoose.Schema(
       enum: ["Fare Only", "Fare & Taxes"],
       default: "Fare Only",
     },
+    ticketForm: {
+      type: String,
+      enum: ["Refundable", "Non Refundable"],
+      default: "Refundable",
+    },
     currency: {
       type: String,
       default: "USD",
