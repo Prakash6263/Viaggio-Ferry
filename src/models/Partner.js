@@ -2,6 +2,12 @@ const mongoose = require("mongoose")
 
 const partnerSchema = new mongoose.Schema(
   {
+    company: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      required: true,
+      index: true,
+    },
     name: { type: String, required: true, trim: true },
     phone: { type: String, required: true, trim: true },
     address: { type: String, required: true, trim: true },
@@ -30,6 +36,6 @@ const partnerSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-partnerSchema.index({ name: "text", phone: "text", address: "text" })
+partnerSchema.index({ company: 1, name: "text", phone: "text", address: "text" })
 
 module.exports = mongoose.model("Partner", partnerSchema)

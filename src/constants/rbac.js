@@ -15,7 +15,14 @@ const MODULES = [
   { code: "settings", label: "Settings" },
 ]
 
+const ROLES = [
+  { code: "superadmin", label: "Super Administrator" },
+  { code: "company-admin", label: "Company Administrator" },
+  { code: "user", label: "User" },
+]
+
 const LAYER_CODES = LAYERS.map((l) => l.code)
 const MODULE_CODES = MODULES.map((m) => m.code)
+const ROLE_CODES = ROLES.map((r) => r.code)
 
-module.exports = { LAYERS, MODULES, LAYER_CODES, MODULE_CODES }
+module.exports = { LAYERS, MODULES, ROLES, LAYER_CODES, MODULE_CODES, ROLE_CODES }

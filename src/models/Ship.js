@@ -8,6 +8,12 @@ const VEHICLE_TYPES = ["Car", "Truck", "Motorcycle", "Bus"]
 
 const ShipSchema = new mongoose.Schema(
   {
+    company: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      required: true,
+      index: true,
+    },
     // General Information
     name: {
       type: String,
@@ -18,14 +24,12 @@ const ShipSchema = new mongoose.Schema(
     imoNumber: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
       uppercase: true,
     },
     mmsiNumber: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
       uppercase: true,
     },
@@ -183,11 +187,10 @@ const ShipSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-// Indexes for search and filtering
-ShipSchema.index({ name: "text", imoNumber: "text", mmsiNumber: "text" })
-ShipSchema.index({ shipType: 1 })
-ShipSchema.index({ status: 1 })
-ShipSchema.index({ isDeleted: 1 })
+ShipSchema.index({ company: 1, name: "text", imoNumber: "text", mmsiNumber: "text" })
+ShipSchema.index({ company: 1, shipType: 1 })
+ShipSchema.index({ company: 1, status: 1 })
+ShipSchema.index({ company: 1, isDeleted: 1 })
 
 module.exports = {
   Ship: mongoose.model("Ship", ShipSchema),

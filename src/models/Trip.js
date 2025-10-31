@@ -2,6 +2,12 @@ const mongoose = require("mongoose")
 
 const tripSchema = new mongoose.Schema(
   {
+    company: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      required: true,
+      index: true,
+    },
     // Trip Details
     tripName: {
       type: String,
@@ -11,7 +17,6 @@ const tripSchema = new mongoose.Schema(
     tripCode: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
       uppercase: true,
     },
@@ -68,7 +73,7 @@ const tripSchema = new mongoose.Schema(
           enum: ["Passenger", "Cargo", "Vehicle"],
           required: true,
         },
-        category: String, // e.g., "Economy", "Container", "Truck"
+        category: String,
         totalQuantity: {
           type: Number,
           required: true,
@@ -105,8 +110,8 @@ const tripSchema = new mongoose.Schema(
     ticketingRules: [
       {
         _id: mongoose.Schema.Types.ObjectId,
-        ruleType: String, // e.g., "Reissue", "Refund", "Cancellation"
-        ruleValue: String, // e.g., "Rule3", "Rule1"
+        ruleType: String,
+        ruleValue: String,
         createdAt: {
           type: Date,
           default: Date.now,
@@ -122,12 +127,11 @@ const tripSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-// Indexes
-tripSchema.index({ tripCode: 1 })
-tripSchema.index({ vessel: 1 })
-tripSchema.index({ departurePort: 1, arrivalPort: 1 })
-tripSchema.index({ departureDateTime: 1 })
-tripSchema.index({ status: 1 })
-tripSchema.index({ isDeleted: 1 })
+tripSchema.index({ company: 1, tripCode: 1 }, { unique: true })
+tripSchema.index({ company: 1, vessel: 1 })
+tripSchema.index({ company: 1, departurePort: 1, arrivalPort: 1 })
+tripSchema.index({ company: 1, departureDateTime: 1 })
+tripSchema.index({ company: 1, status: 1 })
+tripSchema.index({ company: 1, isDeleted: 1 })
 
 module.exports = mongoose.model("Trip", tripSchema)

@@ -2,8 +2,11 @@ const express = require("express")
 const controller = require("../controllers/agentController")
 const { listAgentRules, createAgentRules, updateAgentRules } = require("../validators/agentValidators")
 const { asyncHandler } = require("../middleware/errorHandler")
+const { verifyCompanyToken, extractCompanyId } = require("../middleware/authMiddleware")
 
 const router = express.Router()
+
+router.use(verifyCompanyToken, extractCompanyId)
 
 router.get("/", listAgentRules, asyncHandler(controller.index))
 router.get("/tree", asyncHandler(controller.tree))

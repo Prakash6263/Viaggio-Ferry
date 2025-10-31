@@ -10,10 +10,15 @@ const RateSchema = new mongoose.Schema(
 
 const CurrencySchema = new mongoose.Schema(
   {
+    company: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      required: true,
+      index: true,
+    },
     code: {
       type: String,
       required: true,
-      unique: true,
       uppercase: true,
       trim: true,
       minlength: 3,
@@ -26,7 +31,6 @@ const CurrencySchema = new mongoose.Schema(
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 )
 
-// Virtuals for latest rate and last update time
 CurrencySchema.virtual("lastRateUpdate").get(function () {
   if (!this.rates?.length) return null
   const latest = [...this.rates].sort((a, b) => b.at - a.at)[0]
@@ -39,7 +43,6 @@ CurrencySchema.virtual("currentRateUSD").get(function () {
   return latest?.rateUSD ?? null
 })
 
-// Normalize code and keep rates sorted ascending by time
 CurrencySchema.pre("save", function (next) {
   if (this.code) this.code = String(this.code).toUpperCase()
   if (Array.isArray(this.rates)) {
@@ -51,7 +54,8 @@ CurrencySchema.pre("save", function (next) {
   next()
 })
 
-CurrencySchema.index({ code: "text", name: "text" })
+CurrencySchema.index({ company: 1, code: 1 }, { unique: true })
+CurrencySchema.index({ company: 1, code: "text", name: "text" })
 
 function getEffectiveRateAt(rates = [], atDate) {
   if (!rates.length) return null

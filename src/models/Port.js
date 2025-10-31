@@ -4,6 +4,12 @@ const STATUS = ["Active", "Inactive"]
 
 const PortSchema = new mongoose.Schema(
   {
+    company: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      required: true,
+      index: true,
+    },
     name: {
       type: String,
       required: true,
@@ -12,7 +18,6 @@ const PortSchema = new mongoose.Schema(
     code: {
       type: String,
       required: true,
-      unique: true,
       uppercase: true,
       trim: true,
       minlength: 2,
@@ -24,7 +29,6 @@ const PortSchema = new mongoose.Schema(
       trim: true,
     },
     timezone: {
-      // e.g., "UTC+02:00"
       type: String,
       required: true,
       trim: true,
@@ -41,13 +45,14 @@ const PortSchema = new mongoose.Schema(
       default: "",
       maxlength: 2000,
     },
-    // Optional soft-delete flag if needed later
     isDeleted: { type: Boolean, default: false, index: true },
   },
   { timestamps: true },
 )
 
-PortSchema.index({ name: "text", code: "text", country: "text" })
+PortSchema.index({ company: 1, code: 1 }, { unique: true })
+PortSchema.index({ company: 1, name: "text", code: "text", country: "text" })
+PortSchema.index({ company: 1, status: 1 })
 
 module.exports = {
   Port: mongoose.model("Port", PortSchema),

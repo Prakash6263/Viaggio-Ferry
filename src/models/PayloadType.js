@@ -5,11 +5,16 @@ const STATUS = ["Active", "Inactive"]
 
 const PayloadTypeSchema = new mongoose.Schema(
   {
+    company: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      required: true,
+      index: true,
+    },
     name: { type: String, required: true, trim: true },
     code: {
       type: String,
       required: true,
-      unique: true,
       uppercase: true,
       trim: true,
       minlength: 2,
@@ -18,7 +23,6 @@ const PayloadTypeSchema = new mongoose.Schema(
     description: { type: String, trim: true, default: "", maxlength: 4000 },
     category: { type: String, enum: PAYLOAD_CATEGORIES, required: true, index: true },
     maxWeightKg: { type: Number, min: 0, default: 0 },
-    // free-text dimensions field like "120×100×150 cm" from the UI
     dimensions: { type: String, trim: true, default: "", maxlength: 255 },
     status: { type: String, enum: STATUS, default: "Active", index: true },
     isDeleted: { type: Boolean, default: false, index: true },
@@ -26,7 +30,8 @@ const PayloadTypeSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-PayloadTypeSchema.index({ name: "text", code: "text", description: "text" })
+PayloadTypeSchema.index({ company: 1, code: 1 }, { unique: true })
+PayloadTypeSchema.index({ company: 1, name: "text", code: "text", description: "text" })
 
 module.exports = {
   PayloadType: mongoose.model("PayloadType", PayloadTypeSchema),

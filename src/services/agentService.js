@@ -1,17 +1,17 @@
 const mongoose = require("mongoose")
 const Agent = require("../models/Agent")
 
-function buildFilter({ q, type, status }) {
-  const filter = { isDeleted: false }
+function buildFilter({ q, type, status }, companyId) {
+  const filter = { isDeleted: false, company: companyId }
   if (q) filter.$text = { $search: q }
   if (type) filter.type = type
   if (status) filter.status = status
   return filter
 }
 
-async function listAgents(query) {
+async function listAgents(query, companyId) {
   const { page = 1, limit = 50, q, type, status, sortBy = "depth", sortOrder = "asc" } = query
-  const filter = buildFilter({ q, type, status })
+  const filter = buildFilter({ q, type, status }, companyId)
   const skip = (page - 1) * limit
   const sort = { [sortBy]: sortOrder === "asc" ? 1 : -1 }
 
@@ -23,16 +23,16 @@ async function listAgents(query) {
   return { data: items, page, limit, total, totalPages: Math.ceil(total / limit || 1) }
 }
 
-async function getAgent(id) {
-  return Agent.findOne({ _id: id, isDeleted: false }).populate("parent", "name code type").lean()
+async function getAgent(id, companyId) {
+  return Agent.findOne({ _id: id, company: companyId, isDeleted: false }).populate("parent", "name code type").lean()
 }
 
-async function createAgent(payload) {
+async function createAgent(payload, companyId) {
   const { name, code, type, parentId = null, status = "Active", notes = "" } = payload
-  const parent = parentId ? await Agent.findOne({ _id: parentId, isDeleted: false }) : null
+  const parent = parentId ? await Agent.findOne({ _id: parentId, company: companyId, isDeleted: false }) : null
   const depth = parent ? (parent.depth || 0) + 1 : 0
 
-  const exists = await Agent.findOne({ code: code.toUpperCase(), isDeleted: false }).lean()
+  const exists = await Agent.findOne({ company: companyId, code: code.toUpperCase(), isDeleted: false }).lean()
   if (exists) {
     const err = new Error("Agent code already exists")
     err.status = 409
@@ -40,6 +40,7 @@ async function createAgent(payload) {
   }
 
   const doc = await Agent.create({
+    company: companyId,
     name,
     code: code.toUpperCase(),
     type,
@@ -48,22 +49,27 @@ async function createAgent(payload) {
     status,
     notes,
   })
-  return getAgent(doc._id)
+  return getAgent(doc._id, companyId)
 }
 
-async function updateAgent(id, payload) {
+async function updateAgent(id, payload, companyId) {
   const update = { ...payload }
   if (update.code) update.code = update.code.toUpperCase()
 
   if (typeof update.parentId !== "undefined") {
-    const parent = update.parentId ? await Agent.findById(update.parentId) : null
+    const parent = update.parentId ? await Agent.findOne({ _id: update.parentId, company: companyId }) : null
     update.parent = parent ? parent._id : null
     update.depth = parent ? (parent.depth || 0) + 1 : 0
     delete update.parentId
   }
 
   if (update.code) {
-    const exists = await Agent.findOne({ _id: { $ne: id }, code: update.code, isDeleted: false }).lean()
+    const exists = await Agent.findOne({
+      _id: { $ne: id },
+      company: companyId,
+      code: update.code,
+      isDeleted: false,
+    }).lean()
     if (exists) {
       const err = new Error("Agent code already exists")
       err.status = 409
@@ -71,17 +77,17 @@ async function updateAgent(id, payload) {
     }
   }
 
-  await Agent.updateOne({ _id: id, isDeleted: false }, { $set: update })
-  return getAgent(id)
+  await Agent.updateOne({ _id: id, company: companyId, isDeleted: false }, { $set: update })
+  return getAgent(id, companyId)
 }
 
-async function deleteAgent(id) {
-  await Agent.updateOne({ _id: id }, { $set: { isDeleted: true, status: "Inactive" } })
+async function deleteAgent(id, companyId) {
+  await Agent.updateOne({ _id: id, company: companyId }, { $set: { isDeleted: true, status: "Inactive" } })
   return { success: true }
 }
 
-async function getAgentTree() {
-  const agents = await Agent.find({ isDeleted: false, status: "Active" }).lean()
+async function getAgentTree(companyId) {
+  const agents = await Agent.find({ company: companyId, isDeleted: false, status: "Active" }).lean()
   const byParent = agents.reduce((acc, a) => {
     const pid = a.parent ? String(a.parent) : "root"
     acc[pid] = acc[pid] || []
@@ -102,9 +108,8 @@ async function getAgentTree() {
   return build("root")
 }
 
-async function getAgentGroupedOptions() {
-  // Produce UI-friendly groups: [{heading, items:[{_id,label}]}]
-  const active = await Agent.find({ isDeleted: false, status: "Active" }).lean()
+async function getAgentGroupedOptions(companyId) {
+  const active = await Agent.find({ company: companyId, isDeleted: false, status: "Active" }).lean()
   const groups = ["Company", "Marine", "Commercial", "Selling"]
   const byType = groups.reduce((acc, t) => ({ ...acc, [t]: [] }), {})
   active.forEach((a) => {
@@ -112,7 +117,6 @@ async function getAgentGroupedOptions() {
   })
 
   function labelFromNode(a, map) {
-    // Build nested label by walking up parents to show hierarchy (e.g., "Commercial Agent A1.1")
     const parts = [a.name]
     let current = a
     while (current.parent) {

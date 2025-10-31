@@ -95,16 +95,20 @@ const PeriodSchema = new mongoose.Schema(
 
 const PromotionSchema = new mongoose.Schema(
   {
+    company: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      required: true,
+      index: true,
+    },
     name: { type: String, required: true, trim: true, maxlength: 100 },
     description: { type: String, trim: true, maxlength: 1000 },
     status: { type: String, enum: PROMOTION_STATUS, default: "Active" },
     basis: { type: String, enum: PROMOTION_BASIS, required: true },
 
-    // basis-specific fields
-    period: { type: PeriodSchema, default: undefined }, // when basis=PERIOD
-    tripId: { type: mongoose.Schema.Types.ObjectId, ref: "Trip", default: undefined }, // when basis=TRIP
+    period: { type: PeriodSchema, default: undefined },
+    tripId: { type: mongoose.Schema.Types.ObjectId, ref: "Trip", default: undefined },
 
-    // benefits & eligibility
     passengerTickets: { type: PassengerTicketsSchema, default: { enabled: false } },
     eligibilityConditions: { type: [EligibilityConditionSchema], default: [] },
     cargoTickets: { type: CargoTicketsSchema, default: { enabled: false } },
@@ -117,10 +121,10 @@ const PromotionSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-PromotionSchema.index({ status: 1, isDeleted: 1 })
-PromotionSchema.index({ basis: 1, "period.startAt": 1, "period.endAt": 1 })
-PromotionSchema.index({ tripId: 1 })
-PromotionSchema.index({ name: "text", description: "text" })
+PromotionSchema.index({ company: 1, status: 1, isDeleted: 1 })
+PromotionSchema.index({ company: 1, basis: 1, "period.startAt": 1, "period.endAt": 1 })
+PromotionSchema.index({ company: 1, tripId: 1 })
+PromotionSchema.index({ company: 1, name: "text", description: "text" })
 
 module.exports = {
   PROMOTION_STATUS,

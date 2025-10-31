@@ -1,4 +1,5 @@
 const mongoose = require("mongoose")
+const bcrypt = require("bcryptjs")
 
 const LogoSchema = new mongoose.Schema(
   {
@@ -62,10 +63,40 @@ const CompanySchema = new mongoose.Schema(
 
     subdomain: { type: String, trim: true, lowercase: true },
     isActive: { type: Boolean, default: true },
+
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+
+    password: { type: String },
+
+    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "SuperAdmin" },
+
+    approvalDate: { type: Date },
+
+    rejectionReason: { type: String },
   },
   { timestamps: true },
 )
 
 CompanySchema.index({ companyName: 1 })
+CompanySchema.index({ status: 1 })
+
+CompanySchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next()
+  try {
+    const salt = await bcrypt.genSalt(10)
+    this.password = await bcrypt.hash(this.password, salt)
+    next()
+  } catch (error) {
+    next(error)
+  }
+})
+
+CompanySchema.methods.comparePassword = async function (candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password)
+}
 
 module.exports = mongoose.model("Company", CompanySchema)
