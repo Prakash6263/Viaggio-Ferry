@@ -2,7 +2,6 @@ const mongoose = require("mongoose")
 
 const ACCOUNT_TYPES = ["Cash", "Bank", "Credit Card", "Mobile Wallet"]
 const STATUS = ["Active", "Inactive"]
-const CURRENCIES = ["USD", "EUR", "GBP", "AUD", "CAD", "CHF", "CNY", "INR", "JPY", "SGD", "AED"]
 
 const BankCashAccountSchema = new mongoose.Schema(
   {
@@ -41,10 +40,10 @@ const BankCashAccountSchema = new mongoose.Schema(
       trim: true,
     },
     currency: {
-      type: String,
-      enum: CURRENCIES,
-      default: "USD",
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Currency",
       required: true,
+      index: true,
     },
     ledgerCode: {
       type: String,
@@ -92,5 +91,4 @@ module.exports = {
   BankCashAccount: mongoose.model("BankCashAccount", BankCashAccountSchema),
   BANK_CASH_ACCOUNT_TYPES: ACCOUNT_TYPES,
   BANK_CASH_ACCOUNT_STATUS: STATUS,
-  BANK_CASH_ACCOUNT_CURRENCIES: CURRENCIES,
 }

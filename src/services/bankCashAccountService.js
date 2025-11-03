@@ -1,10 +1,11 @@
 const { BankCashAccount } = require("../models/BankCashAccount")
+const { Currency } = require("../models/Currency")
 
-const buildFilter = ({ companyId, q, accountType, status, currency }) => {
+const buildFilter = ({ companyId, q, accountType, status, currencyId }) => {
   const filter = { company: companyId, isDeleted: false }
   if (status) filter.status = status
   if (accountType) filter.accountType = accountType
-  if (currency) filter.currency = currency
+  if (currencyId) filter.currency = currencyId
   if (q) {
     const regex = new RegExp(q, "i")
     Object.assign(filter, {
@@ -21,17 +22,18 @@ async function listBankCashAccounts({
   q,
   accountType,
   status,
-  currency,
+  currencyId,
   sortBy = "createdAt",
   sortOrder = "desc",
 }) {
-  const filter = buildFilter({ companyId, q, accountType, status, currency })
+  const filter = buildFilter({ companyId, q, accountType, status, currencyId })
   const sort = { [sortBy]: sortOrder === "asc" ? 1 : -1 }
 
   const [total, data] = await Promise.all([
     BankCashAccount.countDocuments(filter),
     BankCashAccount.find(filter)
       .populate("chartOfAccount", "ledgerCode ledgerDescription ledgerType")
+      .populate("currency", "code name symbol")
       .sort(sort)
       .skip((page - 1) * limit)
       .limit(limit),
@@ -53,11 +55,18 @@ async function getBankCashAccountById(id, companyId) {
     _id: id,
     company: companyId,
     isDeleted: false,
-  }).populate("chartOfAccount", "ledgerCode ledgerDescription ledgerType")
+  })
+    .populate("chartOfAccount", "ledgerCode ledgerDescription ledgerType")
+    .populate("currency", "code name symbol")
   return account
 }
 
 async function createBankCashAccount(payload, companyId) {
+  const currency = await Currency.findOne({ _id: payload.currency, company: companyId, isDeleted: false })
+  if (!currency) {
+    throw new Error("Invalid currency")
+  }
+
   const doc = {
     company: companyId,
     layer: payload.layer,
@@ -65,7 +74,7 @@ async function createBankCashAccount(payload, companyId) {
     accountType: payload.accountType,
     accountName: payload.accountName,
     bankAccountNo: payload.bankAccountNo || "N/A",
-    currency: payload.currency || "USD",
+    currency: payload.currency,
     ledgerCode: payload.ledgerCode?.toUpperCase(),
     chartOfAccount: payload.chartOfAccount || null,
     status: payload.status || "Active",
@@ -81,7 +90,14 @@ async function updateBankCashAccount(id, payload, companyId) {
   if (payload.accountType !== undefined) updates.accountType = payload.accountType
   if (payload.accountName !== undefined) updates.accountName = payload.accountName
   if (payload.bankAccountNo !== undefined) updates.bankAccountNo = payload.bankAccountNo
-  if (payload.currency !== undefined) updates.currency = payload.currency
+  if (payload.currency !== undefined) {
+    // Validate currency exists
+    const currency = await Currency.findOne({ _id: payload.currency, company: companyId, isDeleted: false })
+    if (!currency) {
+      throw new Error("Invalid currency")
+    }
+    updates.currency = payload.currency
+  }
   if (payload.ledgerCode !== undefined) updates.ledgerCode = String(payload.ledgerCode).toUpperCase()
   if (payload.chartOfAccount !== undefined) updates.chartOfAccount = payload.chartOfAccount
   if (payload.status !== undefined) updates.status = payload.status
@@ -90,7 +106,9 @@ async function updateBankCashAccount(id, payload, companyId) {
   const updated = await BankCashAccount.findOneAndUpdate({ _id: id, company: companyId, isDeleted: false }, updates, {
     new: true,
     runValidators: true,
-  }).populate("chartOfAccount", "ledgerCode ledgerDescription ledgerType")
+  })
+    .populate("chartOfAccount", "ledgerCode ledgerDescription ledgerType")
+    .populate("currency", "code name symbol")
   return updated
 }
 

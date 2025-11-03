@@ -1,9 +1,5 @@
 const { body, param, query, validationResult } = require("express-validator")
-const {
-  BANK_CASH_ACCOUNT_TYPES,
-  BANK_CASH_ACCOUNT_STATUS,
-  BANK_CASH_ACCOUNT_CURRENCIES,
-} = require("../models/BankCashAccount")
+const { BANK_CASH_ACCOUNT_TYPES, BANK_CASH_ACCOUNT_STATUS } = require("../models/BankCashAccount")
 
 const validate = (req, res, next) => {
   const errors = validationResult(req)
@@ -21,10 +17,7 @@ const createBankCashAccountValidation = [
     .withMessage(`accountType must be one of: ${BANK_CASH_ACCOUNT_TYPES.join(", ")}`),
   body("accountName").isString().trim().notEmpty().withMessage("accountName is required"),
   body("bankAccountNo").optional().isString().trim(),
-  body("currency")
-    .optional()
-    .isIn(BANK_CASH_ACCOUNT_CURRENCIES)
-    .withMessage(`currency must be one of: ${BANK_CASH_ACCOUNT_CURRENCIES.join(", ")}`),
+  body("currency").isMongoId().withMessage("currency must be a valid currency ID from the currency list"),
   body("ledgerCode")
     .isString()
     .trim()
@@ -47,7 +40,7 @@ const updateBankCashAccountValidation = [
   body("accountType").optional().isIn(BANK_CASH_ACCOUNT_TYPES),
   body("accountName").optional().isString().trim().notEmpty(),
   body("bankAccountNo").optional().isString().trim(),
-  body("currency").optional().isIn(BANK_CASH_ACCOUNT_CURRENCIES),
+  body("currency").optional().isMongoId().withMessage("currency must be a valid currency ID"),
   body("ledgerCode")
     .optional()
     .isString()
@@ -68,7 +61,7 @@ const listBankCashAccountsValidation = [
   query("q").optional().isString().trim(),
   query("accountType").optional().isIn(BANK_CASH_ACCOUNT_TYPES),
   query("status").optional().isIn(BANK_CASH_ACCOUNT_STATUS),
-  query("currency").optional().isIn(BANK_CASH_ACCOUNT_CURRENCIES),
+  query("currencyId").optional().isMongoId().withMessage("currencyId must be a valid MongoDB ID"),
   query("sortBy").optional().isIn(["accountName", "accountType", "currency", "status", "createdAt", "updatedAt"]),
   query("sortOrder").optional().isIn(["asc", "desc"]),
   validate,

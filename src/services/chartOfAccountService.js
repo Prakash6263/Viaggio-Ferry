@@ -1,4 +1,5 @@
 const { ChartOfAccount } = require("../models/ChartOfAccount")
+const { LEDGER_TYPE_MAPPING } = require("../constants/ledgerTypes")
 
 const buildFilter = ({ companyId, q, ledgerType, status }) => {
   const filter = { company: companyId, isDeleted: false }
@@ -11,6 +12,20 @@ const buildFilter = ({ companyId, q, ledgerType, status }) => {
     })
   }
   return filter
+}
+
+async function generateLedgerCode(companyId, ledgerType) {
+  const sequence = LEDGER_TYPE_MAPPING[ledgerType].sequence
+
+  // Find the highest sequence number for this ledger type in this company
+  const lastAccount = await ChartOfAccount.findOne({ company: companyId, ledgerType, isDeleted: false })
+    .sort({ ledgerSequenceNumber: -1 })
+    .select("ledgerSequenceNumber")
+
+  const nextSequenceNumber = (lastAccount?.ledgerSequenceNumber || 0) + 1
+  const paddedNumber = String(nextSequenceNumber).padStart(5, "0")
+
+  return `${sequence}-${paddedNumber}`
 }
 
 async function listChartOfAccounts({
@@ -51,12 +66,21 @@ async function getChartOfAccountById(id, companyId) {
 }
 
 async function createChartOfAccount(payload, companyId) {
+  const ledgerType = payload.ledgerType
+  const typeSequence = LEDGER_TYPE_MAPPING[ledgerType]?.sequence
+
+  if (!typeSequence) {
+    throw new Error(`Invalid ledger type: ${ledgerType}`)
+  }
+
+  const ledgerCode = await generateLedgerCode(companyId, ledgerType)
+
   const doc = {
     company: companyId,
-    ledgerCode: payload.ledgerCode?.toUpperCase(),
+    ledgerCode,
     ledgerDescription: payload.ledgerDescription,
-    ledgerType: payload.ledgerType,
-    typeSequence: payload.typeSequence,
+    ledgerType,
+    typeSequence,
     status: payload.status || "Active",
     systemAccount: payload.systemAccount || false,
     partnerAccount: payload.partnerAccount || "N/A",
@@ -67,14 +91,15 @@ async function createChartOfAccount(payload, companyId) {
 
 async function updateChartOfAccount(id, payload, companyId) {
   const updates = {}
-  if (payload.ledgerCode !== undefined) updates.ledgerCode = String(payload.ledgerCode).toUpperCase()
   if (payload.ledgerDescription !== undefined) updates.ledgerDescription = payload.ledgerDescription
-  if (payload.ledgerType !== undefined) updates.ledgerType = payload.ledgerType
-  if (payload.typeSequence !== undefined) updates.typeSequence = payload.typeSequence
   if (payload.status !== undefined) updates.status = payload.status
   if (payload.systemAccount !== undefined) updates.systemAccount = payload.systemAccount
   if (payload.partnerAccount !== undefined) updates.partnerAccount = payload.partnerAccount
   if (payload.notes !== undefined) updates.notes = payload.notes
+
+  if (payload.ledgerType !== undefined || payload.ledgerCode !== undefined) {
+    throw new Error("Cannot update ledgerCode or ledgerType after creation")
+  }
 
   const updated = await ChartOfAccount.findOneAndUpdate({ _id: id, company: companyId, isDeleted: false }, updates, {
     new: true,

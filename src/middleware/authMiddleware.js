@@ -55,4 +55,24 @@ const extractCompanyId = (req, res, next) => {
   }
 }
 
-module.exports = { verifyToken, verifySuperAdmin, verifyCompanyToken, extractCompanyId }
+const extractUserId = (req, res, next) => {
+  try {
+    const userId = req.user?.id || req.user?.userId
+
+    if (!userId) {
+      throw createHttpError(401, "User ID not found in token. Please login again.")
+    }
+
+    // Attach userId to request for use in controllers
+    req.userId = userId
+
+    next()
+  } catch (error) {
+    if (error.status) {
+      throw error
+    }
+    throw createHttpError(500, "Error extracting user information")
+  }
+}
+
+module.exports = { verifyToken, verifySuperAdmin, verifyCompanyToken, extractCompanyId, extractUserId }

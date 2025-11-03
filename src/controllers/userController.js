@@ -31,6 +31,7 @@ async function create(req, res) {
     remarks: req.body.remarks,
     status: req.body.status,
     accessGroups: req.body.accessGroups,
+    company: req.companyId,
   }
   const doc = await service.createUser(payload)
   res.status(201).json(doc)

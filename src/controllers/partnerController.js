@@ -18,7 +18,7 @@ async function show(req, res) {
 async function create(req, res) {
   const errors = validationResult(req)
   if (!errors.isEmpty()) return res.status(400).json({ message: "Validation failed", details: errors.array() })
-  const doc = await service.createPartner(req.body)
+  const doc = await service.createPartner({ ...req.body, company: req.companyId })
   res.status(201).json(doc)
 }
 

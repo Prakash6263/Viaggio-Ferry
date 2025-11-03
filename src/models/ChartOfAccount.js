@@ -1,17 +1,7 @@
 const mongoose = require("mongoose")
+const { LEDGER_TYPES, LEDGER_TYPE_MAPPING } = require("../constants/ledgerTypes")
 
 const STATUS = ["Active", "Inactive"]
-const LEDGER_TYPES = [
-  "Assets",
-  "Liabilities",
-  "Equity",
-  "Revenue",
-  "Expenses",
-  "Cash & Banks",
-  "Accounts Receivable",
-  "Accounts Payable",
-  "Inventory",
-]
 
 const ChartOfAccountSchema = new mongoose.Schema(
   {
@@ -26,8 +16,11 @@ const ChartOfAccountSchema = new mongoose.Schema(
       required: true,
       uppercase: true,
       trim: true,
-      minlength: 2,
-      maxlength: 20,
+      match: /^\d{2}-\d{5}$/,
+    },
+    ledgerSequenceNumber: {
+      type: Number,
+      default: 0,
     },
     ledgerDescription: {
       type: String,
@@ -73,7 +66,12 @@ const ChartOfAccountSchema = new mongoose.Schema(
 )
 
 ChartOfAccountSchema.index({ company: 1, ledgerCode: 1 }, { unique: true })
-ChartOfAccountSchema.index({ company: 1, ledgerDescription: "text", ledgerCode: "text", ledgerType: "text" })
+ChartOfAccountSchema.index({
+  company: 1,
+  ledgerDescription: "text",
+  ledgerCode: "text",
+  ledgerType: "text",
+})
 ChartOfAccountSchema.index({ company: 1, status: 1 })
 ChartOfAccountSchema.index({ company: 1, ledgerType: 1 })
 
