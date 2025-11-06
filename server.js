@@ -31,6 +31,7 @@ const superAdminCompanyRoutes = require("./src/routes/superAdminCompanyRoutes")
 const chartOfAccountRoutes = require("./src/routes/chartOfAccountRoutes")
 const bankCashAccountRoutes = require("./src/routes/bankCashAccountRoutes")
 const journalEntryRoutes = require("./src/routes/journalEntryRoutes")
+const agentTopupRoutes = require("./src/routes/agentTopupRoutes")
 const { notFound, errorHandler } = require("./src/middleware/errorHandler")
 
 const app = express()
@@ -74,6 +75,7 @@ app.use("/api/ships", shipRoutes)
 app.use("/api/chart-of-accounts", chartOfAccountRoutes)
 app.use("/api/bank-cash-accounts", bankCashAccountRoutes)
 app.use("/api/journal-entries", journalEntryRoutes)
+app.use("/api/agent-topups", agentTopupRoutes)
 
 // 404 and error handling
 app.use(notFound)
