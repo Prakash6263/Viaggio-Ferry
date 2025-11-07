@@ -1,6 +1,7 @@
 const createHttpError = require("http-errors")
 const { JournalEntry } = require("../models/JournalEntry")
 const { ChartOfAccount } = require("../models/ChartOfAccount")
+const { createLedgerEntriesFromJournal } = require("./generalLedgerService")
 
 async function listJournalEntries({
   companyId,
@@ -125,7 +126,16 @@ async function postJournalEntry(id, companyId, userId) {
   entry.postedBy = userId
   entry.postedDate = new Date()
 
-  return await entry.save()
+  const savedEntry = await entry.save()
+
+  try {
+    await createLedgerEntriesFromJournal(savedEntry._id, companyId)
+  } catch (error) {
+    // Log error but don't fail the posting
+    console.error("[GeneralLedger] Failed to create ledger entries:", error.message)
+  }
+
+  return savedEntry
 }
 
 async function cancelJournalEntry(id, companyId) {
