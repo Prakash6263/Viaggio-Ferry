@@ -119,6 +119,18 @@ const tripSchema = new mongoose.Schema(
       },
     ],
 
+    // Trip Reporting and Completion Tracking
+    reportingStatus: {
+      type: String,
+      enum: ["NotStarted", "InProgress", "Verified", "Completed"],
+      default: "NotStarted",
+    },
+    tripReport: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TripReport",
+      default: null,
+    },
+
     isDeleted: {
       type: Boolean,
       default: false,
