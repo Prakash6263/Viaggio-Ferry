@@ -1,102 +1,95 @@
 const mongoose = require("mongoose")
 const bcrypt = require("bcryptjs")
 
-const LogoSchema = new mongoose.Schema(
-  {
-    dataBase64: { type: String },
-    mimeType: { type: String },
-  },
-  { _id: false },
-)
-
-const ContactSchema = new mongoose.Schema(
-  {
-    streetAddress: String,
-    city: String,
-    country: String,
-    postalCode: String,
-    mainPhoneNumber: String,
-    email: String,
-    website: String,
-  },
-  { _id: false },
-)
-
-const AboutSchema = new mongoose.Schema(
-  {
-    whoWeAre: String,
-    vision: String,
-    mission: String,
-    purpose: String,
-  },
-  { _id: false },
-)
-
-const SocialSchema = new mongoose.Schema(
-  {
-    facebook: String,
-    instagram: String,
-    whatsapp: String,
-    linkedin: String,
-    skype: String,
-  },
-  { _id: false },
-)
-
 const CompanySchema = new mongoose.Schema(
   {
+    // Basic Company Information
     companyName: { type: String, required: true, trim: true },
-    registrationNumber: { type: String, trim: true },
-    logo: LogoSchema,
+    registrationNumber: { type: String, required: true, trim: true },
+    taxVatNumber: { type: String, trim: true }, // ✅ Tax/VAT Number
+    logoUrl: { type: String },
     dateEstablished: { type: Date },
 
-    contact: ContactSchema,
+    // Contact Details
+    address: { type: String },
+    city: { type: String },
+    country: { type: String },
+    postalCode: { type: String },
+    mainPhoneNumber: { type: String },
+    emailAddress: { type: String, required: true },
+    website: { type: String },
 
-    operational: {
-      defaultCurrency: { type: String, uppercase: true, trim: true },
-      operatingPorts: [{ type: String, trim: true }],
-      workingHours: { type: String, trim: true },
-    },
+    // Operational Details
+    defaultCurrency: { type: String, default: "USD" },
+    applicableTaxes: [{ type: String }], // ✅ Applicable Taxes (e.g. ["VAT", "Excise"])
+    operatingPorts: [{ type: String }],
+    operatingCountries: [{ type: String }], // ✅ Operating Countries
+    timeZone: { type: String }, // ✅ Time Zone
+    workingHours: { type: String },
 
-    about: AboutSchema,
-    social: SocialSchema,
+    // About Us
+    whoWeAre: { type: String },
+    vision: { type: String },
+    mission: { type: String },
+    purpose: { type: String },
 
-    subdomain: { type: String, trim: true, lowercase: true },
+    // Social Network Links
+    facebookUrl: { type: String },
+    instagramUrl: { type: String },
+    whatsappNumber: { type: String },
+    linkedinProfile: { type: String },
+    skypeId: { type: String },
+
+    // Authentication / Status
+    loginEmail: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    passwordHash: { type: String, required: true },
+    status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
     isActive: { type: Boolean, default: true },
-
-    status: {
-      type: String,
-      enum: ["pending", "approved", "rejected"],
-      default: "pending",
-    },
-
-    password: { type: String },
-
-    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "SuperAdmin" },
-
-    approvalDate: { type: Date },
-
+    verifiedAt: { type: Date },
+    verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     rejectionReason: { type: String },
   },
   { timestamps: true },
 )
 
+// Indexes for query optimization
 CompanySchema.index({ companyName: 1 })
 CompanySchema.index({ status: 1 })
+CompanySchema.index({ loginEmail: 1 })
 
-CompanySchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next()
-  try {
-    const salt = await bcrypt.genSalt(10)
-    this.password = await bcrypt.hash(this.password, salt)
-    next()
-  } catch (error) {
-    next(error)
+async function generateRegistrationNumber() {
+  const lastCompany = await mongoose.model("Company").findOne().sort({ createdAt: -1 });
+
+  if (!lastCompany || !lastCompany.registrationNumber) {
+    return "REG-1001";
   }
-})
 
+  const lastNumber = parseInt(lastCompany.registrationNumber.split("-")[1]);
+  const nextNumber = lastNumber + 1;
+
+  return `REG-${nextNumber}`;
+}
+
+
+
+// Hash password before saving
+CompanySchema.pre("save", async function (next) {
+  if (!this.registrationNumber) {
+    this.registrationNumber = await generateRegistrationNumber();
+  }
+
+  if (this.isModified("passwordHash")) {
+    const salt = await bcrypt.genSalt(10);
+    this.passwordHash = await bcrypt.hash(this.passwordHash, salt);
+  }
+
+  next();
+});
+
+
+// Method to compare passwords
 CompanySchema.methods.comparePassword = async function (candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password)
+  return await bcrypt.compare(candidatePassword, this.passwordHash)
 }
 
 module.exports = mongoose.model("Company", CompanySchema)

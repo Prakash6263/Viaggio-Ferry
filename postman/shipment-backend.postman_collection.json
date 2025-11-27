@@ -1,1827 +1,723 @@
 {
   "info": {
-    "name": "Shipment Backend API",
-    "_postman_id": "1c1a8b70-8e0e-4f8e-9e1e-collection-rbac",
-    "description": "Unified Postman collection for Shipment Backend APIs: Health, Meta, Modules, Companies, Access Groups, Ports, Cabins, Payload Types, Agents, Users, Currencies, Taxes, Promotions, Partners, B2C Customers, Markup/Discount Rules, Commission Rules, Ships, Trips, Chart of Accounts.",
+    "_postman_id": "multi-tenant-auth-api",
+    "name": "Multi-Tenant Authentication API",
+    "description": "Complete API collection for Super Admin and Company authentication and management",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
-  "variable": [
-    { "key": "baseUrl", "value": "{{baseUrl}}" },
-    { "key": "companyId", "value": "{{companyId}}" },
-    { "key": "accessGroupId", "value": "{{accessGroupId}}" },
-    { "key": "moduleId", "value": "{{moduleId}}" },
-    { "key": "portId", "value": "{{portId}}" },
-    { "key": "cabinId", "value": "{{cabinId}}" },
-    { "key": "payloadTypeId", "value": "{{payloadTypeId}}" },
-    { "key": "agentId", "value": "{{agentId}}" },
-    { "key": "userId", "value": "{{userId}}" },
-    { "key": "currencyId", "value": "{{currencyId}}" },
-    { "key": "currencyCode", "value": "{{currencyCode}}" },
-    { "key": "taxId", "value": "{{taxId}}" },
-    { "key": "promotionId", "value": "{{promotionId}}" },
-    { "key": "partnerId", "value": "{{partnerId}}" },
-    { "key": "b2cCustomerId", "value": "{{b2cCustomerId}}" },
-    { "key": "tripId", "value": "{{tripId}}" },
-    { "key": "nowISO", "value": "{{nowISO}}" },
-    { "key": "markupDiscountRuleId", "value": "{{markupDiscountRuleId}}" },
-    { "key": "commissionRuleId", "value": "{{commissionRuleId}}" },
-    { "key": "availabilityId", "value": "{{availabilityId}}" },
-    { "key": "allocationId", "value": "{{allocationId}}" },
-    { "key": "ruleId", "value": "{{ruleId}}" },
-    { "key": "shipId", "value": "{{shipId}}" },
-    { "key": "chartOfAccountId", "value": "{{chartOfAccountId}}" },
-    { "key": "bankCashAccountId", "value": "{{bankCashAccountId}}" }
-  ],
   "item": [
     {
-      "name": "Health",
+      "name": "Super Admin",
       "item": [
         {
-          "name": "GET /api/health",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Meta",
-      "item": [
-        {
-          "name": "GET /api/meta/layers",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/meta/layers", "host": ["{{baseUrl}}"], "path": ["meta", "layers"] }
-          }
-        },
-        {
-          "name": "GET /api/meta/modules",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/meta/modules", "host": ["{{baseUrl}}"], "path": ["meta", "modules"] }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Modules",
-      "item": [
-        {
-          "name": "GET /api/modules (active)",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/modules", "host": ["{{baseUrl}}"], "path": ["modules"] }
-          }
-        },
-        {
-          "name": "POST /api/modules",
+          "name": "Register Super Admin",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"code\": \"sales-bookings\",\n  \"name\": \"Sales & Bookings\",\n  \"isActive\": true,\n  \"submodules\": [\n    { \"code\": \"tickets\", \"name\": \"Tickets\" },\n    { \"code\": \"invoices\", \"name\": \"Invoices\" }\n  ]\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/modules", "host": ["{{baseUrl}}"], "path": ["modules"] }
-          }
-        },
-        {
-          "name": "POST /api/modules/seed",
-          "request": {
-            "method": "POST",
-            "url": { "raw": "{{baseUrl}}/modules/seed", "host": ["{{baseUrl}}"], "path": ["modules", "seed"] }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Companies",
-      "item": [
-        {
-          "name": "GET /api/companies",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/companies", "host": ["{{baseUrl}}"], "path": ["companies"] }
-          }
-        },
-        {
-          "name": "POST /api/companies (form-data + optional logo)",
-          "request": {
-            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "form-data"
+              }
+            ],
             "body": {
               "mode": "formdata",
               "formdata": [
-                { "key": "companyName", "value": "Company A", "type": "text" },
-                { "key": "registrationNumber", "value": "REG-001", "type": "text" },
-                { "key": "contact[email]", "value": "info@company-a.com", "type": "text" },
-                { "key": "contact[mainPhoneNumber]", "value": "+1 555 0100", "type": "text" },
-                { "key": "operational[defaultCurrency]", "value": "USD", "type": "text" },
-                { "key": "subdomain", "value": "companya", "type": "text" },
-                { "key": "logo", "type": "file", "src": "" }
+                {
+                  "key": "name",
+                  "value": "Admin User",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "admin@example.com",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "SecurePassword123!",
+                  "type": "text"
+                },
+                {
+                  "key": "profileImage",
+                  "type": "file",
+                  "description": "Optional profile picture (JPG, PNG, max 5MB)"
+                }
               ]
             },
-            "url": { "raw": "{{baseUrl}}/companies", "host": ["{{baseUrl}}"], "path": ["companies"] }
-          }
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/register-super-admin",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "register-super-admin"]
+            },
+            "description": "Register the first super admin with optional profile image"
+          },
+          "response": []
         },
         {
-          "name": "GET /api/companies/:id",
+          "name": "Super Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"SecurePassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "login"]
+            },
+            "description": "Login as super admin and receive JWT token"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Admin Profile",
           "request": {
             "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/companies/{{companyId}}",
+              "raw": "{{baseUrl}}/api/admin/profile",
               "host": ["{{baseUrl}}"],
-              "path": ["companies", "{{companyId}}"]
-            }
-          }
+              "path": ["api", "admin", "profile"]
+            },
+            "description": "Get authenticated admin's profile with profile image"
+          },
+          "response": []
         },
         {
-          "name": "GET /api/companies/:id/logo",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/companies/{{companyId}}/logo",
-              "host": ["{{baseUrl}}"],
-              "path": ["companies", "{{companyId}}", "logo"]
-            }
-          }
-        },
-        {
-          "name": "PATCH /api/companies/:id",
+          "name": "Update Admin Profile",
           "request": {
             "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "body": {
               "mode": "formdata",
               "formdata": [
-                { "key": "companyName", "value": "Company A Updated", "type": "text" },
-                { "key": "logo", "type": "file", "src": "" }
+                {
+                  "key": "name",
+                  "value": "Updated Admin Name",
+                  "type": "text"
+                },
+                {
+                  "key": "profileImage",
+                  "type": "file",
+                  "description": "Optional new profile picture (JPG, PNG, max 5MB)"
+                }
               ]
             },
             "url": {
-              "raw": "{{baseUrl}}/companies/{{companyId}}",
+              "raw": "{{baseUrl}}/api/admin/profile",
               "host": ["{{baseUrl}}"],
-              "path": ["companies", "{{companyId}}"]
-            }
-          }
+              "path": ["api", "admin", "profile"]
+            },
+            "description": "Update admin profile including name and optional profile image"
+          },
+          "response": []
         },
         {
-          "name": "DELETE /api/companies/:id",
+          "name": "List All Companies",
           "request": {
-            "method": "DELETE",
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/companies/{{companyId}}",
+              "raw": "{{baseUrl}}/api/admin/companies",
               "host": ["{{baseUrl}}"],
-              "path": ["companies", "{{companyId}}"]
-            }
-          }
+              "path": ["api", "admin", "companies"]
+            },
+            "description": "Get list of all companies (super admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Company Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/companies/{{companyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "companies", "{{companyId}}"]
+            },
+            "description": "Get details of a specific company"
+          },
+          "response": []
+        },
+{
+  "name": "Add Company (Admin) with Logo",
+  "request": {
+    "method": "POST",
+    "header": [
+      {
+        "key": "Authorization",
+        "value": "Bearer {{adminToken}}"
+      },
+      {
+        "key": "Content-Type",
+        "value": "multipart/form-data"
+      }
+    ],
+    "body": {
+      "mode": "formdata",
+      "formdata": [
+        {
+          "key": "companyName",
+          "value": "Admin Added Corp",
+          "type": "text"
+        },
+        {
+          "key": "loginEmail",
+          "value": "admin.added@corp.com",
+          "type": "text"
+        },
+        {
+          "key": "password",
+          "value": "AdminPass123!",
+          "type": "text"
+        },
+        {
+          "key": "logo",
+          "type": "file",
+          "description": "Company logo (JPG, PNG, max 5MB)"
+        },
+        {
+          "key": "dateEstablished",
+          "value": "2020-05-10",
+          "type": "text"
+        },
+        {
+          "key": "taxVatNumber",
+          "value": "VAT-OV123456",
+          "type": "text"
+        },
+        {
+          "key": "address",
+          "value": "789 Corporate Blvd",
+          "type": "text"
+        },
+        {
+          "key": "city",
+          "value": "Chicago",
+          "type": "text"
+        },
+        {
+          "key": "country",
+          "value": "USA",
+          "type": "text"
+        },
+        {
+          "key": "postalCode",
+          "value": "60601",
+          "type": "text"
+        },
+        {
+          "key": "mainPhoneNumber",
+          "value": "+1 555 123 456",
+          "type": "text"
+        },
+        {
+          "key": "emailAddress",
+          "value": "contact@admin-corp.com",
+          "type": "text"
+        },
+        {
+          "key": "website",
+          "value": "https://admin-corp.com",
+          "type": "text"
+        },
+        {
+          "key": "defaultCurrency",
+          "value": "USD",
+          "type": "text"
+        },
+        {
+          "key": "applicableTaxes",
+          "value": "[\"VAT\", \"Excise\"]",
+          "type": "text"
+        },
+        {
+          "key": "operatingPorts",
+          "value": "[\"Port A\", \"Port C\"]",
+          "type": "text"
+        },
+        {
+          "key": "operatingCountries",
+          "value": "[\"Sudan\", \"Saudi Arabia\"]",
+          "type": "text"
+        },
+        {
+          "key": "timeZone",
+          "value": "UTC +3",
+          "type": "text"
+        },
+        {
+          "key": "workingHours",
+          "value": "Mon-Fri, 9am-5pm",
+          "type": "text"
+        },
+        {
+          "key": "whoWeAre",
+          "value": "Enterprise solutions provider",
+          "type": "text"
+        },
+        {
+          "key": "vision",
+          "value": "Lead the industry with innovation",
+          "type": "text"
+        },
+        {
+          "key": "mission",
+          "value": "Deliver excellence",
+          "type": "text"
+        },
+        {
+          "key": "purpose",
+          "value": "Empower businesses globally",
+          "type": "text"
+        },
+        {
+          "key": "facebookUrl",
+          "value": "https://facebook.com/admincorp",
+          "type": "text"
+        },
+        {
+          "key": "instagramUrl",
+          "value": "https://instagram.com/admincorp",
+          "type": "text"
+        },
+        {
+          "key": "whatsappNumber",
+          "value": "+1 555 123 456",
+          "type": "text"
+        },
+        {
+          "key": "linkedinProfile",
+          "value": "https://linkedin.com/company/admin-corp",
+          "type": "text"
+        },
+        {
+          "key": "skypeId",
+          "value": "admin.corp",
+          "type": "text"
+        },
+        {
+          "key": "approveNow",
+          "value": "true",
+          "type": "text"
         }
       ]
     },
-    {
-      "name": "Access Groups",
-      "item": [
+    "url": {
+      "raw": "{{baseUrl}}/api/companies/admin/add",
+      "host": ["{{baseUrl}}"],
+      "path": ["api", "companies", "admin", "add"]
+    },
+    "description": "Add a new company with logo upload. registrationNumber is auto-generated in backend (e.g. REG-1001). Set approveNow to true to approve immediately. Only super admin can use this endpoint."
+  },
+  "response": []
+},
         {
-          "name": "GET /api/access-groups",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/access-groups?companyId={{companyId}}&page=1&limit=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["access-groups"],
-              "query": [
-                { "key": "companyId", "value": "{{companyId}}" },
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "20" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "POST /api/access-groups",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"company\": \"{{companyId}}\",\n  \"groupName\": \"Sales Manager\",\n  \"groupCode\": \"SAL-MGR\",\n  \"moduleCode\": \"sales-bookings\",\n  \"layer\": \"selling-agent\",\n  \"isActive\": true,\n  \"permissions\": [\n    { \"submoduleCode\": \"tickets\", \"canRead\": true, \"canWrite\": true, \"canEdit\": true, \"canDelete\": false }\n  ]\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/access-groups", "host": ["{{baseUrl}}"], "path": ["access-groups"] }
-          }
-        },
-        {
-          "name": "GET /api/access-groups/:id",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/access-groups/{{accessGroupId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["access-groups", "{{accessGroupId}}"]
-            }
-          }
-        },
-        {
-          "name": "PATCH /api/access-groups/:id",
+          "name": "Verify Company",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"groupName\": \"Sales Supervisor\",\n  \"isActive\": true,\n  \"permissions\": [\n    { \"submoduleCode\": \"tickets\", \"canRead\": true, \"canWrite\": true, \"canEdit\": true, \"canDelete\": true }\n  ]\n}"
+              "raw": "{}"
             },
             "url": {
-              "raw": "{{baseUrl}}/access-groups/{{accessGroupId}}",
+              "raw": "{{baseUrl}}/api/admin/companies/{{companyId}}/verify",
               "host": ["{{baseUrl}}"],
-              "path": ["access-groups", "{{accessGroupId}}"]
-            }
-          }
+              "path": ["api", "admin", "companies", "{{companyId}}", "verify"]
+            },
+            "description": "Verify and approve a company registration"
+          },
+          "response": []
         },
         {
-          "name": "DELETE /api/access-groups/:id",
+          "name": "Reject Company",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Incomplete business information\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/companies/{{companyId}}/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "companies", "{{companyId}}", "reject"]
+            },
+            "description": "Reject a company registration with reason"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Company",
           "request": {
             "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/access-groups/{{accessGroupId}}",
+              "raw": "{{baseUrl}}/api/admin/companies/{{companyId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["access-groups", "{{accessGroupId}}"]
-            }
-          }
+              "path": ["api", "admin", "companies", "{{companyId}}"]
+            },
+            "description": "Delete a company (soft delete)"
+          },
+          "response": []
         }
       ]
     },
     {
-      "name": "Ports",
+      "name": "Company Authentication",
       "item": [
+{
+  "name": "Register Company with Logo",
+  "request": {
+    "method": "POST",
+    "header": [
+      {
+        "key": "Content-Type",
+        "value": "multipart/form-data"
+      }
+    ],
+    "body": {
+      "mode": "formdata",
+      "formdata": [
         {
-          "name": "GET /api/ports",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/ports?page=1&limit=10&q=&status=&sortBy=createdAt&sortOrder=desc",
-              "host": ["{{baseUrl}}"],
-              "path": ["ports"],
-              "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "10" },
-                { "key": "q", "value": "" },
-                { "key": "status", "value": "" },
-                { "key": "sortBy", "value": "createdAt" },
-                { "key": "sortOrder", "value": "desc" }
-              ]
-            }
-          }
+          "key": "companyName",
+          "value": "Acme Corp",
+          "type": "text"
         },
         {
-          "name": "POST /api/ports",
+          "key": "loginEmail",
+          "value": "company@acme.com",
+          "type": "text"
+        },
+        {
+          "key": "password",
+          "value": "CompanyPass123!",
+          "type": "text"
+        },
+        {
+          "key": "logo",
+          "type": "file",
+          "description": "Company logo (JPG, PNG, max 5MB)"
+        },
+        {
+          "key": "dateEstablished",
+          "value": "2015-01-15",
+          "type": "text"
+        },
+        {
+          "key": "taxVatNumber",
+          "value": "VAT-AC12345",
+          "type": "text"
+        },
+        {
+          "key": "address",
+          "value": "123 Business St",
+          "type": "text"
+        },
+        {
+          "key": "city",
+          "value": "New York",
+          "type": "text"
+        },
+        {
+          "key": "country",
+          "value": "USA",
+          "type": "text"
+        },
+        {
+          "key": "postalCode",
+          "value": "10001",
+          "type": "text"
+        },
+        {
+          "key": "mainPhoneNumber",
+          "value": "+1 234 567 890",
+          "type": "text"
+        },
+        {
+          "key": "emailAddress",
+          "value": "contact@acme.com",
+          "type": "text"
+        },
+        {
+          "key": "website",
+          "value": "https://acme.com",
+          "type": "text"
+        },
+        {
+          "key": "defaultCurrency",
+          "value": "USD",
+          "type": "text"
+        },
+        {
+          "key": "applicableTaxes",
+          "value": "[\"VAT\", \"Service Tax\"]",
+          "type": "text"
+        },
+        {
+          "key": "operatingPorts",
+          "value": "[\"Port A\", \"Port B\"]",
+          "type": "text"
+        },
+        {
+          "key": "operatingCountries",
+          "value": "[\"Sudan\", \"Saudi Arabia\"]",
+          "type": "text"
+        },
+        {
+          "key": "timeZone",
+          "value": "UTC +3",
+          "type": "text"
+        },
+        {
+          "key": "workingHours",
+          "value": "Mon-Fri, 9am-5pm",
+          "type": "text"
+        },
+        {
+          "key": "whoWeAre",
+          "value": "Leading tech solutions provider",
+          "type": "text"
+        },
+        {
+          "key": "vision",
+          "value": "To transform businesses through innovative technology",
+          "type": "text"
+        },
+        {
+          "key": "mission",
+          "value": "Deliver high-quality solutions that drive growth",
+          "type": "text"
+        },
+        {
+          "key": "purpose",
+          "value": "Empowering enterprises with cutting-edge tools",
+          "type": "text"
+        },
+        {
+          "key": "facebookUrl",
+          "value": "https://facebook.com/acme",
+          "type": "text"
+        },
+        {
+          "key": "instagramUrl",
+          "value": "https://instagram.com/acme",
+          "type": "text"
+        },
+        {
+          "key": "whatsappNumber",
+          "value": "+1 234 567 890",
+          "type": "text"
+        },
+        {
+          "key": "linkedinProfile",
+          "value": "https://linkedin.com/company/acme",
+          "type": "text"
+        },
+        {
+          "key": "skypeId",
+          "value": "acme.corp",
+          "type": "text"
+        }
+      ]
+    },
+    "url": {
+      "raw": "{{baseUrl}}/api/companies/register",
+      "host": ["{{baseUrl}}"],
+      "path": ["api", "companies", "register"]
+    },
+    "description": "Register a new company with logo upload using multipart/form-data. registrationNumber is auto-generated in backend (e.g. REG-1001)."
+  },
+  "response": []
+},
+        {
+          "name": "Company Login",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Port Sudan\",\n  \"code\": \"PSD\",\n  \"country\": \"Sudan\",\n  \"timezone\": \"UTC+02:00\",\n  \"status\": \"Active\",\n  \"notes\": \"Red Sea port\"\n}"
+              "raw": "{\n  \"email\": \"company@acme.com\",\n  \"password\": \"CompanyPass123!\"\n}"
             },
-            "url": { "raw": "{{baseUrl}}/ports", "host": ["{{baseUrl}}"], "path": ["ports"] }
-          }
-        },
+            "url": {
+              "raw": "{{baseUrl}}/api/companies/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "companies", "login"]
+            },
+            "description": "Login as company and receive JWT token"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Company Profile",
+      "item": [
         {
-          "name": "GET /api/ports/:id",
+          "name": "Get Own Profile",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/ports/{{portId}}", "host": ["{{baseUrl}}"], "path": ["ports", "{{portId}}"] }
-          }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/companies/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "companies", "me"]
+            },
+            "description": "Get authenticated company's own profile"
+          },
+          "response": []
         },
         {
-          "name": "PUT /api/ports/:id",
+          "name": "Update Own Profile with Logo",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Jeddah Islamic Port\",\n  \"code\": \"JED\",\n  \"country\": \"Saudi Arabia\",\n  \"timezone\": \"UTC+03:00\",\n  \"status\": \"Active\",\n  \"notes\": \"Updated notes\"\n}" },
-            "url": { "raw": "{{baseUrl}}/ports/{{portId}}", "host": ["{{baseUrl}}"], "path": ["ports", "{{portId}}"] }
-          }
-        },
-        {
-          "name": "DELETE /api/ports/:id",
-          "request": {
-            "method": "DELETE",
-            "url": { "raw": "{{baseUrl}}/ports/{{portId}}", "host": ["{{baseUrl}}"], "path": ["ports", "{{portId}}"] }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Cabins",
-      "item": [
-        {
-          "name": "GET /api/cabins",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/cabins?page=1&limit=10&type=&status=&q=",
-              "host": ["{{baseUrl}}"],
-              "path": ["cabins"],
-              "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "10" },
-                { "key": "type", "value": "" },
-                { "key": "status", "value": "" },
-                { "key": "q", "value": "" }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "multipart/form-data"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "mainPhoneNumber",
+                  "value": "+1 987 654 321",
+                  "type": "text"
+                },
+                {
+                  "key": "website",
+                  "value": "https://newsite.acme.com",
+                  "type": "text"
+                },
+                {
+                  "key": "whoWeAre",
+                  "value": "Updated company description",
+                  "type": "text"
+                },
+                {
+                  "key": "address",
+                  "value": "456 Updated Ave",
+                  "type": "text"
+                },
+                {
+                  "key": "city",
+                  "value": "Los Angeles",
+                  "type": "text"
+                },
+                {
+                  "key": "workingHours",
+                  "value": "Mon-Fri, 8am-6pm",
+                  "type": "text"
+                },
+                {
+                  "key": "logo",
+                  "type": "file",
+                  "description": "Optional new company logo (JPG, PNG, max 5MB)"
+                }
               ]
-            }
-          }
-        },
-        {
-          "name": "POST /api/cabins",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"1A\",\n  \"description\": \"Window side passenger cabin\",\n  \"remarks\": \"Deck 1\",\n  \"type\": \"Passengers\",\n  \"status\": \"Inactive\"\n}"
             },
-            "url": { "raw": "{{baseUrl}}/cabins", "host": ["{{baseUrl}}"], "path": ["cabins"] }
-          }
-        },
-        {
-          "name": "GET /api/cabins/:id",
-          "request": {
-            "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/cabins/{{cabinId}}",
+              "raw": "{{baseUrl}}/api/companies/me",
               "host": ["{{baseUrl}}"],
-              "path": ["cabins", "{{cabinId}}"]
-            }
-          }
-        },
-        {
-          "name": "PUT /api/cabins/:id",
-          "request": {
-            "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"1A - Updated\",\n  \"status\": \"Active\"\n}" },
-            "url": {
-              "raw": "{{baseUrl}}/cabins/{{cabinId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["cabins", "{{cabinId}}"]
-            }
-          }
-        },
-        {
-          "name": "DELETE /api/cabins/:id",
-          "request": {
-            "method": "DELETE",
-            "url": {
-              "raw": "{{baseUrl}}/cabins/{{cabinId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["cabins", "{{cabinId}}"]
-            }
-          }
+              "path": ["api", "companies", "me"]
+            },
+            "description": "Update authenticated company's profile with optional logo upload"
+          },
+          "response": []
         }
       ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001",
+      "type": "string"
     },
     {
-      "name": "Payload Types",
-      "item": [
-        {
-          "name": "GET /api/payload-types",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/payload-types?page=1&limit=10&q=&category=&status=&sortBy=createdAt&sortOrder=desc",
-              "host": ["{{baseUrl}}"],
-              "path": ["payload-types"],
-              "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "10" },
-                { "key": "q", "value": "" },
-                { "key": "category", "value": "" },
-                { "key": "status", "value": "" },
-                { "key": "sortBy", "value": "createdAt" },
-                { "key": "sortOrder", "value": "desc" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "POST /api/payload-types",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Passenger\",\n  \"code\": \"PAX\",\n  \"category\": \"Passenger\",\n  \"maxWeightKg\": 0,\n  \"dimensions\": \"N/A\",\n  \"status\": \"Active\"\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/payload-types", "host": ["{{baseUrl}}"], "path": ["payload-types"] }
-          }
-        },
-        {
-          "name": "GET /api/payload-types/:id",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/payload-types/{{payloadTypeId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["payload-types", "{{payloadTypeId}}"]
-            }
-          }
-        },
-        {
-          "name": "PUT /api/payload-types/:id",
-          "request": {
-            "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Passenger Updated\",\n  \"status\": \"Inactive\"\n}" },
-            "url": {
-              "raw": "{{baseUrl}}/payload-types/{{payloadTypeId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["payload-types", "{{payloadTypeId}}"]
-            }
-          }
-        },
-        {
-          "name": "DELETE /api/payload-types/:id",
-          "request": {
-            "method": "DELETE",
-            "url": {
-              "raw": "{{baseUrl}}/payload-types/{{payloadTypeId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["payload-types", "{{payloadTypeId}}"]
-            }
-          }
-        }
-      ]
+      "key": "adminToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT token from super admin login"
     },
     {
-      "name": "Agents",
-      "item": [
-        {
-          "name": "GET /api/agents",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/agents?page=1&limit=20&q=",
-              "host": ["{{baseUrl}}"],
-              "path": ["agents"],
-              "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }, { "key": "q", "value": "" }]
-            }
-          }
-        },
-        {
-          "name": "GET /api/agents/options (grouped)",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/agents/options", "host": ["{{baseUrl}}"], "path": ["agents", "options"] }
-          }
-        },
-        {
-          "name": "GET /api/agents/tree",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/agents/tree", "host": ["{{baseUrl}}"], "path": ["agents", "tree"] }
-          }
-        },
-        {
-          "name": "POST /api/agents",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Commercial Agent A1.1\",\n  \"type\": \"commercial\",\n  \"parent\": null\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/agents", "host": ["{{baseUrl}}"], "path": ["agents"] }
-          }
-        },
-        {
-          "name": "GET /api/agents/:id",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/agents/{{agentId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["agents", "{{agentId}}"]
-            }
-          }
-        },
-        {
-          "name": "PATCH /api/agents/:id",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Commercial Agent A1.1 Updated\"\n}" },
-            "url": {
-              "raw": "{{baseUrl}}/agents/{{agentId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["agents", "{{agentId}}"]
-            }
-          }
-        },
-        {
-          "name": "DELETE /api/agents/:id",
-          "request": {
-            "method": "DELETE",
-            "url": {
-              "raw": "{{baseUrl}}/agents/{{agentId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["agents", "{{agentId}}"]
-            }
-          }
-        }
-      ]
+      "key": "companyToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT token from company login"
     },
     {
-      "name": "Users",
-      "item": [
-        {
-          "name": "GET /api/users",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/users?page=1&limit=10&q=&status=&isSalesman=&agentId=",
-              "host": ["{{baseUrl}}"],
-              "path": ["users"],
-              "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "10" },
-                { "key": "q", "value": "" },
-                { "key": "status", "value": "" },
-                { "key": "isSalesman", "value": "" },
-                { "key": "agentId", "value": "" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "POST /api/users",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"fullName\": \"John Smith\",\n  \"email\": \"john@example.com\",\n  \"position\": \"Finance Manager\",\n  \"agentId\": \"{{agentId}}\",\n  \"isSalesman\": false,\n  \"remarks\": \"\",\n  \"status\": \"Active\",\n  \"accessGroups\": []\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] }
-          }
-        },
-        {
-          "name": "GET /api/users/:id",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users", "{{userId}}"] }
-          }
-        },
-        {
-          "name": "PATCH /api/users/:id",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"position\": \"Operations Manager\",\n  \"isSalesman\": true\n}" },
-            "url": { "raw": "{{baseUrl}}/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users", "{{userId}}"] }
-          }
-        },
-        {
-          "name": "DELETE /api/users/:id",
-          "request": {
-            "method": "DELETE",
-            "url": {
-              "raw": "{{baseUrl}}/users/{{userId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["users", "{{userId}}"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Currencies",
-      "item": [
-        {
-          "name": "GET /api/currencies",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/currencies?page=1&limit=10&q=&sortBy=code&sortOrder=asc",
-              "host": ["{{baseUrl}}"],
-              "path": ["currencies"],
-              "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "10" },
-                { "key": "q", "value": "" },
-                { "key": "sortBy", "value": "code" },
-                { "key": "sortOrder", "value": "asc" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "POST /api/currencies",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"code\": \"SAR\",\n  \"name\": \"Saudi Riyal\",\n  \"rates\": [\n    { \"at\": \"2024-09-09T12:00:00.000Z\", \"rateUSD\": 3.75 }\n  ]\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/currencies", "host": ["{{baseUrl}}"], "path": ["currencies"] }
-          }
-        },
-        {
-          "name": "GET /api/currencies/:id",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/currencies/{{currencyId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["currencies", "{{currencyId}}"]
-            }
-          }
-        },
-        {
-          "name": "PATCH /api/currencies/:id",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Saudi Riyal Updated\"\n}" },
-            "url": {
-              "raw": "{{baseUrl}}/currencies/{{currencyId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["currencies", "{{currencyId}}"]
-            }
-          }
-        },
-        {
-          "name": "DELETE /api/currencies/:id",
-          "request": {
-            "method": "DELETE",
-            "url": {
-              "raw": "{{baseUrl}}/currencies/{{currencyId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["currencies", "{{currencyId}}"]
-            }
-          }
-        },
-        {
-          "name": "POST /api/currencies/:id/rates (add row)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"at\": \"2024-09-11T06:30:00.000Z\",\n  \"rateUSD\": 3.76\n}" },
-            "url": {
-              "raw": "{{baseUrl}}/currencies/{{currencyId}}/rates",
-              "host": ["{{baseUrl}}"],
-              "path": ["currencies", "{{currencyId}}", "rates"]
-            }
-          }
-        },
-        {
-          "name": "DELETE /api/currencies/:id/rates/:rateId (remove row)",
-          "request": {
-            "method": "DELETE",
-            "url": {
-              "raw": "{{baseUrl}}/currencies/{{currencyId}}/rates/{{rateId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["currencies", "{{currencyId}}", "rates", "{{rateId}}"]
-            }
-          }
-        },
-        {
-          "name": "GET /api/currencies/:code/effective-rate?at=",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/currencies/{{currencyCode}}/effective-rate?at=2024-09-11T06:30:00.000Z",
-              "host": ["{{baseUrl}}"],
-              "path": ["currencies", "{{currencyCode}}", "effective-rate"],
-              "query": [{ "key": "at", "value": "2024-09-11T06:30:00.000Z" }]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Taxes",
-      "item": [
-        {
-          "name": "GET /api/taxes",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/taxes?page=1&limit=10&q=&status=&type=&form=&sortBy=createdAt&sortOrder=desc",
-              "host": ["{{baseUrl}}"],
-              "path": ["taxes"],
-              "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "10" },
-                { "key": "q", "value": "" },
-                { "key": "status", "value": "" },
-                { "key": "type", "value": "" },
-                { "key": "form", "value": "" },
-                { "key": "sortBy", "value": "createdAt" },
-                { "key": "sortOrder", "value": "desc" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "POST /api/taxes",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"code\": \"VAT\",\n  \"name\": \"Value Added Tax\",\n  \"ledgerCode\": \"21500\",\n  \"value\": 15,\n  \"type\": \"%\",\n  \"form\": \"Refundable\",\n  \"status\": \"Active\"\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/taxes", "host": ["{{baseUrl}}"], "path": ["taxes"] }
-          }
-        },
-        {
-          "name": "GET /api/taxes/:id",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/taxes/{{taxId}}", "host": ["{{baseUrl}}"], "path": ["taxes", "{{taxId}}"] }
-          }
-        },
-        {
-          "name": "PUT /api/taxes/:id",
-          "request": {
-            "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"VAT Updated\",\n  \"value\": 5,\n  \"type\": \"Fixed\",\n  \"status\": \"Inactive\"\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/taxes/{{taxId}}", "host": ["{{baseUrl}}"], "path": ["taxes", "{{taxId}}"] }
-          }
-        },
-        {
-          "name": "DELETE /api/taxes/:id",
-          "request": {
-            "method": "DELETE",
-            "url": {
-              "raw": "{{baseUrl}}/taxes/{{taxId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["taxes", "{{taxId}}"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Ships",
-      "item": [
-        {
-          "name": "GET /api/ships",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/ships?page=1&limit=10&q=&status=&shipType=&sortBy=createdAt&sortOrder=desc",
-              "host": ["{{baseUrl}}"],
-              "path": ["ships"],
-              "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "10" },
-                { "key": "q", "value": "" },
-                { "key": "status", "value": "" },
-                { "key": "shipType", "value": "" },
-                { "key": "sortBy", "value": "createdAt" },
-                { "key": "sortOrder", "value": "desc" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "POST /api/ships (Create Ship)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"shipName\": \"MS Ocean Explorer\",\n  \"shipIMONumber\": \"1234567\",\n  \"shipMMSINumber\": \"123456789\",\n  \"flagState\": \"Panama\",\n  \"shipType\": \"Passenger Ferry\",\n  \"yearBuilt\": 2015,\n  \"classificationSociety\": \"Lloyd's Register\",\n  \"status\": \"Active\",\n  \"remarks\": \"Modern passenger ferry with advanced facilities\",\n  \"technicalSpecifications\": {\n    \"grossTonnage\": 45000,\n    \"netTonnage\": 35000,\n    \"lengthOverall\": 220.5,\n    \"beam\": 32.2,\n    \"draft\": 8.5\n  },\n  \"passengerCapacity\": [\n    {\n      \"cabin\": \"First Class\",\n      \"totalWeightKg\": 150000,\n      \"numberOfSeats\": 500\n    },\n    {\n      \"cabin\": \"Economy\",\n      \"totalWeightKg\": 300000,\n      \"numberOfSeats\": 1500\n    }\n  ],\n  \"cargoCapacity\": [\n    {\n      \"type\": \"Pallet\",\n      \"totalWeight\": 500,\n      \"spots\": 1000\n    },\n    {\n      \"type\": \"Container\",\n      \"totalWeight\": 1000,\n      \"spots\": 500\n    }\n  ],\n  \"vehicleCapacity\": [\n    {\n      \"type\": \"Car\",\n      \"totalWeight\": 200,\n      \"spots\": 300\n    },\n    {\n      \"type\": \"Truck\",\n      \"totalWeight\": 500,\n      \"spots\": 100\n    }\n  ]\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/ships", "host": ["{{baseUrl}}"], "path": ["ships"] }
-          }
-        },
-        {
-          "name": "GET /api/ships/:id",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/ships/{{shipId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["ships", "{{shipId}}"]
-            }
-          }
-        },
-        {
-          "name": "PATCH /api/ships/:id (Update Ship)",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"shipName\": \"MS Ocean Explorer Updated\",\n  \"status\": \"Maintenance\",\n  \"remarks\": \"Updated remarks\",\n  \"technicalSpecifications\": {\n    \"grossTonnage\": 46000,\n    \"netTonnage\": 36000\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/ships/{{shipId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["ships", "{{shipId}}"]
-            }
-          }
-        },
-        {
-          "name": "DELETE /api/ships/:id",
-          "request": {
-            "method": "DELETE",
-            "url": {
-              "raw": "{{baseUrl}}/ships/{{shipId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["ships", "{{shipId}}"]
-            }
-          }
-        },
-        {
-          "name": "POST /api/ships/:id/passenger-capacity (Add Passenger Capacity)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"cabin\": \"Business Class\",\n  \"totalWeightKg\": 200000,\n  \"numberOfSeats\": 800\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/ships/{{shipId}}/passenger-capacity",
-              "host": ["{{baseUrl}}"],
-              "path": ["ships", "{{shipId}}", "passenger-capacity"]
-            }
-          }
-        },
-        {
-          "name": "DELETE /api/ships/:id/passenger-capacity (Remove Passenger Capacity)",
-          "request": {
-            "method": "DELETE",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"cabin\": \"Business Class\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/ships/{{shipId}}/passenger-capacity",
-              "host": ["{{baseUrl}}"],
-              "path": ["ships", "{{shipId}}", "passenger-capacity"]
-            }
-          }
-        },
-        {
-          "name": "POST /api/ships/:id/cargo-capacity (Add Cargo Capacity)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"type\": \"Breakbulk\",\n  \"totalWeight\": 750,\n  \"spots\": 200\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/ships/{{shipId}}/cargo-capacity",
-              "host": ["{{baseUrl}}"],
-              "path": ["ships", "{{shipId}}", "cargo-capacity"]
-            }
-          }
-        },
-        {
-          "name": "DELETE /api/ships/:id/cargo-capacity (Remove Cargo Capacity)",
-          "request": {
-            "method": "DELETE",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"type\": \"Breakbulk\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/ships/{{shipId}}/cargo-capacity",
-              "host": ["{{baseUrl}}"],
-              "path": ["ships", "{{shipId}}", "cargo-capacity"]
-            }
-          }
-        },
-        {
-          "name": "POST /api/ships/:id/vehicle-capacity (Add Vehicle Capacity)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"type\": \"Bus\",\n  \"totalWeight\": 300,\n  \"spots\": 50\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/ships/{{shipId}}/vehicle-capacity",
-              "host": ["{{baseUrl}}"],
-              "path": ["ships", "{{shipId}}", "vehicle-capacity"]
-            }
-          }
-        },
-        {
-          "name": "DELETE /api/ships/:id/vehicle-capacity (Remove Vehicle Capacity)",
-          "request": {
-            "method": "DELETE",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"type\": \"Bus\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/ships/{{shipId}}/vehicle-capacity",
-              "host": ["{{baseUrl}}"],
-              "path": ["ships", "{{shipId}}", "vehicle-capacity"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Promotions",
-      "item": [
-        {
-          "name": "GET /api/promotions",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/promotions?page=1&limit=10&q=&status=&basis=&tripId=&activeOn={{nowISO}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["promotions"],
-              "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "10" },
-                { "key": "q", "value": "" },
-                { "key": "status", "value": "" },
-                { "key": "basis", "value": "" },
-                { "key": "tripId", "value": "" },
-                { "key": "activeOn", "value": "{{nowISO}}" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "POST /api/promotions (PERIOD + QUANTITY)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Weekend PAX BOGO\",\n  \"description\": \"Buy 2 get 1 free on weekends\",\n  \"status\": \"Active\",\n  \"basis\": \"PERIOD\",\n  \"period\": { \"startAt\": \"2025-10-01T00:00:00.000Z\", \"endAt\": \"2025-10-31T23:59:59.000Z\" },\n  \"passengerTickets\": { \"enabled\": true, \"ruleType\": \"QUANTITY\", \"quantityRule\": { \"buyX\": 2, \"getY\": 1 } },\n  \"eligibilityConditions\": [ { \"passengerType\": \"Adult\", \"cabinClass\": \"Economy\" } ]\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/promotions", "host": ["{{baseUrl}}"], "path": ["promotions"] }
-          }
-        },
-        {
-          "name": "POST /api/promotions (PERIOD + TOTAL_VALUE)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Spend 500 Save 10%\",\n  \"description\": \"Percentage off for spend threshold\",\n  \"status\": \"Active\",\n  \"basis\": \"PERIOD\",\n  \"period\": { \"startAt\": \"2025-10-01T00:00:00.000Z\", \"endAt\": \"2025-10-31T23:59:59.000Z\" },\n  \"passengerTickets\": { \"enabled\": true, \"ruleType\": \"TOTAL_VALUE\", \"totalValueRule\": { \"minAmount\": 500, \"discount\": { \"type\": \"PERCENT\", \"value\": 10 } } },\n  \"eligibilityConditions\": [ { \"passengerType\": \"Adult\", \"cabinClass\": \"Business\" } ]\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/promotions", "host": ["{{baseUrl}}"], "path": ["promotions"] }
-          }
-        },
-        {
-          "name": "POST /api/promotions (TRIP + QUANTITY)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Trip Special B2G1\",\n  \"description\": \"Buy2Get1 on selected trip\",\n  \"status\": \"Active\",\n  \"basis\": \"TRIP\",\n  \"tripId\": \"{{tripId}}\",\n  \"passengerTickets\": { \"enabled\": true, \"ruleType\": \"QUANTITY\", \"quantityRule\": { \"buyX\": 2, \"getY\": 1 } },\n  \"eligibilityConditions\": [ { \"passengerType\": \"Adult\", \"cabinClass\": \"Economy\" } ]\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/promotions", "host": ["{{baseUrl}}"], "path": ["promotions"] }
-          }
-        },
-        {
-          "name": "GET /api/promotions/:id",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/promotions/{{promotionId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["promotions", "{{promotionId}}"]
-            }
-          }
-        },
-        {
-          "name": "PATCH /api/promotions/:id",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"description\": \"Updated description\",\n  \"eligibilityConditions\": [ { \"passengerType\": \"Adult\", \"cabinClass\": \"Suite\" } ]\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/promotions/{{promotionId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["promotions", "{{promotionId}}"]
-            }
-          }
-        },
-        {
-          "name": "DELETE /api/promotions/:id",
-          "request": {
-            "method": "DELETE",
-            "url": {
-              "raw": "{{baseUrl}}/promotions/{{promotionId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["promotions", "{{promotionId}}"]
-            }
-          }
-        },
-        {
-          "name": "POST /api/promotions/apply",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"basisContext\": { \"at\": \"{{nowISO}}\", \"tripId\": \"{{tripId}}\" },\n  \"cart\": {\n    \"items\": [\n      { \"type\": \"PASSENGER\", \"quantity\": 3, \"unitPrice\": 120, \"passengerType\": \"Adult\", \"cabinClass\": \"Economy\" }\n    ]\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/promotions/apply",
-              "host": ["{{baseUrl}}"],
-              "path": ["promotions", "apply"]
-            }
-          }
-        },
-        {
-          "name": "POST /api/promotions (PERIOD + CARGO QUANTITY)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Cargo B2G1\",\n  \"description\": \"Buy 2 cargo get 1 free\",\n  \"status\": \"Active\",\n  \"basis\": \"PERIOD\",\n  \"period\": { \"startAt\": \"2025-10-01T00:00:00.000Z\", \"endAt\": \"2025-10-31T23:59:59.000Z\" },\n  \"cargoTickets\": { \"enabled\": true, \"ruleType\": \"QUANTITY\", \"quantityRule\": { \"buyX\": 2, \"getY\": 1 } },\n  \"cargoEligibilityConditions\": [ { \"cargoType\": \"General Goods\" } ]\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/promotions",
-              "host": ["{{baseUrl}}"],
-              "path": ["promotions"]
-            }
-          }
-        },
-        {
-          "name": "POST /api/promotions (PERIOD + VEHICLE TOTAL_VALUE)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Vehicle Spend 1000 Save 15%\",\n  \"description\": \"15% off vehicles over 1000\",\n  \"status\": \"Active\",\n  \"basis\": \"PERIOD\",\n  \"period\": { \"startAt\": \"2025-10-01T00:00:00.000Z\", \"endAt\": \"2025-10-31T23:59:59.000Z\" },\n  \"vehicleTickets\": { \"enabled\": true, \"ruleType\": \"TOTAL_VALUE\", \"totalValueRule\": { \"minAmount\": 1000, \"discount\": { \"type\": \"PERCENT\", \"value\": 15 } } },\n  \"vehicleEligibilityConditions\": [ { \"vehicleType\": \"Car\" } ]\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/promotions",
-              "host": ["{{baseUrl}}"],
-              "path": ["promotions"]
-            }
-          }
-        },
-        {
-          "name": "POST /api/promotions/apply (mixed cart)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"basisContext\": { \"at\": \"{{nowISO}}\", \"tripId\": \"{{tripId}}\" },\n  \"cart\": {\n    \"items\": [\n      { \"type\": \"PASSENGER\", \"quantity\": 3, \"unitPrice\": 120, \"passengerType\": \"Adult\", \"cabinClass\": \"Economy\" },\n      { \"type\": \"CARGO\", \"quantity\": 2, \"unitPrice\": 300, \"cargoType\": \"General Goods\" },\n      { \"type\": \"VEHICLE\", \"quantity\": 1, \"unitPrice\": 1500, \"vehicleType\": \"Car\" }\n    ]\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/promotions/apply",
-              "host": ["{{baseUrl}}"],
-              "path": ["promotions", "apply"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Partners",
-      "item": [
-        {
-          "name": "GET /api/partners",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/partners?page=1&limit=10&q=&layer=&status=&sortBy=createdAt&sortOrder=desc",
-              "host": ["{{baseUrl}}"],
-              "path": ["partners"],
-              "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "10" },
-                { "key": "q", "value": "" },
-                { "key": "layer", "value": "" },
-                { "key": "status", "value": "" },
-                { "key": "sortBy", "value": "createdAt" },
-                { "key": "sortOrder", "value": "desc" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "POST /api/partners",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Marine Transport Co.\",\n  \"phone\": \"+123456789\",\n  \"address\": \"123 Ocean St.\",\n  \"layer\": \"Marine\",\n  \"parentAccount\": null,\n  \"partnerStatus\": \"Active\",\n  \"priceList\": \"Standard\",\n  \"creditLimit\": {\n    \"limitAmount\": 50000,\n    \"limitTicket\": \"CL-001\"\n  },\n  \"contactInformation\": {\n    \"name\": \"John Doe\",\n    \"title\": \"Operations Manager\",\n    \"phone\": \"+123456789\",\n    \"email\": \"john@marine-transport.com\",\n    \"hotline\": \"+123456700\"\n  },\n  \"users\": []\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/partners", "host": ["{{baseUrl}}"], "path": ["partners"] }
-          }
-        },
-        {
-          "name": "GET /api/partners/:id",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/partners/{{partnerId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["partners", "{{partnerId}}"]
-            }
-          }
-        },
-        {
-          "name": "PATCH /api/partners/:id",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Marine Transport Co. Updated\",\n  \"partnerStatus\": \"Active\",\n  \"creditLimit\": {\n    \"limitAmount\": 75000,\n    \"limitTicket\": \"CL-002\"\n  },\n  \"contactInformation\": {\n    \"name\": \"Jane Smith\",\n    \"title\": \"Director\",\n    \"phone\": \"+1234567800\",\n    \"email\": \"jane@marine-transport.com\",\n    \"hotline\": \"+123456700\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/partners/{{partnerId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["partners", "{{partnerId}}"]
-            }
-          }
-        },
-        {
-          "name": "DELETE /api/partners/:id",
-          "request": {
-            "method": "DELETE",
-            "url": {
-              "raw": "{{baseUrl}}/partners/{{partnerId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["partners", "{{partnerId}}"]
-            }
-          }
-        },
-        {
-          "name": "GET /api/partners/by-layer/:layer",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/partners/by-layer/Marine",
-              "host": ["{{baseUrl}}"],
-              "path": ["partners", "by-layer", "Marine"]
-            }
-          }
-        },
-        {
-          "name": "GET /api/partners/options",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/partners/options",
-              "host": ["{{baseUrl}}"],
-              "path": ["partners", "options"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "B2C Customers",
-      "item": [
-        {
-          "name": "GET /api/b2c-customers",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/b2c-customers?page=1&limit=10&q=&partner=&status=&sortBy=createdAt&sortOrder=desc",
-              "host": ["{{baseUrl}}"],
-              "path": ["b2c-customers"],
-              "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "10" },
-                { "key": "q", "value": "" },
-                { "key": "partner", "value": "" },
-                { "key": "status", "value": "" },
-                { "key": "sortBy", "value": "createdAt" },
-                { "key": "sortOrder", "value": "desc" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "POST /api/b2c-customers",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"John Doe\",\n  \"partnerId\": \"{{partnerId}}\",\n  \"nationality\": \"USA\",\n  \"password\": \"SecurePassword123!\",\n  \"whatsappNumber\": \"+1 555-123-4567\",\n  \"status\": \"Active\",\n  \"address\": {\n    \"street\": \"123 Main St\",\n    \"city\": \"Anytown\",\n    \"country\": \"USA\"\n  },\n  \"notes\": \"VIP Customer\"\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/b2c-customers", "host": ["{{baseUrl}}"], "path": ["b2c-customers"] }
-          }
-        },
-        {
-          "name": "GET /api/b2c-customers/:id",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/b2c-customers/{{b2cCustomerId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["b2c-customers", "{{b2cCustomerId}}"]
-            }
-          }
-        },
-        {
-          "name": "PATCH /api/b2c-customers/:id",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"John Doe Updated\",\n  \"whatsappNumber\": \"+1 555-123-4568\",\n  \"status\": \"Active\",\n  \"address\": {\n    \"street\": \"456 Oak Ave\",\n    \"city\": \"Somewhere\",\n    \"country\": \"USA\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/b2c-customers/{{b2cCustomerId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["b2c-customers", "{{b2cCustomerId}}"]
-            }
-          }
-        },
-        {
-          "name": "DELETE /api/b2c-customers/:id",
-          "request": {
-            "method": "DELETE",
-            "url": {
-              "raw": "{{baseUrl}}/b2c-customers/{{b2cCustomerId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["b2c-customers", "{{b2cCustomerId}}"]
-            }
-          }
-        },
-        {
-          "name": "GET /api/b2c-customers/by-partner/:partnerId",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/b2c-customers/by-partner/{{partnerId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["b2c-customers", "by-partner", "{{partnerId}}"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Markup/Discount Rules",
-      "item": [
-        {
-          "name": "GET /api/markup-discount-rules",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/markup-discount-rules?page=1&limit=10&q=&ruleType=&layer=&partner=&status=&sortBy=createdAt&sortOrder=desc",
-              "host": ["{{baseUrl}}"],
-              "path": ["markup-discount-rules"],
-              "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "10" },
-                { "key": "q", "value": "" },
-                { "key": "ruleType", "value": "" },
-                { "key": "layer", "value": "" },
-                { "key": "partner", "value": "" },
-                { "key": "status", "value": "" },
-                { "key": "sortBy", "value": "createdAt" },
-                { "key": "sortOrder", "value": "desc" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "POST /api/markup-discount-rules",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ruleName\": \"Marine Agent Markup\",\n  \"ruleType\": \"Markup\",\n  \"provider\": \"{{partnerId}}\",\n  \"appliedToLayer\": \"Company\",\n  \"partner\": \"All Child Partners\",\n  \"commissionValue\": 5,\n  \"serviceTypes\": [\"Passenger\", \"Cargo\", \"Vehicle\"],\n  \"passengerCabins\": [\"Economy\", \"Business\"],\n  \"passengerTypes\": [\"Adult\", \"Child\"],\n  \"cargoTypes\": [\"General Cargo\"],\n  \"vehicleTypes\": [\"Car\", \"Truck\"],\n  \"visaType\": \"Tourist\",\n  \"routes\": [\n    { \"from\": \"Muscat\", \"to\": \"Dubai\" },\n    { \"from\": \"Dubai\", \"to\": \"Abu Dhabi\" }\n  ],\n  \"value\": 7,\n  \"valueType\": \"PERCENT\",\n  \"effectiveDate\": \"2025-10-01T00:00:00.000Z\",\n  \"expiryDate\": \"2025-12-31T23:59:59.000Z\",\n  \"status\": \"Active\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/markup-discount-rules",
-              "host": ["{{baseUrl}}"],
-              "path": ["markup-discount-rules"]
-            }
-          }
-        },
-        {
-          "name": "GET /api/markup-discount-rules/:id",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/markup-discount-rules/{{markupDiscountRuleId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["markup-discount-rules", "{{markupDiscountRuleId}}"]
-            }
-          }
-        },
-        {
-          "name": "PATCH /api/markup-discount-rules/:id",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ruleName\": \"Marine Agent Markup Updated\",\n  \"value\": 8,\n  \"status\": \"Active\",\n  \"passengerCabins\": [\"Economy\", \"Business\", \"First\"]\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/markup-discount-rules/{{markupDiscountRuleId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["markup-discount-rules", "{{markupDiscountRuleId}}"]
-            }
-          }
-        },
-        {
-          "name": "DELETE /api/markup-discount-rules/:id",
-          "request": {
-            "method": "DELETE",
-            "url": {
-              "raw": "{{baseUrl}}/markup-discount-rules/{{markupDiscountRuleId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["markup-discount-rules", "{{markupDiscountRuleId}}"]
-            }
-          }
-        },
-        {
-          "name": "POST /api/markup-discount-rules/find-applicable",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"serviceType\": \"Passenger\",\n  \"passengerType\": \"Adult\",\n  \"cabinClass\": \"Economy\",\n  \"cargoType\": null,\n  \"vehicleType\": null,\n  \"route\": { \"from\": \"Muscat\", \"to\": \"Dubai\" },\n  \"visaType\": \"Tourist\",\n  \"layer\": \"Company\",\n  \"partner\": \"{{partnerId}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/markup-discount-rules/find-applicable",
-              "host": ["{{baseUrl}}"],
-              "path": ["markup-discount-rules", "find-applicable"]
-            }
-          }
-        },
-        {
-          "name": "POST /api/markup-discount-rules/apply",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"basePrice\": 500,\n  \"serviceType\": \"Passenger\",\n  \"passengerType\": \"Adult\",\n  \"cabinClass\": \"Economy\",\n  \"cargoType\": null,\n  \"vehicleType\": null,\n  \"route\": { \"from\": \"Muscat\", \"to\": \"Dubai\" },\n  \"visaType\": \"Tourist\",\n  \"layer\": \"Company\",\n  \"partner\": \"{{partnerId}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/markup-discount-rules/apply",
-              "host": ["{{baseUrl}}"],
-              "path": ["markup-discount-rules", "apply"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Commission Rules",
-      "item": [
-        {
-          "name": "GET /api/commission-rules",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/commission-rules?page=1&limit=10&q=&layer=&provider=&status=&sortBy=createdAt&sortOrder=desc",
-              "host": ["{{baseUrl}}"],
-              "path": ["commission-rules"],
-              "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "10" },
-                { "key": "q", "value": "" },
-                { "key": "layer", "value": "" },
-                { "key": "provider", "value": "" },
-                { "key": "status", "value": "" },
-                { "key": "sortBy", "value": "createdAt" },
-                { "key": "sortOrder", "value": "desc" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "POST /api/commission-rules",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ruleName\": \"Company to Marine Commission\",\n  \"provider\": \"{{partnerId}}\",\n  \"appliedToLayer\": \"Company\",\n  \"partner\": \"All Child Partners\",\n  \"commissionValue\": 5,\n  \"serviceTypes\": [\"Passenger\", \"Cargo\", \"Vehicle\"],\n  \"commissionFlow\": [\"Company\", \"Marine Agent\"],\n  \"routes\": [\n    { \"from\": \"Muscat\", \"to\": \"Dubai\" }\n  ],\n  \"visaType\": \"Tourist\",\n  \"effectiveDate\": \"2025-10-01T00:00:00.000Z\",\n  \"expiryDate\": \"2025-12-31T23:59:59.000Z\",\n  \"status\": \"Active\"\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/commission-rules", "host": ["{{baseUrl}}"], "path": ["commission-rules"] }
-          }
-        },
-        {
-          "name": "GET /api/commission-rules/:id",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/commission-rules/{{commissionRuleId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["commission-rules", "{{commissionRuleId}}"]
-            }
-          }
-        },
-        {
-          "name": "PATCH /api/commission-rules/:id",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ruleName\": \"Company to Marine Commission Updated\",\n  \"commissionValue\": 6,\n  \"status\": \"Active\",\n  \"commissionFlow\": [\"Company\", \"Marine Agent\", \"Commercial Agent\"]\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/commission-rules/{{commissionRuleId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["commission-rules", "{{commissionRuleId}}"]
-            }
-          }
-        },
-        {
-          "name": "DELETE /api/commission-rules/:id",
-          "request": {
-            "method": "DELETE",
-            "url": {
-              "raw": "{{baseUrl}}/commission-rules/{{commissionRuleId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["commission-rules", "{{commissionRuleId}}"]
-            }
-          }
-        },
-        {
-          "name": "POST /api/commission-rules/find-applicable",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"serviceType\": \"Passenger\",\n  \"route\": { \"from\": \"Muscat\", \"to\": \"Dubai\" },\n  \"visaType\": \"Tourist\",\n  \"layer\": \"Company\",\n  \"partner\": \"{{partnerId}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/commission-rules/find-applicable",
-              "host": ["{{baseUrl}}"],
-              "path": ["commission-rules", "find-applicable"]
-            }
-          }
-        },
-        {
-          "name": "POST /api/commission-rules/calculate",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"baseAmount\": 1000,\n  \"serviceType\": \"Passenger\",\n  \"route\": { \"from\": \"Muscat\", \"to\": \"Dubai\" },\n  \"visaType\": \"Tourist\",\n  \"layer\": \"Company\",\n  \"partner\": \"{{partnerId}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/commission-rules/calculate",
-              "host": ["{{baseUrl}}"],
-              "path": ["commission-rules", "calculate"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Trips",
-      "item": [
-        {
-          "name": "GET /api/trips",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/trips?page=1&limit=10&q=&status=&sortBy=createdAt&sortOrder=desc",
-              "host": ["{{baseUrl}}"],
-              "path": ["trips"],
-              "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "10" },
-                { "key": "q", "value": "" },
-                { "key": "status", "value": "" },
-                { "key": "sortBy", "value": "createdAt" },
-                { "key": "sortOrder", "value": "desc" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "POST /api/trips (Create Trip)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tripName\": \"Dubai to Muscat Ferry\",\n  \"tripCode\": \"DXB-MSC-001\",\n  \"vessel\": \"{{shipId}}\",\n  \"departurePort\": \"{{portId}}\",\n  \"arrivalPort\": \"{{portId}}\",\n  \"departureDateTime\": \"2025-10-28T10:00:00.000Z\",\n  \"arrivalDateTime\": \"2025-10-28T14:00:00.000Z\",\n  \"status\": \"Scheduled\",\n  \"bookingOpeningDate\": \"2025-10-01T00:00:00.000Z\",\n  \"bookingClosingDate\": \"2025-10-27T23:59:59.000Z\",\n  \"checkInOpeningDate\": \"2025-10-28T08:00:00.000Z\",\n  \"checkInClosingDate\": \"2025-10-28T09:30:00.000Z\",\n  \"boardingClosingDate\": \"2025-10-28T09:45:00.000Z\",\n  \"promotion\": null,\n  \"remarks\": \"Regular scheduled trip\"\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/trips", "host": ["{{baseUrl}}"], "path": ["trips"] }
-          }
-        },
-        {
-          "name": "GET /api/trips/:id",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/trips/{{tripId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["trips", "{{tripId}}"]
-            }
-          }
-        },
-        {
-          "name": "PATCH /api/trips/:id (Update Trip Details)",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tripName\": \"Dubai to Muscat Ferry Updated\",\n  \"status\": \"In Progress\",\n  \"remarks\": \"Updated remarks\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/trips/{{tripId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["trips", "{{tripId}}"]
-            }
-          }
-        },
-        {
-          "name": "DELETE /api/trips/:id",
-          "request": {
-            "method": "DELETE",
-            "url": {
-              "raw": "{{baseUrl}}/trips/{{tripId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["trips", "{{tripId}}"]
-            }
-          }
-        },
-        {
-          "name": "POST /api/trips/:id/availability (Add Availability)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"type\": \"Passenger\",\n  \"category\": \"Economy\",\n  \"totalQuantity\": 100\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/trips/{{tripId}}/availability",
-              "host": ["{{baseUrl}}"],
-              "path": ["trips", "{{tripId}}", "availability"]
-            }
-          }
-        },
-        {
-          "name": "POST /api/trips/:id/availability/allocate (Allocate to Agent)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"availabilityId\": \"{{availabilityId}}\",\n  \"agentId\": \"{{agentId}}\",\n  \"allocatedQuantity\": 50\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/trips/{{tripId}}/availability/allocate",
-              "host": ["{{baseUrl}}"],
-              "path": ["trips", "{{tripId}}", "availability", "allocate"]
-            }
-          }
-        },
-        {
-          "name": "DELETE /api/trips/:id/availability/allocation (Remove Allocation)",
-          "request": {
-            "method": "DELETE",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"availabilityId\": \"{{availabilityId}}\",\n  \"allocationId\": \"{{allocationId}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/trips/{{tripId}}/availability/allocation",
-              "host": ["{{baseUrl}}"],
-              "path": ["trips", "{{tripId}}", "availability", "allocation"]
-            }
-          }
-        },
-        {
-          "name": "DELETE /api/trips/:id/availability (Remove Availability)",
-          "request": {
-            "method": "DELETE",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"availabilityId\": \"{{availabilityId}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/trips/{{tripId}}/availability",
-              "host": ["{{baseUrl}}"],
-              "path": ["trips", "{{tripId}}", "availability"]
-            }
-          }
-        },
-        {
-          "name": "POST /api/trips/:id/ticketing-rules (Add Ticketing Rule)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ruleType\": \"Reissue\",\n  \"ruleValue\": \"Rule3\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/trips/{{tripId}}/ticketing-rules",
-              "host": ["{{baseUrl}}"],
-              "path": ["trips", "{{tripId}}", "ticketing-rules"]
-            }
-          }
-        },
-        {
-          "name": "DELETE /api/trips/:id/ticketing-rules (Remove Ticketing Rule)",
-          "request": {
-            "method": "DELETE",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ruleId\": \"{{ruleId}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/trips/{{tripId}}/ticketing-rules",
-              "host": ["{{baseUrl}}"],
-              "path": ["trips", "{{tripId}}", "ticketing-rules"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Chart of Accounts",
-      "item": [
-        {
-          "name": "GET /api/chart-of-accounts",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/chart-of-accounts?page=1&limit=10&q=&ledgerType=&status=&sortBy=createdAt&sortOrder=desc",
-              "host": ["{{baseUrl}}"],
-              "path": ["chart-of-accounts"],
-              "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "10" },
-                { "key": "q", "value": "" },
-                { "key": "ledgerType", "value": "" },
-                { "key": "status", "value": "" },
-                { "key": "sortBy", "value": "createdAt" },
-                { "key": "sortOrder", "value": "desc" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "POST /api/chart-of-accounts",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ledgerCode\": \"1000\",\n  \"ledgerDescription\": \"Cash Account\",\n  \"ledgerType\": \"Cash & Banks\",\n  \"typeSequence\": \"001\",\n  \"status\": \"Active\",\n  \"systemAccount\": false,\n  \"partnerAccount\": \"N/A\",\n  \"notes\": \"Main cash account for operations\"\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/chart-of-accounts", "host": ["{{baseUrl}}"], "path": ["chart-of-accounts"] }
-          }
-        },
-        {
-          "name": "GET /api/chart-of-accounts/:id",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/chart-of-accounts/{{chartOfAccountId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["chart-of-accounts", "{{chartOfAccountId}}"]
-            }
-          }
-        },
-        {
-          "name": "PUT /api/chart-of-accounts/:id",
-          "request": {
-            "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ledgerDescription\": \"Main Cash Account Updated\",\n  \"status\": \"Active\",\n  \"typeSequence\": \"001\",\n  \"notes\": \"Updated main cash account\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/chart-of-accounts/{{chartOfAccountId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["chart-of-accounts", "{{chartOfAccountId}}"]
-            }
-          }
-        },
-        {
-          "name": "DELETE /api/chart-of-accounts/:id",
-          "request": {
-            "method": "DELETE",
-            "url": {
-              "raw": "{{baseUrl}}/chart-of-accounts/{{chartOfAccountId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["chart-of-accounts", "{{chartOfAccountId}}"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Bank & Cash Accounts",
-      "item": [
-        {
-          "name": "GET /api/bank-cash-accounts",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/bank-cash-accounts?page=1&limit=10&q=&accountType=&status=&currency=&sortBy=createdAt&sortOrder=desc",
-              "host": ["{{baseUrl}}"],
-              "path": ["bank-cash-accounts"],
-              "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "10" },
-                { "key": "q", "value": "" },
-                { "key": "accountType", "value": "" },
-                { "key": "status", "value": "" },
-                { "key": "currency", "value": "" },
-                { "key": "sortBy", "value": "createdAt" },
-                { "key": "sortOrder", "value": "desc" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "POST /api/bank-cash-accounts",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"layer\": \"Company\",\n  \"partnerAccount\": \"N/A\",\n  \"accountType\": \"Cash\",\n  \"accountName\": \"Main Cash\",\n  \"bankAccountNo\": \"N/A\",\n  \"currency\": \"USD\",\n  \"ledgerCode\": \"1100\",\n  \"chartOfAccount\": null,\n  \"status\": \"Active\",\n  \"note\": \"Main cash account for daily operations\"\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/bank-cash-accounts", "host": ["{{baseUrl}}"], "path": ["bank-cash-accounts"] }
-          }
-        },
-        {
-          "name": "GET /api/bank-cash-accounts/:id",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/bank-cash-accounts/{{bankCashAccountId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["bank-cash-accounts", "{{bankCashAccountId}}"]
-            }
-          }
-        },
-        {
-          "name": "PUT /api/bank-cash-accounts/:id",
-          "request": {
-            "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"layer\": \"Company\",\n  \"partnerAccount\": \"N/A\",\n  \"accountType\": \"Bank\",\n  \"accountName\": \"BOK Bank\",\n  \"bankAccountNo\": \"123456789\",\n  \"currency\": \"USD\",\n  \"ledgerCode\": \"1101\",\n  \"status\": \"Active\",\n  \"note\": \"Primary bank account\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/bank-cash-accounts/{{bankCashAccountId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["bank-cash-accounts", "{{bankCashAccountId}}"]
-            }
-          }
-        },
-        {
-          "name": "DELETE /api/bank-cash-accounts/:id",
-          "request": {
-            "method": "DELETE",
-            "url": {
-              "raw": "{{baseUrl}}/bank-cash-accounts/{{bankCashAccountId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["bank-cash-accounts", "{{bankCashAccountId}}"]
-            }
-          }
-        }
-      ]
+      "key": "companyId",
+      "value": "",
+      "type": "string",
+      "description": "Company ID from registration or list response"
     }
   ]
 }

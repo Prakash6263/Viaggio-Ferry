@@ -19,8 +19,8 @@ const verifyToken = (req, res, next) => {
 
 const verifySuperAdmin = (req, res, next) => {
   verifyToken(req, res, () => {
-    if (req.user.role !== "superadmin") {
-      throw createHttpError(403, "Access denied. Superadmin role required.")
+    if (req.user.role !== "super_admin") {
+      throw createHttpError(403, "Access denied. Super admin role required.")
     }
     next()
   })

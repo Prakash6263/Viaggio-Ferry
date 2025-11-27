@@ -1,25 +1,35 @@
 const express = require("express")
+const {
+  registerCompany,
+  loginCompany,
+  listCompanies,
+  getCompanyById,
+  approveCompany,
+  rejectCompany,
+  getOwnProfile,
+  updateOwnProfile,
+  deleteCompany,
+  adminAddCompany,
+} = require("../controllers/companyController")
+const { verifyToken, verifySuperAdmin, verifyCompanyToken, extractCompanyId } = require("../middleware/authMiddleware")
+const { companyLogoUpload } = require("../middleware/upload")
+
 const router = express.Router()
 
-const { upload } = require("../middleware/upload")
-const { asyncHandler } = require("../middleware/errorHandler")
-const { createCompanyRules, updateCompanyRules } = require("../validators/companyValidators")
-const controller = require("../controllers/companyController")
+// Public routes
+router.post("/register", companyLogoUpload.single("logo"), registerCompany)
+router.post("/login", loginCompany)
 
-// List & Create
-router.get("/", asyncHandler(controller.index))
-router.post("/", upload.single("logo"), createCompanyRules, asyncHandler(controller.create))
+// Company routes (require authentication)
+router.get("/me", verifyToken, verifyCompanyToken, extractCompanyId, getOwnProfile)
+router.put("/me", verifyToken, verifyCompanyToken, extractCompanyId, companyLogoUpload.single("logo"), updateOwnProfile)
 
-// Read one
-router.get("/:id", asyncHandler(controller.show))
-
-// Serve logo image
-router.get("/:id/logo", asyncHandler(controller.logo))
-
-// Update
-router.patch("/:id", upload.single("logo"), updateCompanyRules, asyncHandler(controller.patch))
-
-// Delete
-router.delete("/:id", asyncHandler(controller.destroy))
+// Super Admin routes (require super admin authentication)
+router.get("/", verifySuperAdmin, listCompanies)
+router.get("/:id", verifySuperAdmin, getCompanyById)
+router.post("/admin/add", verifySuperAdmin, companyLogoUpload.single("logo"), adminAddCompany)
+router.patch("/:id/verify", verifySuperAdmin, approveCompany)
+router.patch("/:id/reject", verifySuperAdmin, rejectCompany)
+router.delete("/:id", verifySuperAdmin, deleteCompany)
 
 module.exports = router
