@@ -5,7 +5,7 @@ const CompanySchema = new mongoose.Schema(
   {
     // Basic Company Information
     companyName: { type: String, required: true, trim: true },
-    registrationNumber: { type: String, required: true, trim: true },
+    registrationNumber: { type: String, trim: true },
     taxVatNumber: { type: String, trim: true }, // ✅ Tax/VAT Number
     logoUrl: { type: String },
     dateEstablished: { type: Date },
@@ -58,34 +58,41 @@ CompanySchema.index({ status: 1 })
 CompanySchema.index({ loginEmail: 1 })
 
 async function generateRegistrationNumber() {
-  const lastCompany = await mongoose.model("Company").findOne().sort({ createdAt: -1 });
+  const lastCompany = await mongoose
+    .model("Company")
+    .findOne({
+      registrationNumber: { $regex: /^REG-\d+$/ },
+    })
+    .sort({ createdAt: -1 })
 
   if (!lastCompany || !lastCompany.registrationNumber) {
-    return "REG-1001";
+    return "REG-1001"
   }
 
-  const lastNumber = parseInt(lastCompany.registrationNumber.split("-")[1]);
-  const nextNumber = lastNumber + 1;
+  const lastNumber = Number.parseInt(lastCompany.registrationNumber.split("-")[1], 10)
 
-  return `REG-${nextNumber}`;
+  if (isNaN(lastNumber)) {
+    return "REG-1001"
+  }
+
+  const nextNumber = lastNumber + 1
+
+  return `REG-${nextNumber}`
 }
-
-
 
 // Hash password before saving
 CompanySchema.pre("save", async function (next) {
   if (!this.registrationNumber) {
-    this.registrationNumber = await generateRegistrationNumber();
+    this.registrationNumber = await generateRegistrationNumber()
   }
 
   if (this.isModified("passwordHash")) {
-    const salt = await bcrypt.genSalt(10);
-    this.passwordHash = await bcrypt.hash(this.passwordHash, salt);
+    const salt = await bcrypt.genSalt(10)
+    this.passwordHash = await bcrypt.hash(this.passwordHash, salt)
   }
 
-  next();
-});
-
+  next()
+})
 
 // Method to compare passwords
 CompanySchema.methods.comparePassword = async function (candidatePassword) {
