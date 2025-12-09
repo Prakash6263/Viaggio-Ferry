@@ -42,10 +42,7 @@ const registerCompany = async (req, res, next) => {
     } = req.body
 
     if (!companyName || !loginEmail || !password || !emailAddress) {
-      throw createHttpError(
-        400,
-        "Missing required fields: companyName, loginEmail, password, emailAddress",
-      )
+      throw createHttpError(400, "Missing required fields: companyName, loginEmail, password, emailAddress")
     }
 
     // Check if company already exists
@@ -143,7 +140,7 @@ const loginCompany = async (req, res, next) => {
 
     // Generate JWT
     const token = jwt.sign(
-      { companyId: company._id, id: company._id, role: "company_admin" },
+      { companyId: company._id, id: company._id, role: "company" },
       process.env.JWT_SECRET || "your-secret-key",
       { expiresIn: "24h" },
     )
@@ -332,29 +329,6 @@ const updateOwnProfile = async (req, res, next) => {
   }
 }
 
-// 9️⃣ Super Admin — Soft Delete Company
-const deleteCompany = async (req, res, next) => {
-  try {
-    const { id } = req.params
-
-    const company = await Company.findByIdAndUpdate(id, { isActive: false }, { new: true }).select(
-      "-passwordHash -loginEmail",
-    )
-
-    if (!company) {
-      throw createHttpError(404, "Company not found")
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Company deactivated successfully",
-      data: company,
-    })
-  } catch (error) {
-    next(error)
-  }
-}
-
 // 🔟 Super Admin — Add Company (Admin Registration)
 const adminAddCompany = async (req, res, next) => {
   try {
@@ -396,10 +370,7 @@ const adminAddCompany = async (req, res, next) => {
     } = req.body
 
     if (!companyName || !loginEmail || !password || !emailAddress) {
-      throw createHttpError(
-        400,
-        "Missing required fields: companyName,loginEmail, password, emailAddress",
-      )
+      throw createHttpError(400, "Missing required fields: companyName,loginEmail, password, emailAddress")
     }
 
     // Check if company already exists
@@ -466,6 +437,24 @@ const adminAddCompany = async (req, res, next) => {
   }
 }
 
+// Super Admin — Delete Company
+const deleteCompany = async (req, res, next) => {
+  try {
+    const { id } = req.params
+
+    const company = await Company.findByIdAndDelete(id)
+    if (!company) {
+      throw createHttpError(404, "Company not found")
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Company deleted successfully",
+    })
+  } catch (error) {
+    next(error)
+  }
+}
 
 module.exports = {
   registerCompany,
