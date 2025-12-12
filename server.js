@@ -12,20 +12,37 @@ const app = express()
 
 // Security & parsing
 app.use(helmet())
-app.use(
-  cors({
-    origin: [
-      "https://voyagian.com",
-      "https://admin.voyagian.com",
-      "https://company.voyagian.com",
-      "http://localhost:3000",
-      "http://localhost:3001",
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true
-  })
-)
+// put this near top, after require('cors') and before routes
+const allowedOrigins = [
+  "https://voyagian.com",
+  "https://admin.voyagian.com",
+  "https://company.voyagian.com",
+  "http://localhost:3000",
+  "http://localhost:3001"
+]
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin)         // echo origin
+    res.setHeader("Access-Control-Allow-Credentials", "true")    // allow cookies/auth
+  }
+
+  // allow the methods and headers your client may send (including for file uploads)
+  res.setHeader("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS")
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+  )
+  // optional: expose headers to client
+  res.setHeader("Access-Control-Expose-Headers", "Content-Length,Content-Range")
+
+  // handle preflight
+  if (req.method === "OPTIONS") {
+    return res.status(204).end()
+  }
+  next()
+})
 
 app.use(express.json({ limit: "1mb" }))
 app.use(express.urlencoded({ extended: true }))
