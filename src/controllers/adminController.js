@@ -280,6 +280,45 @@ const deleteCompany = async (req, res, next) => {
   }
 }
 
+// PATCH /api/admin/companies/:id/toggle-status
+// Enable or disable a company (prevents login when disabled)
+const toggleCompanyStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params
+    const { isActive } = req.body
+
+    if (typeof isActive !== "boolean") {
+      throw createHttpError(400, "isActive field must be a boolean value")
+    }
+
+    const company = await Company.findById(id)
+    if (!company) {
+      throw createHttpError(404, "Company not found")
+    }
+
+    // Only allow toggling status for approved companies
+    if (company.status !== "approved") {
+      throw createHttpError(400, "Can only enable/disable approved companies")
+    }
+
+    company.isActive = isActive
+    await company.save()
+
+    res.json({
+      success: true,
+      message: isActive ? "Company enabled successfully" : "Company disabled successfully",
+      data: {
+        _id: company._id,
+        companyName: company.companyName,
+        isActive: company.isActive,
+        status: company.status,
+      },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 // GET /api/admin/profile
 // Get current admin profile
 const getProfile = async (req, res, next) => {
@@ -361,4 +400,5 @@ module.exports = {
   verifyCompany,
   rejectCompany,
   deleteCompany,
+  toggleCompanyStatus,
 }

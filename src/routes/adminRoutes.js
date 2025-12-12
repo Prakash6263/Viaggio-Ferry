@@ -15,6 +15,7 @@ router.get("/companies", verifySuperAdmin, adminController.listCompanies)
 router.get("/companies/:id", verifySuperAdmin, adminController.getCompany)
 router.patch("/companies/:id/verify", verifySuperAdmin, adminController.verifyCompany)
 router.patch("/companies/:id/reject", verifySuperAdmin, adminController.rejectCompany)
+router.patch("/companies/:id/toggle-status", verifySuperAdmin, adminController.toggleCompanyStatus)
 router.delete("/companies/:id", verifySuperAdmin, adminController.deleteCompany)
 
 module.exports = router

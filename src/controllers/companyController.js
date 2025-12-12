@@ -129,7 +129,7 @@ const loginCompany = async (req, res, next) => {
     }
 
     if (!company.isActive) {
-      throw createHttpError(403, "Company account is inactive")
+      throw createHttpError(403, "Company account has been disabled by administrator. Please contact support.")
     }
 
     // Verify password
