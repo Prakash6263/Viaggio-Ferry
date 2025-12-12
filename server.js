@@ -17,7 +17,9 @@ app.use(
     origin: [
       "https://voyagian.com",
       "https://admin.voyagian.com",
-      "https://company.voyagian.com"
+      "https://company.voyagian.com",
+      "http://localhost:3000",
+      "http://localhost:3001",
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
