@@ -10,6 +10,7 @@ const {
   updateOwnProfile,
   deleteCompany,
   adminAddCompany,
+  confirmVerification,
 } = require("../controllers/companyController")
 const { verifyToken, verifySuperAdmin, verifyCompanyToken, extractCompanyId } = require("../middleware/authMiddleware")
 const { companyLogoUpload } = require("../middleware/upload")
@@ -19,6 +20,7 @@ const router = express.Router()
 // Public routes
 router.post("/register", companyLogoUpload.single("logo"), registerCompany)
 router.post("/login", loginCompany)
+router.get("/confirm-verification/:token", confirmVerification)
 
 // Company routes (require authentication)
 router.get("/me", verifyToken, verifyCompanyToken, extractCompanyId, getOwnProfile)

@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken")
 const createHttpError = require("http-errors")
 const Company = require("../models/Company")
+const { sendApprovalEmail } = require("../utils/emailService")
 
 // 1️⃣ Public — Register Company
 const registerCompany = async (req, res, next) => {
@@ -456,6 +457,263 @@ const deleteCompany = async (req, res, next) => {
   }
 }
 
+// GET /api/companies/confirm-verification/:token
+// Public route - Company clicks this link from email to confirm verification
+const confirmVerification = async (req, res, next) => {
+  try {
+    const { token } = req.params
+
+    // Find company by verification token
+    const company = await Company.findOne({
+      verificationToken: token,
+      verificationTokenExpires: { $gt: new Date() },
+    })
+
+    if (!company) {
+      // Render error HTML page
+      return res.status(400).send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Verification Failed</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+              min-height: 100vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              padding: 20px;
+            }
+            .container {
+              background: white;
+              border-radius: 16px;
+              padding: 48px;
+              max-width: 500px;
+              width: 100%;
+              text-align: center;
+              box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            }
+            .icon {
+              width: 80px;
+              height: 80px;
+              background: #fee2e2;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              margin: 0 auto 24px;
+            }
+            .icon svg { width: 40px; height: 40px; color: #dc2626; }
+            h1 { color: #dc2626; font-size: 28px; margin-bottom: 16px; }
+            p { color: #6b7280; font-size: 16px; line-height: 1.6; margin-bottom: 24px; }
+            .support { font-size: 14px; color: #9ca3af; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="icon">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </div>
+            <h1>Verification Failed</h1>
+            <p>This verification link is invalid or has expired. Please contact the administrator to request a new verification link.</p>
+            <p class="support">If you need assistance, please contact our support team.</p>
+          </div>
+        </body>
+        </html>
+      `)
+    }
+
+    // Check if already verified
+    if (company.status === "approved") {
+      return res.status(200).send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Already Verified</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+              min-height: 100vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              padding: 20px;
+            }
+            .container {
+              background: white;
+              border-radius: 16px;
+              padding: 48px;
+              max-width: 500px;
+              width: 100%;
+              text-align: center;
+              box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            }
+            .icon {
+              width: 80px;
+              height: 80px;
+              background: #dbeafe;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              margin: 0 auto 24px;
+            }
+            .icon svg { width: 40px; height: 40px; color: #2563eb; }
+            h1 { color: #1e40af; font-size: 28px; margin-bottom: 16px; }
+            p { color: #6b7280; font-size: 16px; line-height: 1.6; margin-bottom: 24px; }
+            .company-name { font-weight: 600; color: #1f2937; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="icon">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <h1>Already Verified</h1>
+            <p>Your company <span class="company-name">${company.companyName}</span> has already been verified. You can now log in to your account.</p>
+          </div>
+        </body>
+        </html>
+      `)
+    }
+
+    // Update company status to approved
+    company.status = "approved"
+    company.verifiedAt = new Date()
+    company.verificationToken = undefined
+    company.verificationTokenExpires = undefined
+    company.verificationPending = false
+
+    await company.save()
+
+    // Send approval confirmation email
+    const emailResult = await sendApprovalEmail(company)
+    if (!emailResult.success) {
+      console.error("Failed to send approval email after verification:", emailResult.error)
+    }
+
+    // Render success HTML page
+    res.status(200).send(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Verification Successful</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+          }
+          .container {
+            background: white;
+            border-radius: 16px;
+            padding: 48px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+          }
+          .icon {
+            width: 80px;
+            height: 80px;
+            background: #d1fae5;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            animation: scaleIn 0.5s ease-out;
+          }
+          @keyframes scaleIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+          }
+          .icon svg { width: 40px; height: 40px; color: #059669; }
+          h1 { color: #059669; font-size: 28px; margin-bottom: 16px; }
+          p { color: #6b7280; font-size: 16px; line-height: 1.6; margin-bottom: 24px; }
+          .company-name { font-weight: 600; color: #1f2937; }
+          .details {
+            background: #f9fafb;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 24px 0;
+            text-align: left;
+          }
+          .details h3 { font-size: 14px; color: #6b7280; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+          .details ul { list-style: none; }
+          .details li { padding: 8px 0; border-bottom: 1px solid #e5e7eb; font-size: 14px; color: #374151; }
+          .details li:last-child { border-bottom: none; }
+          .details strong { color: #111827; }
+          .note {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 16px;
+            font-size: 14px;
+            color: #1e40af;
+          }
+          .checkmark {
+            display: inline-block;
+            animation: checkmark 0.8s ease-in-out;
+          }
+          @keyframes checkmark {
+            0% { stroke-dashoffset: 100; }
+            100% { stroke-dashoffset: 0; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path class="checkmark" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+          <h1>Verification Successful!</h1>
+          <p>Congratulations! Your company <span class="company-name">${company.companyName}</span> has been successfully verified.</p>
+          
+          <div class="details">
+            <h3>Company Details</h3>
+            <ul>
+              <li><strong>Company Name:</strong> ${company.companyName}</li>
+              <li><strong>Registration Number:</strong> ${company.registrationNumber}</li>
+              <li><strong>Verified On:</strong> ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</li>
+            </ul>
+          </div>
+
+          <div class="note">
+            <strong>What's next?</strong><br>
+            A confirmation email has been sent to your registered email address. You can now log in to your account and start using our services.
+          </div>
+        </div>
+      </body>
+      </html>
+    `)
+  } catch (error) {
+    next(error)
+  }
+}
+
 module.exports = {
   registerCompany,
   loginCompany,
@@ -467,4 +725,5 @@ module.exports = {
   updateOwnProfile,
   deleteCompany,
   adminAddCompany,
+  confirmVerification,
 }

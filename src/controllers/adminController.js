@@ -4,7 +4,12 @@ const path = require("path")
 const fs = require("fs")
 const Admin = require("../models/Admin")
 const Company = require("../models/Company")
-const { sendApprovalEmail, sendRejectionEmail } = require("../utils/emailService")
+const {
+  sendApprovalEmail,
+  sendRejectionEmail,
+  sendVerificationLinkEmail,
+  generateVerificationToken,
+} = require("../utils/emailService")
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
 
@@ -192,8 +197,19 @@ const verifyCompany = async (req, res, next) => {
       throw createHttpError(404, "Company not found")
     }
 
-    company.status = "approved"
-    company.verifiedAt = new Date()
+    // Check if company is already approved
+    if (company.status === "approved") {
+      throw createHttpError(400, "Company is already approved")
+    }
+
+    // Generate verification token
+    const verificationToken = generateVerificationToken()
+    const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+
+    // Update company with verification token (don't change status yet)
+    company.verificationToken = verificationToken
+    company.verificationTokenExpires = tokenExpiry
+    company.verificationPending = true
     company.verifiedBy = req.user.userId
 
     if (verificationNotes) {
@@ -202,14 +218,15 @@ const verifyCompany = async (req, res, next) => {
 
     await company.save()
 
-    const emailResult = await sendApprovalEmail(company)
+    // Send verification link email instead of approval email
+    const emailResult = await sendVerificationLinkEmail(company, verificationToken)
     if (!emailResult.success) {
-      console.error("Failed to send approval email:", emailResult.error)
+      console.error("Failed to send verification link email:", emailResult.error)
     }
 
     res.json({
       success: true,
-      message: "Company verified successfully",
+      message: "Verification link sent to company email",
       data: company,
       emailSent: emailResult.success,
     })

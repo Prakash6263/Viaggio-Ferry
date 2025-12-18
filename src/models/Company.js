@@ -48,6 +48,10 @@ const CompanySchema = new mongoose.Schema(
     verifiedAt: { type: Date },
     verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     rejectionReason: { type: String },
+
+    verificationToken: { type: String },
+    verificationTokenExpires: { type: Date },
+    verificationPending: { type: Boolean, default: false }, // Flag to track if verification link was sent
   },
   { timestamps: true },
 )
