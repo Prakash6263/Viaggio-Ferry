@@ -204,7 +204,7 @@ const verifyCompany = async (req, res, next) => {
 
     // Generate verification token
     const verificationToken = generateVerificationToken()
-    const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+    const tokenExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
 
     // Update company with verification token (don't change status yet)
     company.verificationToken = verificationToken

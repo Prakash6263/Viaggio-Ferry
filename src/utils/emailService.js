@@ -21,7 +21,7 @@ const generateVerificationToken = () => {
 const sendVerificationLinkEmail = async (company, verificationToken) => {
   const transporter = createTransporter()
 
-  const verificationUrl = `${process.env.BACKEND_URL || "http://localhost:3001"}/api/companies/confirm-verification/${verificationToken}`
+  const verificationUrl = `${process.env.BACKEND_URL || "https://api.voyagian.com"}/api/companies/confirm-verification/${verificationToken}`
 
   const mailOptions = {
     from: `"${process.env.SMTP_FROM_NAME || "Admin"}" <${process.env.SMTP_USER}>`,
