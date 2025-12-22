@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken")
 const createHttpError = require("http-errors")
 const Company = require("../models/Company")
-const { sendApprovalEmail } = require("../utils/emailService")
+const { sendApprovalEmail, sendVerificationEmail } = require("../utils/emailService")
 
 // 1️⃣ Public — Register Company
 const registerCompany = async (req, res, next) => {
@@ -91,14 +91,32 @@ const registerCompany = async (req, res, next) => {
 
     await company.save()
 
+    // Generate verification token
+    const verificationToken = jwt.sign({ companyId: company._id }, process.env.JWT_SECRET || "your-secret-key", {
+      expiresIn: "1h",
+    })
+
+    // Update company with verification token
+    company.verificationToken = verificationToken
+    company.verificationTokenExpires = new Date(Date.now() + 3600000) // 1 hour from now
+    await company.save()
+
+    // Send verification email
+    const emailResult = await sendVerificationEmail(company)
+    if (!emailResult.success) {
+      console.error("Failed to send verification email:", emailResult.error)
+    }
+
     // Exclude sensitive fields from response
     const companyResponse = company.toObject()
     delete companyResponse.passwordHash
     delete companyResponse.loginEmail
+    delete companyResponse.verificationToken
+    delete companyResponse.verificationTokenExpires
 
     res.status(201).json({
       success: true,
-      message: "Company registered successfully. Awaiting verification.",
+      message: "Company registered successfully. Please check your email for verification instructions.",
       data: companyResponse,
     })
   } catch (error) {
@@ -301,7 +319,6 @@ const getOwnProfile = async (req, res, next) => {
 }
 
 // 8️⃣ Company — Update Own Profile
-
 const updateOwnProfile = async (req, res, next) => {
   try {
     const companyId = req.user.companyId || req.user.id
@@ -451,6 +468,116 @@ const deleteCompany = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Company deleted successfully",
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+// Super Admin — Update Company Details
+const updateCompanyDetails = async (req, res, next) => {
+  try {
+    const { id } = req.params
+
+    // Fields that can be updated
+    const {
+      // Basic Company Information
+      taxVatNumber,
+      dateEstablished,
+      // Contact Details
+      address,
+      city,
+      country,
+      postalCode,
+      mainPhoneNumber,
+      emailAddress,
+      website,
+      // Operational Details
+      defaultCurrency,
+      applicableTaxes,
+      operatingPorts,
+      operatingCountries,
+      timeZone,
+      workingHours,
+      // About Us
+      whoWeAre,
+      vision,
+      mission,
+      purpose,
+      // Social Network Links
+      facebookUrl,
+      instagramUrl,
+      whatsappNumber,
+      linkedinProfile,
+      skypeId,
+      // Login Email (can be updated by admin)
+      loginEmail,
+      // Company Name
+      companyName,
+    } = req.body
+
+    // Build update object with only provided fields
+    const updateData = {}
+
+    if (taxVatNumber !== undefined) updateData.taxVatNumber = taxVatNumber
+    if (dateEstablished !== undefined) updateData.dateEstablished = dateEstablished
+    if (address !== undefined) updateData.address = address
+    if (city !== undefined) updateData.city = city
+    if (country !== undefined) updateData.country = country
+    if (postalCode !== undefined) updateData.postalCode = postalCode
+    if (mainPhoneNumber !== undefined) updateData.mainPhoneNumber = mainPhoneNumber
+    if (emailAddress !== undefined) updateData.emailAddress = emailAddress
+    if (website !== undefined) updateData.website = website
+    if (defaultCurrency !== undefined) updateData.defaultCurrency = defaultCurrency
+    if (applicableTaxes !== undefined) updateData.applicableTaxes = applicableTaxes
+    if (operatingPorts !== undefined) updateData.operatingPorts = operatingPorts
+    if (operatingCountries !== undefined) updateData.operatingCountries = operatingCountries
+    if (timeZone !== undefined) updateData.timeZone = timeZone
+    if (workingHours !== undefined) updateData.workingHours = workingHours
+    if (whoWeAre !== undefined) updateData.whoWeAre = whoWeAre
+    if (vision !== undefined) updateData.vision = vision
+    if (mission !== undefined) updateData.mission = mission
+    if (purpose !== undefined) updateData.purpose = purpose
+    if (facebookUrl !== undefined) updateData.facebookUrl = facebookUrl
+    if (instagramUrl !== undefined) updateData.instagramUrl = instagramUrl
+    if (whatsappNumber !== undefined) updateData.whatsappNumber = whatsappNumber
+    if (linkedinProfile !== undefined) updateData.linkedinProfile = linkedinProfile
+    if (skypeId !== undefined) updateData.skypeId = skypeId
+    if (companyName !== undefined) updateData.companyName = companyName
+
+    // Handle loginEmail separately to check for duplicates
+    if (loginEmail !== undefined) {
+      const existingCompany = await Company.findOne({
+        loginEmail: loginEmail.toLowerCase(),
+        _id: { $ne: id },
+      })
+      if (existingCompany) {
+        throw createHttpError(400, "Another company with this login email already exists")
+      }
+      updateData.loginEmail = loginEmail.toLowerCase()
+    }
+
+    // Handle logo upload
+    if (req.file) {
+      updateData.logoUrl = `/uploads/companies/${req.file.filename}`
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      throw createHttpError(400, "No valid fields provided for update")
+    }
+
+    const company = await Company.findByIdAndUpdate(id, updateData, { new: true, runValidators: true }).select(
+      "-passwordHash",
+    )
+
+    if (!company) {
+      throw createHttpError(404, "Company not found")
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Company details updated successfully",
+      data: company,
     })
   } catch (error) {
     next(error)
@@ -714,6 +841,64 @@ const confirmVerification = async (req, res, next) => {
   }
 }
 
+// Super Admin — Toggle Company Status
+const toggleCompanyStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params
+
+    const company = await Company.findById(id)
+    if (!company) {
+      throw createHttpError(404, "Company not found")
+    }
+
+    company.isActive = !company.isActive
+    await company.save()
+
+    res.status(200).json({
+      success: true,
+      message: `Company status toggled to ${company.isActive ? "active" : "inactive"} successfully`,
+      data: company,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+// Super Admin — Send Verification Link
+const sendVerificationLink = async (req, res, next) => {
+  try {
+    const { id } = req.params
+
+    const company = await Company.findById(id)
+    if (!company) {
+      throw createHttpError(404, "Company not found")
+    }
+
+    // Generate verification token
+    const verificationToken = jwt.sign({ companyId: company._id }, process.env.JWT_SECRET || "your-secret-key", {
+      expiresIn: "1h",
+    })
+
+    // Update company with verification token
+    company.verificationToken = verificationToken
+    company.verificationTokenExpires = new Date(Date.now() + 3600000) // 1 hour from now
+    await company.save()
+
+    // Send verification email
+    const emailResult = await sendVerificationEmail(company)
+    if (!emailResult.success) {
+      console.error("Failed to send verification email:", emailResult.error)
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Verification link sent successfully",
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 module.exports = {
   registerCompany,
   loginCompany,
@@ -726,4 +911,7 @@ module.exports = {
   deleteCompany,
   adminAddCompany,
   confirmVerification,
+  toggleCompanyStatus,
+  sendVerificationLink,
+  updateCompanyDetails,
 }

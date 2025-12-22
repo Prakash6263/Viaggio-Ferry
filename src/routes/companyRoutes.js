@@ -11,6 +11,7 @@ const {
   deleteCompany,
   adminAddCompany,
   confirmVerification,
+  updateCompanyDetails, // Import new function
 } = require("../controllers/companyController")
 const { verifyToken, verifySuperAdmin, verifyCompanyToken, extractCompanyId } = require("../middleware/authMiddleware")
 const { companyLogoUpload } = require("../middleware/upload")
@@ -30,6 +31,7 @@ router.put("/me", verifyToken, verifyCompanyToken, extractCompanyId, companyLogo
 router.get("/", verifySuperAdmin, listCompanies)
 router.get("/:id", verifySuperAdmin, getCompanyById)
 router.post("/admin/add", verifySuperAdmin, companyLogoUpload.single("logo"), adminAddCompany)
+router.put("/:id", verifyToken, companyLogoUpload.single("logo"), updateCompanyDetails)
 router.patch("/:id/verify", verifySuperAdmin, approveCompany)
 router.patch("/:id/reject", verifySuperAdmin, rejectCompany)
 router.delete("/:id", verifySuperAdmin, deleteCompany)

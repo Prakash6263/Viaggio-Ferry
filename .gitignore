@@ -44,3 +44,7 @@ coverage/
 .next/
 .nuxt/
 storybook-static/
+
+
+# Uploaded files
+uploads/
