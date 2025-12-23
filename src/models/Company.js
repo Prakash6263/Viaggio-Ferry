@@ -1,5 +1,6 @@
 const mongoose = require("mongoose")
 const bcrypt = require("bcryptjs")
+const crypto = require("crypto")
 
 const CompanySchema = new mongoose.Schema(
   {
@@ -29,9 +30,12 @@ const CompanySchema = new mongoose.Schema(
 
     // About Us
     whoWeAre: { type: String },
+    whoWeAreImage: { type: String }, // Add whoWeAreImage field to store image for Who We Are
     vision: { type: String },
     mission: { type: String },
     purpose: { type: String },
+
+    adminProfileImage: { type: String },
 
     // Social Network Links
     facebookUrl: { type: String },
@@ -52,6 +56,15 @@ const CompanySchema = new mongoose.Schema(
     verificationToken: { type: String },
     verificationTokenExpires: { type: Date },
     verificationPending: { type: Boolean, default: false }, // Flag to track if verification link was sent
+
+    resetPasswordOTP: {
+      type: String,
+      default: null,
+    },
+    resetPasswordExpires: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true },
 )
@@ -101,6 +114,35 @@ CompanySchema.pre("save", async function (next) {
 // Method to compare passwords
 CompanySchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.passwordHash)
+}
+
+CompanySchema.methods.generateResetPasswordOTP = function () {
+  // Generate a 6-digit OTP
+  const otp = crypto.randomInt(100000, 999999).toString()
+
+  // Hash the OTP before saving
+  this.resetPasswordOTP = crypto.createHash("sha256").update(otp).digest("hex")
+
+  // Set expiry to 15 minutes from now
+  this.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000)
+
+  // Return plain OTP to send via email
+  return otp
+}
+
+CompanySchema.methods.verifyResetPasswordOTP = function (otp) {
+  if (!this.resetPasswordOTP || !this.resetPasswordExpires) {
+    return false
+  }
+
+  // Check if OTP has expired
+  if (this.resetPasswordExpires < new Date()) {
+    return false
+  }
+
+  // Hash the provided OTP and compare with stored hash
+  const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex")
+  return hashedOTP === this.resetPasswordOTP
 }
 
 module.exports = mongoose.model("Company", CompanySchema)

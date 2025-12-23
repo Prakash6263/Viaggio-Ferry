@@ -206,9 +206,145 @@ const sendRejectionEmail = async (company, rejectionReason) => {
   }
 }
 
+// Send OTP for forgot password
+const sendForgotPasswordOTPEmail = async (email, otp, userName, userType = "user") => {
+  const transporter = createTransporter()
+
+  const mailOptions = {
+    from: `"${process.env.SMTP_FROM_NAME || "Admin"}" <${process.env.SMTP_USER}>`,
+    to: email,
+    subject: "Password Reset OTP",
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #2196F3; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+          .content { background-color: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+          .otp-box { background-color: #fff; border: 2px dashed #2196F3; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px; }
+          .otp-code { font-size: 32px; font-weight: bold; color: #2196F3; letter-spacing: 8px; }
+          .warning { background-color: #fff3cd; border: 1px solid #ffc107; padding: 10px; border-radius: 5px; margin-top: 15px; }
+          .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Password Reset Request</h1>
+          </div>
+          <div class="content">
+            <p>Dear <strong>${userName}</strong>,</p>
+            <p>We received a request to reset your password. Use the OTP code below to proceed with resetting your password:</p>
+            <div class="otp-box">
+              <p style="margin: 0; font-size: 14px; color: #666;">Your OTP Code</p>
+              <p class="otp-code">${otp}</p>
+              <p style="margin: 0; font-size: 12px; color: #999;">Valid for 15 minutes</p>
+            </div>
+            <div class="warning">
+              <strong>Security Notice:</strong>
+              <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>This OTP will expire in 15 minutes</li>
+                <li>Do not share this code with anyone</li>
+                <li>If you didn't request a password reset, please ignore this email</li>
+              </ul>
+            </div>
+            <p>To complete the password reset, you'll need to provide:</p>
+            <ul>
+              <li>This OTP code</li>
+              <li>Your current password</li>
+              <li>Your new password</li>
+            </ul>
+            <p>Best regards,<br>The Admin Team</p>
+          </div>
+          <div class="footer">
+            <p>This is an automated message. Please do not reply directly to this email.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+  }
+
+  try {
+    const info = await transporter.sendMail(mailOptions)
+    console.log("Password reset OTP email sent:", info.messageId)
+    return { success: true, messageId: info.messageId }
+  } catch (error) {
+    console.error("Error sending password reset OTP email:", error)
+    return { success: false, error: error.message }
+  }
+}
+
+// Send password reset success confirmation
+const sendPasswordResetSuccessEmail = async (email, userName, userType = "user") => {
+  const transporter = createTransporter()
+
+  const mailOptions = {
+    from: `"${process.env.SMTP_FROM_NAME || "Admin"}" <${process.env.SMTP_USER}>`,
+    to: email,
+    subject: "Password Successfully Reset",
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+          .content { background-color: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+          .success-icon { text-align: center; font-size: 48px; color: #4CAF50; margin: 20px 0; }
+          .warning { background-color: #ffebee; border: 1px solid #f44336; padding: 10px; border-radius: 5px; margin-top: 15px; }
+          .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Password Reset Successful</h1>
+          </div>
+          <div class="content">
+            <div class="success-icon">✓</div>
+            <p>Dear <strong>${userName}</strong>,</p>
+            <p>Your password has been successfully reset at <strong>${new Date().toLocaleString()}</strong>.</p>
+            <p>You can now use your new password to log in to your account.</p>
+            <div class="warning">
+              <strong>Did you make this change?</strong>
+              <p style="margin: 10px 0;">If you did not reset your password, please contact our support team immediately to secure your account.</p>
+            </div>
+            <p>For your security, we recommend:</p>
+            <ul>
+              <li>Use a strong, unique password</li>
+              <li>Never share your password with anyone</li>
+              <li>Change your password regularly</li>
+            </ul>
+            <p>Best regards,<br>The Admin Team</p>
+          </div>
+          <div class="footer">
+            <p>This is an automated message. Please do not reply directly to this email.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+  }
+
+  try {
+    const info = await transporter.sendMail(mailOptions)
+    console.log("Password reset success email sent:", info.messageId)
+    return { success: true, messageId: info.messageId }
+  } catch (error) {
+    console.error("Error sending password reset success email:", error)
+    return { success: false, error: error.message }
+  }
+}
+
 module.exports = {
   sendApprovalEmail,
   sendRejectionEmail,
   sendVerificationLinkEmail,
   generateVerificationToken,
+  sendForgotPasswordOTPEmail,
+  sendPasswordResetSuccessEmail,
 }

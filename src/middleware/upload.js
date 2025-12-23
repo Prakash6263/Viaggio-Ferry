@@ -72,4 +72,46 @@ const whoWeAreUpload = multer({
   fileFilter,
 })
 
-module.exports = { adminUpload, companyLogoUpload, whoWeAreUpload }
+const companyUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, companyUploadDir)
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9)
+      const prefix = file.fieldname === "whoWeAreImage" ? "who-we-are-" : "company-logo-"
+      cb(null, prefix + uniqueSuffix + path.extname(file.originalname))
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter,
+})
+
+const companyMultiUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, companyUploadDir)
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9)
+      let prefix = "company-logo-"
+      if (file.fieldname === "whoWeAreImage") prefix = "who-we-are-"
+      if (file.fieldname === "adminProfileImage") prefix = "admin-profile-"
+      cb(null, prefix + uniqueSuffix + path.extname(file.originalname))
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter,
+})
+
+module.exports = {
+  adminUpload,
+  companyLogoUpload,
+  whoWeAreUpload,
+  companyUpload,
+  companyMultiUpload: companyMultiUpload.fields([
+    { name: "logo", maxCount: 1 },
+    { name: "whoWeAreImage", maxCount: 1 },
+    { name: "adminProfileImage", maxCount: 1 },
+  ]),
+}

@@ -1,7 +1,13 @@
 const jwt = require("jsonwebtoken")
 const createHttpError = require("http-errors")
 const Company = require("../models/Company")
-const { sendApprovalEmail, sendVerificationEmail } = require("../utils/emailService")
+const {
+  sendApprovalEmail,
+  sendVerificationLinkEmail,
+  sendForgotPasswordOTPEmail,
+  sendPasswordResetSuccessEmail,
+} = require("../utils/emailService")
+const { generateCompanyUrl } = require("../utils/urlGenerator")
 
 // 1️⃣ Public — Register Company
 const registerCompany = async (req, res, next) => {
@@ -53,15 +59,30 @@ const registerCompany = async (req, res, next) => {
     }
 
     let logoUrl = null
-    if (req.file) {
-      logoUrl = `/uploads/companies/${req.file.filename}`
+    let whoWeAreImage = null
+    let adminProfileImage = null
+
+    if (req.files) {
+      if (req.files.logo && req.files.logo[0]) {
+        logoUrl = `/uploads/companies/${req.files.logo[0].filename}`
+      }
+      if (req.files.whoWeAreImage && req.files.whoWeAreImage[0]) {
+        whoWeAreImage = `/uploads/companies/${req.files.whoWeAreImage[0].filename}`
+      }
+      if (req.files.adminProfileImage && req.files.adminProfileImage[0]) {
+        adminProfileImage = `/uploads/companies/${req.files.adminProfileImage[0].filename}`
+      }
     }
+
+    const finalWebsite = website || generateCompanyUrl(companyName)
 
     const company = new Company({
       companyName,
       loginEmail: loginEmail.toLowerCase(),
       passwordHash: password,
       logoUrl,
+      whoWeAreImage, // Add whoWeAreImage from registration
+      adminProfileImage, // Add adminProfileImage from registration
       dateEstablished,
       taxVatNumber, // ✅ Save field
       address,
@@ -70,7 +91,7 @@ const registerCompany = async (req, res, next) => {
       postalCode,
       mainPhoneNumber,
       emailAddress,
-      website,
+      website: finalWebsite,
       defaultCurrency,
       applicableTaxes, // ✅ Save field (array or string – Mongoose will handle if frontend sends array)
       operatingPorts,
@@ -102,9 +123,9 @@ const registerCompany = async (req, res, next) => {
     await company.save()
 
     // Send verification email
-    const emailResult = await sendVerificationEmail(company)
+    const emailResult = await sendVerificationLinkEmail(company)
     if (!emailResult.success) {
-      console.error("Failed to send verification email:", emailResult.error)
+      console.error("Failed to send verification link email:", emailResult.error)
     }
 
     // Exclude sensitive fields from response
@@ -398,15 +419,30 @@ const adminAddCompany = async (req, res, next) => {
     }
 
     let logoUrl = null
-    if (req.file) {
-      logoUrl = `/uploads/companies/${req.file.filename}`
+    let whoWeAreImage = null
+    let adminProfileImage = null
+
+    if (req.files) {
+      if (req.files.logo && req.files.logo[0]) {
+        logoUrl = `/uploads/companies/${req.files.logo[0].filename}`
+      }
+      if (req.files.whoWeAreImage && req.files.whoWeAreImage[0]) {
+        whoWeAreImage = `/uploads/companies/${req.files.whoWeAreImage[0].filename}`
+      }
+      if (req.files.adminProfileImage && req.files.adminProfileImage[0]) {
+        adminProfileImage = `/uploads/companies/${req.files.adminProfileImage[0].filename}`
+      }
     }
+
+    const finalWebsite = website || generateCompanyUrl(companyName)
 
     const company = new Company({
       companyName,
       loginEmail: loginEmail.toLowerCase(),
       passwordHash: password,
       logoUrl,
+      whoWeAreImage, // Add whoWeAreImage from admin creation
+      adminProfileImage, // Add adminProfileImage from admin creation
       dateEstablished,
       taxVatNumber, // ✅ Save field
       address,
@@ -415,7 +451,7 @@ const adminAddCompany = async (req, res, next) => {
       postalCode,
       mainPhoneNumber,
       emailAddress,
-      website,
+      website: finalWebsite,
       defaultCurrency,
       applicableTaxes, // ✅ Save field
       operatingPorts,
@@ -557,9 +593,16 @@ const updateCompanyDetails = async (req, res, next) => {
       updateData.loginEmail = loginEmail.toLowerCase()
     }
 
-    // Handle logo upload
-    if (req.file) {
-      updateData.logoUrl = `/uploads/companies/${req.file.filename}`
+    if (req.files) {
+      if (req.files.logo && req.files.logo[0]) {
+        updateData.logoUrl = `/uploads/companies/${req.files.logo[0].filename}`
+      }
+      if (req.files.whoWeAreImage && req.files.whoWeAreImage[0]) {
+        updateData.whoWeAreImage = `/uploads/companies/${req.files.whoWeAreImage[0].filename}`
+      }
+      if (req.files.adminProfileImage && req.files.adminProfileImage[0]) {
+        updateData.adminProfileImage = `/uploads/companies/${req.files.adminProfileImage[0].filename}`
+      }
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -812,8 +855,8 @@ const confirmVerification = async (req, res, next) => {
       <body>
         <div class="container">
           <div class="icon">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path class="checkmark" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            <svg class="checkmark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
             </svg>
           </div>
           <h1>Verification Successful!</h1>
@@ -885,9 +928,9 @@ const sendVerificationLink = async (req, res, next) => {
     await company.save()
 
     // Send verification email
-    const emailResult = await sendVerificationEmail(company)
+    const emailResult = await sendVerificationLinkEmail(company)
     if (!emailResult.success) {
-      console.error("Failed to send verification email:", emailResult.error)
+      console.error("Failed to send verification link email:", emailResult.error)
     }
 
     res.status(200).json({
@@ -898,6 +941,178 @@ const sendVerificationLink = async (req, res, next) => {
     next(error)
   }
 }
+
+// POST /api/companies/forgot-password
+// Send OTP to company's login email for password reset
+const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body
+
+    if (!email) {
+      throw createHttpError(400, "Email is required")
+    }
+
+    const company = await Company.findOne({ loginEmail: email.toLowerCase() })
+    if (!company) {
+      throw createHttpError(404, "Company with this email does not exist")
+    }
+
+    // Check if company is approved and active
+    if (company.status !== "approved") {
+      throw createHttpError(403, "Company is not approved yet")
+    }
+
+    if (!company.isActive) {
+      throw createHttpError(403, "Company account has been disabled")
+    }
+
+    // Generate OTP
+    const otp = company.generateResetPasswordOTP()
+    await company.save()
+
+    const emailResult = await sendForgotPasswordOTPEmail(company.loginEmail, otp, company.companyName, "company")
+    if (!emailResult.success) {
+      console.error("Failed to send OTP email:", emailResult.error)
+      throw createHttpError(500, "Failed to send OTP email. Please try again.")
+    }
+
+    res.json({
+      success: true,
+      message: "OTP has been sent to your email address",
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+// POST /api/companies/verify-reset-otp
+// Verify OTP before allowing password reset
+const verifyResetOTP = async (req, res, next) => {
+  try {
+    const { email, otp } = req.body
+
+    if (!email || !otp) {
+      throw createHttpError(400, "Email and OTP are required")
+    }
+
+    // Find company by login email
+    const company = await Company.findOne({ loginEmail: email.toLowerCase() })
+    if (!company) {
+      throw createHttpError(401, "Invalid credentials")
+    }
+
+    // Verify OTP
+    const isOTPValid = company.verifyResetPasswordOTP(otp)
+    if (!isOTPValid) {
+      throw createHttpError(401, "Invalid or expired OTP")
+    }
+
+    res.json({
+      success: true,
+      message: "OTP verified successfully. You can now reset your password.",
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+// POST /api/companies/reset-password
+// Reset password using verified OTP
+const resetPassword = async (req, res, next) => {
+  try {
+    const { email, otp, newPassword } = req.body
+
+    if (!email || !otp || !newPassword) {
+      throw createHttpError(400, "Email, OTP, and new password are required")
+    }
+
+    // Validate new password strength
+    if (newPassword.length < 6) {
+      throw createHttpError(400, "New password must be at least 6 characters long")
+    }
+
+    // Find company by login email
+    const company = await Company.findOne({ loginEmail: email.toLowerCase() })
+    if (!company) {
+      throw createHttpError(401, "Invalid credentials")
+    }
+
+    // Verify OTP
+    const isOTPValid = company.verifyResetPasswordOTP(otp)
+    if (!isOTPValid) {
+      throw createHttpError(401, "Invalid or expired OTP")
+    }
+
+    // Update password
+    company.passwordHash = newPassword // Will be hashed by pre-save hook
+    company.resetPasswordOTP = null
+    company.resetPasswordExpires = null
+    await company.save()
+
+    // Send success email
+    const emailResult = await sendPasswordResetSuccessEmail(company.loginEmail, company.companyName, "company")
+    if (!emailResult.success) {
+      console.error("Failed to send password reset success email:", emailResult.error)
+    }
+
+    res.json({
+      success: true,
+      message: "Password reset successfully. You can now login with your new password.",
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+
+
+// 🌐 Public — Get Company Public About Info by Company Slug (NO AUTH)
+const getCompanyPublicAboutByName = async (req, res, next) => {
+  try {
+    const { companyName } = req.params
+
+    if (!companyName) {
+      return res.status(400).json({
+        success: false,
+        message: "Company name is required",
+      })
+    }
+
+    // Convert slug → normal name
+    // Sabihat-Marine-Services → Sabihat Marine Services
+    const decodedName = companyName.replace(/-/g, " ")
+
+    const company = await Company.findOne({
+      companyName: { $regex: `^${decodedName}$`, $options: "i" }, // case-insensitive
+      status: "approved",
+      isActive: true,
+    }).select("companyName whoWeAre whoWeAreImage vision mission purpose")
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "Company not found",
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Company public info fetched successfully",
+      data: {
+        companyName: company.companyName,
+        whoWeAre: company.whoWeAre || "",
+        whoWeAreImage: company.whoWeAreImage || null,
+        vision: company.vision || "",
+        mission: company.mission || "",
+        purpose: company.purpose || "",
+      },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+
 
 module.exports = {
   registerCompany,
@@ -911,7 +1126,11 @@ module.exports = {
   deleteCompany,
   adminAddCompany,
   confirmVerification,
+  updateCompanyDetails,
   toggleCompanyStatus,
   sendVerificationLink,
-  updateCompanyDetails,
+  forgotPassword,
+  verifyResetOTP,
+  resetPassword,
+  getCompanyPublicAboutByName,
 }
