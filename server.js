@@ -14,8 +14,15 @@ const app = express()
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "blob:", "https://api.voyagian.com"],
+      },
+    },
   })
 )
+
 
 // put this near top, after require('cors') and before routes
 const allowedOrigins = [
