@@ -69,7 +69,7 @@ const registerCompany = async (req, res, next) => {
       if (req.files.whoWeAreImage && req.files.whoWeAreImage[0]) {
         whoWeAreImage = `/uploads/who-we-are/${req.files.whoWeAreImage[0].filename}`      }
       if (req.files.adminProfileImage && req.files.adminProfileImage[0]) {
-        adminProfileImage = `/uploads/companies/${req.files.adminProfileImage[0].filename}`
+        adminProfileImage = `/uploads/admin/${req.file.filename}`
       }
     }
 
@@ -428,7 +428,7 @@ const adminAddCompany = async (req, res, next) => {
       if (req.files.whoWeAreImage && req.files.whoWeAreImage[0]) {
         whoWeAreImage = `/uploads/who-we-are/${req.files.whoWeAreImage[0].filename}`      }
       if (req.files.adminProfileImage && req.files.adminProfileImage[0]) {
-        adminProfileImage = `/uploads/companies/${req.files.adminProfileImage[0].filename}`
+        adminProfileImage = `/uploads/admin/${req.file.filename}`
       }
     }
 
@@ -598,7 +598,7 @@ const updateCompanyDetails = async (req, res, next) => {
       if (req.files.whoWeAreImage && req.files.whoWeAreImage[0]) {
         updateData.whoWeAreImage = `/uploads/who-we-are/${req.files.whoWeAreImage[0].filename}`      }
       if (req.files.adminProfileImage && req.files.adminProfileImage[0]) {
-        updateData.adminProfileImage = `/uploads/companies/${req.files.adminProfileImage[0].filename}`
+        updateData.adminProfileImage = `/uploads/admin/${req.file.filename}`
       }
     }
 
