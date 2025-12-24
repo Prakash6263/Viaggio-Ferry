@@ -70,15 +70,7 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: "1mb" }))
 app.use(express.urlencoded({ extended: true }))
 
-// 🔥 MUST be BEFORE express.static
-app.use("/uploads", (req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*")
-  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin")
-  next()
-})
-
 app.use("/uploads", express.static(path.join(__dirname, "src/uploads")))
-
 
 // Logging
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"))
