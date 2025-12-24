@@ -67,8 +67,7 @@ const registerCompany = async (req, res, next) => {
         logoUrl = `/uploads/companies/${req.files.logo[0].filename}`
       }
       if (req.files.whoWeAreImage && req.files.whoWeAreImage[0]) {
-        whoWeAreImage = `/uploads/companies/${req.files.whoWeAreImage[0].filename}`
-      }
+        whoWeAreImage = `/uploads/who-we-are/${req.files.whoWeAreImage[0].filename}`      }
       if (req.files.adminProfileImage && req.files.adminProfileImage[0]) {
         adminProfileImage = `/uploads/companies/${req.files.adminProfileImage[0].filename}`
       }
@@ -427,8 +426,7 @@ const adminAddCompany = async (req, res, next) => {
         logoUrl = `/uploads/companies/${req.files.logo[0].filename}`
       }
       if (req.files.whoWeAreImage && req.files.whoWeAreImage[0]) {
-        whoWeAreImage = `/uploads/companies/${req.files.whoWeAreImage[0].filename}`
-      }
+        whoWeAreImage = `/uploads/who-we-are/${req.files.whoWeAreImage[0].filename}`      }
       if (req.files.adminProfileImage && req.files.adminProfileImage[0]) {
         adminProfileImage = `/uploads/companies/${req.files.adminProfileImage[0].filename}`
       }
@@ -598,8 +596,7 @@ const updateCompanyDetails = async (req, res, next) => {
         updateData.logoUrl = `/uploads/companies/${req.files.logo[0].filename}`
       }
       if (req.files.whoWeAreImage && req.files.whoWeAreImage[0]) {
-        updateData.whoWeAreImage = `/uploads/companies/${req.files.whoWeAreImage[0].filename}`
-      }
+        updateData.whoWeAreImage = `/uploads/who-we-are/${req.files.whoWeAreImage[0].filename}`      }
       if (req.files.adminProfileImage && req.files.adminProfileImage[0]) {
         updateData.adminProfileImage = `/uploads/companies/${req.files.adminProfileImage[0].filename}`
       }
