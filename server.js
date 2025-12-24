@@ -11,7 +11,12 @@ const setupRoutes = require("./src/routes")
 const app = express()
 
 // Security & parsing
-app.use(helmet())
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+)
+
 // put this near top, after require('cors') and before routes
 const allowedOrigins = [
   "https://voyagian.com",
