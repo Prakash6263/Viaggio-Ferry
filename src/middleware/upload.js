@@ -90,19 +90,28 @@ const companyUpload = multer({
 const companyMultiUpload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
-      cb(null, companyUploadDir)
+      if (file.fieldname === "whoWeAreImage") {
+        cb(null, whoWeAreUploadDir) // ✅ CORRECT
+      } else if (file.fieldname === "adminProfileImage") {
+        cb(null, adminUploadDir)
+      } else {
+        cb(null, companyUploadDir)
+      }
     },
     filename: (req, file, cb) => {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9)
       let prefix = "company-logo-"
+
       if (file.fieldname === "whoWeAreImage") prefix = "who-we-are-"
       if (file.fieldname === "adminProfileImage") prefix = "admin-profile-"
+
       cb(null, prefix + uniqueSuffix + path.extname(file.originalname))
     },
   }),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter,
 })
+
 
 module.exports = {
   adminUpload,
