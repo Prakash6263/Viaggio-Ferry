@@ -34,6 +34,12 @@ const CompanySchema = new mongoose.Schema(
     vision: { type: String },
     mission: { type: String },
     purpose: { type: String },
+   companySlug: {
+  type: String,
+  unique: true,
+  lowercase: true,
+  trim: true,
+},
 
     adminProfileImage: { type: String },
 

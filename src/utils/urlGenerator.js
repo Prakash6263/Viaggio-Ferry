@@ -1,18 +1,29 @@
 /**
- * Generate a slugified URL from company name
- * Example: "Sabihat Marine Services" -> "Sabihat-Marine-Services"
+ * Generate company slug + full website URL
+ * Example:
+ * "Sabihat Marine Services"
+ * -> slug: "sabihat-marine-services"
+ * -> website: "https://voyagian.com/sabihat-marine-services"
  */
 const generateCompanyUrl = (companyName) => {
-  if (!companyName) return null
+  if (!companyName) {
+    return { slug: null, website: null }
+  }
 
-  // Remove extra whitespace and replace spaces with hyphens
   const slug = companyName
+    .toString()
     .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-zA-Z0-9-]/g, "") // Remove special characters
+    .toLowerCase()                 // ✅ lowercase
+    .replace(/[^a-z0-9\s-]/g, "")  // remove special chars
+    .replace(/\s+/g, "-")          // spaces → hyphen
+    .replace(/-+/g, "-")           // remove duplicate hyphens
 
   const baseUrl = "https://voyagian.com"
-  return `${baseUrl}/${slug}`
+
+  return {
+    slug,
+    website: `${baseUrl}/${slug}`,
+  }
 }
 
 module.exports = { generateCompanyUrl }

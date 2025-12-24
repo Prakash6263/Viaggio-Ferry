@@ -76,7 +76,10 @@ const registerCompany = async (req, res, next) => {
 
     }
 
-    const finalWebsite = website || generateCompanyUrl(companyName)
+    const { slug, website: autoWebsite } = generateCompanyUrl(companyName)
+
+const finalWebsite = website || autoWebsite
+
 
     const company = new Company({
       companyName,
@@ -93,6 +96,7 @@ const registerCompany = async (req, res, next) => {
       postalCode,
       mainPhoneNumber,
       emailAddress,
+      companySlug: slug,
       website: finalWebsite,
       defaultCurrency,
       applicableTaxes, // ✅ Save field (array or string – Mongoose will handle if frontend sends array)
@@ -438,7 +442,10 @@ if (req.files?.adminProfileImage?.[0]) {
 
     }
 
-    const finalWebsite = website || generateCompanyUrl(companyName)
+    const { slug, website: autoWebsite } = generateCompanyUrl(companyName)
+
+    const finalWebsite = website || autoWebsite
+
 
     const company = new Company({
       companyName,
@@ -455,6 +462,7 @@ if (req.files?.adminProfileImage?.[0]) {
       postalCode,
       mainPhoneNumber,
       emailAddress,
+      companySlug: slug,
       website: finalWebsite,
       defaultCurrency,
       applicableTaxes, // ✅ Save field
