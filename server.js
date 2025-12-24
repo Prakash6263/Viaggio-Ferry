@@ -13,23 +13,11 @@ const app = express()
 // Security & parsing
 app.use(
   helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" },
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        imgSrc: [
-          "'self'",
-          "data:",
-          "blob:",
-          "https://api.voyagian.com",
-          "https://voyagian.com",
-          "https://admin.voyagian.com",
-          "https://company.voyagian.com"
-        ],
-      },
-    },
+    crossOriginResourcePolicy: false, // IMPORTANT
+    contentSecurityPolicy: false      // IMPORTANT
   })
 )
+
 
 
 
@@ -70,7 +58,17 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: "1mb" }))
 app.use(express.urlencoded({ extended: true }))
 
-app.use("/uploads", express.static(path.join(__dirname, "src/uploads")))
+app.use(
+  "/uploads",
+  (req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*")
+    res.setHeader("Access-Control-Allow-Methods", "GET")
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin")
+    next()
+  },
+  express.static(path.join(__dirname, "src/uploads"))
+)
+
 
 // Logging
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"))
