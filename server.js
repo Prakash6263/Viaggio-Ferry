@@ -17,11 +17,20 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "blob:", "https://api.voyagian.com"],
+        imgSrc: [
+          "'self'",
+          "data:",
+          "blob:",
+          "https://api.voyagian.com",
+          "https://voyagian.com",
+          "https://admin.voyagian.com",
+          "https://company.voyagian.com"
+        ],
       },
     },
   })
 )
+
 
 
 // put this near top, after require('cors') and before routes
