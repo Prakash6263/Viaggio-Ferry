@@ -67,19 +67,16 @@ const registerCompany = async (req, res, next) => {
         logoUrl = `/uploads/companies/${req.files.logo[0].filename}`
       }
       if (req.files.whoWeAreImage && req.files.whoWeAreImage[0]) {
-        whoWeAreImage = `/uploads/who-we-are/${req.files.whoWeAreImage[0].filename}`      }
-
-   if (req.files?.adminProfileImage?.[0]) {
-  updateData.adminProfileImage =
-    `/uploads/admin/${req.files.adminProfileImage[0].filename}`
-}
-
+        whoWeAreImage = `/uploads/who-we-are/${req.files.whoWeAreImage[0].filename}`
+      }
+      if (req.files?.adminProfileImage?.[0]) {
+        adminProfileImage = `/uploads/admin/${req.files.adminProfileImage[0].filename}`
+      }
     }
 
     const { slug, website: autoWebsite } = generateCompanyUrl(companyName)
 
-const finalWebsite = website || autoWebsite
-
+    const finalWebsite = website || autoWebsite
 
     const company = new Company({
       companyName,
@@ -433,19 +430,16 @@ const adminAddCompany = async (req, res, next) => {
         logoUrl = `/uploads/companies/${req.files.logo[0].filename}`
       }
       if (req.files.whoWeAreImage && req.files.whoWeAreImage[0]) {
-        whoWeAreImage = `/uploads/who-we-are/${req.files.whoWeAreImage[0].filename}`      }
-if (req.files?.adminProfileImage?.[0]) {
-  updateData.adminProfileImage =
-    `/uploads/admin/${req.files.adminProfileImage[0].filename}`
-}
-
-
+        whoWeAreImage = `/uploads/who-we-are/${req.files.whoWeAreImage[0].filename}`
+      }
+      if (req.files?.adminProfileImage?.[0]) {
+        adminProfileImage = `/uploads/admin/${req.files.adminProfileImage[0].filename}`
+      }
     }
 
     const { slug, website: autoWebsite } = generateCompanyUrl(companyName)
 
     const finalWebsite = website || autoWebsite
-
 
     const company = new Company({
       companyName,
@@ -610,13 +604,11 @@ const updateCompanyDetails = async (req, res, next) => {
         updateData.logoUrl = `/uploads/companies/${req.files.logo[0].filename}`
       }
       if (req.files.whoWeAreImage && req.files.whoWeAreImage[0]) {
-        updateData.whoWeAreImage = `/uploads/who-we-are/${req.files.whoWeAreImage[0].filename}`      }
-    if (req.files?.adminProfileImage?.[0]) {
-  updateData.adminProfileImage =
-    `/uploads/admin/${req.files.adminProfileImage[0].filename}`
-}
-
-
+        updateData.whoWeAreImage = `/uploads/who-we-are/${req.files.whoWeAreImage[0].filename}`
+      }
+      if (req.files?.adminProfileImage?.[0]) {
+        updateData.adminProfileImage = `/uploads/admin/${req.files.adminProfileImage[0].filename}`
+      }
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -1078,8 +1070,6 @@ const resetPassword = async (req, res, next) => {
   }
 }
 
-
-
 // 🌐 Public — Get Company Public About Info by Company Slug (NO AUTH)
 const getCompanyPublicAboutByName = async (req, res, next) => {
   try {
@@ -1100,7 +1090,7 @@ const getCompanyPublicAboutByName = async (req, res, next) => {
       companyName: { $regex: `^${decodedName}$`, $options: "i" }, // case-insensitive
       status: "approved",
       isActive: true,
-    }).select("companyName whoWeAre whoWeAreImage vision mission purpose")
+    }).select("companyName logoUrl whoWeAre whoWeAreImage vision mission purpose")
 
     if (!company) {
       return res.status(404).json({
@@ -1114,6 +1104,7 @@ const getCompanyPublicAboutByName = async (req, res, next) => {
       message: "Company public info fetched successfully",
       data: {
         companyName: company.companyName,
+        logoUrl: company.logoUrl || null,
         whoWeAre: company.whoWeAre || "",
         whoWeAreImage: company.whoWeAreImage || null,
         vision: company.vision || "",
@@ -1125,8 +1116,6 @@ const getCompanyPublicAboutByName = async (req, res, next) => {
     next(error)
   }
 }
-
-
 
 module.exports = {
   registerCompany,
