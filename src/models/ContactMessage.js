@@ -5,6 +5,13 @@ const ContactMessageSchema = new mongoose.Schema(
     company: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
+      required: false, // changed to false to support admin messages
+      index: true,
+    },
+    recipientType: {
+      type: String,
+      enum: ["admin", "company"],
+      default: "company",
       required: true,
       index: true,
     },

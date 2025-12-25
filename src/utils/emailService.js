@@ -103,7 +103,7 @@ const sendApprovalEmail = async (company) => {
           .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
           .content { background-color: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
           .button { display: inline-block; background-color: #4CAF50; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin-top: 20px; }
-          .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+          .footer { margin-top: 30px; font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 10px; }
         </style>
       </head>
       <body>
@@ -340,6 +340,54 @@ const sendPasswordResetSuccessEmail = async (email, userName, userType = "user")
   }
 }
 
+const sendContactReplyEmail = async (userEmail, userName, companyName, companyEmail, originalSubject, replyMessage) => {
+  const transporter = createTransporter()
+
+  const mailOptions = {
+    from: `"${companyName}" <${process.env.SMTP_USER}>`,
+    to: userEmail,
+    replyTo: companyEmail,
+    subject: `Re: ${originalSubject || "Inquiry to " + companyName}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px; }
+          .header { border-bottom: 2px solid #2196F3; padding-bottom: 10px; margin-bottom: 20px; }
+          .reply-content { background-color: #f9f9f9; padding: 20px; border-radius: 5px; white-space: pre-wrap; }
+          .footer { margin-top: 30px; font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h2>Response from ${companyName}</h2>
+          </div>
+          <p>Dear ${userName},</p>
+          <p>Thank you for reaching out to us. Here is the response to your inquiry:</p>
+          <div class="reply-content">${replyMessage}</div>
+          <p>Best regards,<br>${companyName}</p>
+          <div class="footer">
+            <p>This message was sent on behalf of ${companyName} via Voyagian.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+  }
+
+  try {
+    const info = await transporter.sendMail(mailOptions)
+    console.log("[v0] Contact reply email sent:", info.messageId)
+    return { success: true, messageId: info.messageId }
+  } catch (error) {
+    console.error("[v0] Error sending contact reply email:", error)
+    return { success: false, error: error.message }
+  }
+}
+
 module.exports = {
   sendApprovalEmail,
   sendRejectionEmail,
@@ -347,4 +395,5 @@ module.exports = {
   generateVerificationToken,
   sendForgotPasswordOTPEmail,
   sendPasswordResetSuccessEmail,
+  sendContactReplyEmail, // Exported new function
 }
