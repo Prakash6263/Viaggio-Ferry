@@ -9,6 +9,9 @@ router.post("/public/send", contactMessageController.sendPublicMessage)
 // Protected endpoint - Admin fetch their messages
 router.get("/admin/messages", verifyToken, contactMessageController.getAdminMessages)
 
+// Protected endpoint - Admin reply to a message
+router.post("/admin/messages/:messageId/reply", verifyToken, contactMessageController.replyToMessageAsAdmin)
+
 // Protected endpoint - Companies fetch their messages
 router.get("/company/messages", verifyToken, verifyCompanyToken, contactMessageController.getCompanyMessages)
 

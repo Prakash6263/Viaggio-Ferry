@@ -1,6 +1,7 @@
 const createHttpError = require("http-errors")
 const ContactMessage = require("../models/ContactMessage")
 const Company = require("../models/Company")
+const Admin = require("../models/Admin") // Added Admin model import
 const { sendContactReplyEmail } = require("../utils/emailService") // Added email service import
 
 // POST /api/contact-messages/public/send
@@ -87,6 +88,50 @@ const getAdminMessages = async (req, res, next) => {
   }
 }
 
+const adminReplyToMessage = async (req, res, next) => {
+  try {
+    const { messageId } = req.params
+    const { reply } = req.body
+    const adminId = req.user.userId
+
+    if (!reply) {
+      throw createHttpError(400, "Reply message is required")
+    }
+
+    // Admins can reply to any message, but usually those with recipientType 'admin'
+    const contactMessage = await ContactMessage.findById(messageId)
+    if (!contactMessage) {
+      throw createHttpError(404, "Message not found")
+    }
+
+    const admin = await Admin.findById(adminId)
+    if (!admin) {
+      throw createHttpError(404, "Admin details not found")
+    }
+
+    // For admin replies, we use the site name/admin name as companyName
+    await sendContactReplyEmail(
+      contactMessage.email,
+      contactMessage.fullName,
+      process.env.SITE_NAME || "Admin Support",
+      admin.email,
+      contactMessage.subject,
+      reply,
+    )
+
+    contactMessage.status = "Closed"
+    contactMessage.internalNotes = reply
+    await contactMessage.save()
+
+    res.json({
+      success: true,
+      message: "Admin reply sent successfully",
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 const replyToMessage = async (req, res, next) => {
   try {
     const { messageId } = req.params
@@ -129,9 +174,61 @@ const replyToMessage = async (req, res, next) => {
   }
 }
 
+// POST /api/contact-messages/admin/messages/:messageId/reply
+// Protected endpoint for admins to reply to a message
+const replyToMessageAsAdmin = async (req, res, next) => {
+  try {
+    const { messageId } = req.params
+    const { reply } = req.body
+    const adminId = req.user.userId || req.user.id
+
+    if (!reply) {
+      throw createHttpError(400, "Reply message is required")
+    }
+
+    // Find message that is addressed to admin
+    const contactMessage = await ContactMessage.findOne({ 
+      _id: messageId, 
+      recipientType: "admin" 
+    })
+    
+    if (!contactMessage) {
+      throw createHttpError(404, "Message not found")
+    }
+
+    // Get admin details
+    const admin = await Admin.findById(adminId)
+    if (!admin) {
+      throw createHttpError(404, "Admin details not found")
+    }
+
+    // Send reply email using admin details
+    await sendContactReplyEmail(
+      contactMessage.email,
+      contactMessage.fullName,
+      admin.name, // Admin name as sender
+      admin.email, // Admin email as reply-to
+      contactMessage.subject,
+      reply,
+    )
+
+    contactMessage.status = "Closed"
+    contactMessage.internalNotes = reply
+    await contactMessage.save()
+
+    res.json({
+      success: true,
+      message: "Reply sent successfully",
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 module.exports = {
   sendPublicMessage,
   getCompanyMessages,
   getAdminMessages, // exported admin controller
   replyToMessage,
+  replyToMessageAsAdmin, // Export new admin reply function
 }
