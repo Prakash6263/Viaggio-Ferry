@@ -1117,6 +1117,53 @@ const getCompanyPublicAboutByName = async (req, res, next) => {
   }
 }
 
+// Public route - Get Company Contact Info by Company Name
+const getCompanyContactByName = async (req, res, next) => {
+  try {
+    const { companyName } = req.params
+
+    if (!companyName) {
+      return res.status(400).json({
+        success: false,
+        message: "Company name is required",
+      })
+    }
+
+    const decodedName = companyName.replace(/-/g, " ")
+
+    const company = await Company.findOne({
+      companyName: { $regex: `^${decodedName}$`, $options: "i" },
+      status: "approved",
+      isActive: true,
+    }).select("address city country postalCode mainPhoneNumber workingHours")
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "Company not found",
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Company contact info fetched successfully",
+      data: {
+        office: {
+          address: company.address || "",
+          cityStateZip: `${company.city || ""}, ${company.country || ""} ${company.postalCode || ""}`
+            .trim()
+            .replace(/^,/, "")
+            .trim(),
+        },
+        phone: company.mainPhoneNumber || "",
+        workingHours: company.workingHours || "",
+      },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 module.exports = {
   registerCompany,
   loginCompany,
@@ -1136,4 +1183,5 @@ module.exports = {
   verifyResetOTP,
   resetPassword,
   getCompanyPublicAboutByName,
+  getCompanyContactByName,
 }

@@ -18,6 +18,7 @@ const {
   verifyResetOTP,
   resetPassword,
   getCompanyPublicAboutByName,
+  getCompanyContactByName, // importing new function
 } = require("../controllers/companyController")
 const { verifyToken, verifySuperAdmin, verifyCompanyToken, extractCompanyId } = require("../middleware/authMiddleware")
 const { companyLogoUpload, companyMultiUpload } = require("../middleware/upload")
@@ -47,4 +48,5 @@ router.patch("/:id/toggle-status", verifySuperAdmin, toggleCompanyStatus)
 router.post("/:id/send-verification", verifySuperAdmin, sendVerificationLink)
 router.delete("/:id", verifySuperAdmin, deleteCompany)
 router.get("/public/about/:companyName", getCompanyPublicAboutByName)
+router.get("/public/contact/:companyName", getCompanyContactByName) // adding public contact route
 module.exports = router
