@@ -1090,7 +1090,9 @@ const getCompanyPublicAboutByName = async (req, res, next) => {
       companyName: { $regex: `^${decodedName}$`, $options: "i" }, // case-insensitive
       status: "approved",
       isActive: true,
-    }).select("companyName logoUrl whoWeAre whoWeAreImage vision mission purpose")
+    }).select(
+      "companyName logoUrl whoWeAre whoWeAreImage vision mission purpose facebookUrl instagramUrl whatsappNumber linkedinProfile skypeId",
+    )
 
     if (!company) {
       return res.status(404).json({
@@ -1110,6 +1112,13 @@ const getCompanyPublicAboutByName = async (req, res, next) => {
         vision: company.vision || "",
         mission: company.mission || "",
         purpose: company.purpose || "",
+        socialMedia: {
+          facebook: company.facebookUrl || null,
+          instagram: company.instagramUrl || null,
+          whatsapp: company.whatsappNumber || null,
+          linkedin: company.linkedinProfile || null,
+          skype: company.skypeId || null,
+        },
       },
     })
   } catch (error) {
@@ -1135,7 +1144,9 @@ const getCompanyContactByName = async (req, res, next) => {
       companyName: { $regex: `^${decodedName}$`, $options: "i" },
       status: "approved",
       isActive: true,
-    }).select("address city country postalCode mainPhoneNumber workingHours")
+    }).select(
+      "address city country postalCode mainPhoneNumber workingHours facebookUrl instagramUrl whatsappNumber linkedinProfile skypeId",
+    )
 
     if (!company) {
       return res.status(404).json({
@@ -1157,6 +1168,13 @@ const getCompanyContactByName = async (req, res, next) => {
         },
         phone: company.mainPhoneNumber || "",
         workingHours: company.workingHours || "",
+        socialMedia: {
+          facebook: company.facebookUrl || null,
+          instagram: company.instagramUrl || null,
+          whatsapp: company.whatsappNumber || null,
+          linkedin: company.linkedinProfile || null,
+          skype: company.skypeId || null,
+        },
       },
     })
   } catch (error) {
