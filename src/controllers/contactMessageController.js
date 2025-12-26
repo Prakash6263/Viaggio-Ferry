@@ -20,8 +20,15 @@ const sendPublicMessage = async (req, res, next) => {
     if (type === "company") {
       if (!companyName) throw createHttpError(400, "Company Name is required for company messages")
 
+      const normalizedName = companyName.trim().replace(/-/g, " ")
+
       const company = await Company.findOne({
-        companyName: { $regex: new RegExp(`^${companyName.trim()}$`, "i") },
+        $or: [
+          // Try exact match with original name
+          { companyName: { $regex: new RegExp(`^${companyName.trim()}$`, "i") } },
+          // Try match with normalized name (hyphens converted to spaces)
+          { companyName: { $regex: new RegExp(`^${normalizedName}$`, "i") } },
+        ],
       })
 
       if (!company) throw createHttpError(404, "Company not found")
