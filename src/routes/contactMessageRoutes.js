@@ -7,12 +7,14 @@ const { verifyToken, verifyCompanyToken } = require("../middleware/authMiddlewar
 router.post("/public/send", contactMessageController.sendPublicMessage)
 
 // Protected endpoint - Admin fetch their messages
+// Query params: ?status=New|InProgress|Closed (optional)
 router.get("/admin/messages", verifyToken, contactMessageController.getAdminMessages)
 
 // Protected endpoint - Admin reply to a message
 router.post("/admin/messages/:messageId/reply", verifyToken, contactMessageController.replyToMessageAsAdmin)
 
 // Protected endpoint - Companies fetch their messages
+// Query params: ?status=New|InProgress|Closed (optional)
 router.get("/company/messages", verifyToken, verifyCompanyToken, contactMessageController.getCompanyMessages)
 
 // Protected endpoint - Companies reply to a message

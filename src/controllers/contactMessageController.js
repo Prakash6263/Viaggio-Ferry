@@ -54,12 +54,23 @@ const sendPublicMessage = async (req, res, next) => {
 const getCompanyMessages = async (req, res, next) => {
   try {
     const companyId = req.user.companyId || req.user.userId || req.user.id
+    const { status } = req.query
 
-    const messages = await ContactMessage.find({
+    const query = {
       company: companyId,
-      recipientType: "company", // added type filter
+      recipientType: "company",
       isDeleted: false,
-    }).sort({ createdAt: -1 })
+    }
+
+    if (status) {
+      const validStatuses = ["New", "InProgress", "Closed"]
+      if (!validStatuses.includes(status)) {
+        throw createHttpError(400, `Invalid status. Must be one of: ${validStatuses.join(", ")}`)
+      }
+      query.status = status
+    }
+
+    const messages = await ContactMessage.find(query).sort({ createdAt: -1 })
 
     res.json({
       success: true,
@@ -74,10 +85,22 @@ const getCompanyMessages = async (req, res, next) => {
 // Protected endpoint for admins to fetch their messages
 const getAdminMessages = async (req, res, next) => {
   try {
-    const messages = await ContactMessage.find({
+    const { status } = req.query
+
+    const query = {
       recipientType: "admin",
       isDeleted: false,
-    }).sort({ createdAt: -1 })
+    }
+
+    if (status) {
+      const validStatuses = ["New", "InProgress", "Closed"]
+      if (!validStatuses.includes(status)) {
+        throw createHttpError(400, `Invalid status. Must be one of: ${validStatuses.join(", ")}`)
+      }
+      query.status = status
+    }
+
+    const messages = await ContactMessage.find(query).sort({ createdAt: -1 })
 
     res.json({
       success: true,
@@ -187,11 +210,11 @@ const replyToMessageAsAdmin = async (req, res, next) => {
     }
 
     // Find message that is addressed to admin
-    const contactMessage = await ContactMessage.findOne({ 
-      _id: messageId, 
-      recipientType: "admin" 
+    const contactMessage = await ContactMessage.findOne({
+      _id: messageId,
+      recipientType: "admin",
     })
-    
+
     if (!contactMessage) {
       throw createHttpError(404, "Message not found")
     }
