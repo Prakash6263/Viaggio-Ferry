@@ -15,6 +15,7 @@ const b2cCustomerSchema = new mongoose.Schema(
     password: { type: String, required: true },
     partner: { type: mongoose.Schema.Types.ObjectId, ref: "Partner", default: null },
     nationality: { type: String, default: "", trim: true },
+    profileImage: { type: String, default: null }, // Added profileImage field to store the image path
 
     isEmailVerified: { type: Boolean, default: false },
     emailVerificationToken: { type: String, default: null },

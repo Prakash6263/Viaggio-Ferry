@@ -3,6 +3,7 @@ const router = express.Router()
 const b2cController = require("../controllers/b2cController")
 const { verifyToken, extractUserId } = require("../middleware/authMiddleware")
 const { asyncHandler } = require("../middleware/errorHandler")
+const { b2cUserUpload } = require("../middleware/upload") // Imported b2cUserUpload middleware
 
 // ✅ Public Routes
 router.post("/register", asyncHandler(b2cController.registerB2CUser))
@@ -26,6 +27,7 @@ router.put(
   "/profile",
   asyncHandler(verifyToken),
   asyncHandler(extractUserId),
+  b2cUserUpload.single("profileImage"), // Added file upload middleware to the update profile route
   asyncHandler(b2cController.updateB2CUserProfile),
 )
 

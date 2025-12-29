@@ -1,6 +1,8 @@
 const createHttpError = require("http-errors")
 const jwt = require("jsonwebtoken")
 const crypto = require("crypto")
+const fs = require("fs") // Imported fs for file management
+const path = require("path") // Imported path for file paths
 const B2CCustomer = require("../models/B2CCustomer")
 const Company = require("../models/Company")
 const {
@@ -517,6 +519,16 @@ const updateB2CUserProfile = async (req, res, next) => {
     const b2cUser = await B2CCustomer.findById(userId)
     if (!b2cUser) {
       throw createHttpError(404, "User not found")
+    }
+
+    if (req.file) {
+      if (b2cUser.profileImage) {
+        const oldImagePath = path.join(__dirname, "..", b2cUser.profileImage)
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath)
+        }
+      }
+      b2cUser.profileImage = `/uploads/b2c-users/${req.file.filename}`
     }
 
     // Update only allowed fields
