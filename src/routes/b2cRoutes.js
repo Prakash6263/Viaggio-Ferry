@@ -48,4 +48,13 @@ router.delete(
   asyncHandler(b2cController.deleteB2CUser),
 )
 
+router.get(
+  "/company/users",
+  asyncHandler(verifyToken),
+  asyncHandler(verifyCompanyToken),
+  asyncHandler(extractCompanyId),
+  asyncHandler(b2cController.getAllB2CUsersByCompany),
+)
+
 module.exports = router
+        
