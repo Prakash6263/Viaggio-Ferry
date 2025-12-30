@@ -760,73 +760,6 @@ const deleteB2CUser = async (req, res, next) => {
   }
 }
 
-// ✅ 8️⃣ Protected — Get All B2C Users by Company
-const getAllB2CUsersByCompany = async (req, res) => {
-  try {
-    const companyId = req.companyId
-    const { status, page = 1, limit = 10, search } = req.query
-
-    if (!companyId) {
-      return res.status(400).json({
-        success: false,
-        message: "Company ID is required",
-      })
-    }
-
-    // Build filter object
-    const filter = { company: companyId }
-
-    // Filter by status if provided
-    if (status && ["Active", "Inactive", "Pending"].includes(status)) {
-      filter.status = status
-    }
-
-    // Search by email or name
-    if (search) {
-      filter.$or = [
-        { email: { $regex: search, $options: "i" } },
-        { firstName: { $regex: search, $options: "i" } },
-        { lastName: { $regex: search, $options: "i" } },
-      ]
-    }
-
-    // Calculate pagination
-    const pageNum = Math.max(1, Number.parseInt(page))
-    const pageSize = Math.max(1, Math.min(100, Number.parseInt(limit)))
-    const skip = (pageNum - 1) * pageSize
-
-    // Get total count for pagination
-    const totalCount = await B2CCustomer.countDocuments(filter)
-
-    // Get users with pagination
-    const users = await B2CCustomer.find(filter)
-      .select("-password")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(pageSize)
-      .lean()
-
-    res.status(200).json({
-      success: true,
-      message: "B2C users retrieved successfully",
-      data: users,
-      pagination: {
-        totalUsers: totalCount,
-        currentPage: pageNum,
-        pageSize: pageSize,
-        totalPages: Math.ceil(totalCount / pageSize),
-      },
-    })
-  } catch (error) {
-    console.error("Error retrieving B2C users:", error)
-    res.status(500).json({
-      success: false,
-      message: "Failed to retrieve B2C users",
-      error: error.message,
-    })
-  }
-}
-
 module.exports = {
   registerB2CUser,
   verifyEmailWithLink,
@@ -840,5 +773,4 @@ module.exports = {
   resetPasswordB2C,
   toggleB2CUserStatus,
   deleteB2CUser,
-  getAllB2CUsersByCompany,
 }
