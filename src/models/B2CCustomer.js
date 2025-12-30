@@ -1,4 +1,5 @@
 const mongoose = require("mongoose")
+const bcrypt = require("bcrypt")
 
 const b2cCustomerSchema = new mongoose.Schema(
   {
@@ -49,6 +50,30 @@ b2cCustomerSchema.index({ email: 1 }, { unique: true })
 b2cCustomerSchema.index({ company: 1, email: 1 }, { sparse: true })
 b2cCustomerSchema.index({ name: "text", whatsappNumber: "text", "address.street": "text" })
 b2cCustomerSchema.index({ status: 1 })
+
+b2cCustomerSchema.pre("save", async function (next) {
+  // Only hash if password is new or modified
+  if (!this.isModified("password")) {
+    return next()
+  }
+
+  try {
+    // Generate salt and hash password with 10 rounds
+    const salt = await bcrypt.genSalt(10)
+    this.password = await bcrypt.hash(this.password, salt)
+    next()
+  } catch (error) {
+    next(error)
+  }
+})
+
+b2cCustomerSchema.methods.comparePassword = async function (plainPassword) {
+  try {
+    return await bcrypt.compare(plainPassword, this.password)
+  } catch (error) {
+    throw error
+  }
+}
 
 b2cCustomerSchema.methods.generateResetPasswordOTP = function () {
   const otp = Math.floor(100000 + Math.random() * 900000).toString()

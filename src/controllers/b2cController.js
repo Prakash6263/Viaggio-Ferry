@@ -445,9 +445,8 @@ const loginB2CUser = async (req, res, next) => {
       throw createHttpError(401, "Invalid email or password")
     }
 
-    // Verify password (comparing plain text - should use bcrypt in production)
-    // TODO: Implement bcrypt for password hashing
-    if (b2cUser.password !== password) {
+    const isPasswordValid = await b2cUser.comparePassword(password)
+    if (!isPasswordValid) {
       throw createHttpError(401, "Invalid email or password")
     }
 
@@ -681,6 +680,86 @@ const resetPasswordB2C = async (req, res, next) => {
   }
 }
 
+// PATCH /api/b2c/:userId/toggle-status
+// Company admin can toggle B2C user status between Active and Inactive
+const toggleB2CUserStatus = async (req, res, next) => {
+  try {
+    const { userId } = req.params
+    const companyId = req.user.companyId || req.user.id
+
+    // Find B2C user
+    const b2cUser = await B2CCustomer.findById(userId)
+    if (!b2cUser) {
+      throw createHttpError(404, "B2C user not found")
+    }
+
+    // Verify that the company admin owns this user
+    if (b2cUser.company.toString() !== companyId.toString()) {
+      throw createHttpError(403, "You can only manage B2C users belonging to your company")
+    }
+
+    // Toggle status between Active and Inactive
+    const newStatus = b2cUser.status === "Active" ? "Inactive" : "Active"
+    b2cUser.status = newStatus
+
+    await b2cUser.save()
+
+    res.status(200).json({
+      success: true,
+      message: `B2C user status changed to ${newStatus} successfully`,
+      data: {
+        userId: b2cUser._id,
+        email: b2cUser.email,
+        name: b2cUser.name,
+        status: b2cUser.status,
+      },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+// DELETE /api/b2c/:userId
+// Company admin can delete B2C users from their company
+const deleteB2CUser = async (req, res, next) => {
+  try {
+    const { userId } = req.params
+    const companyId = req.user.companyId || req.user.id
+
+    // Find B2C user
+    const b2cUser = await B2CCustomer.findById(userId)
+    if (!b2cUser) {
+      throw createHttpError(404, "B2C user not found")
+    }
+
+    // Verify that the company admin owns this user
+    if (b2cUser.company.toString() !== companyId.toString()) {
+      throw createHttpError(403, "You can only delete B2C users belonging to your company")
+    }
+
+    // Delete user profile image if exists
+    if (b2cUser.profileImage) {
+      const imagePath = path.join(__dirname, "..", b2cUser.profileImage)
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath)
+      }
+    }
+
+    // Delete the user from database
+    await B2CCustomer.findByIdAndDelete(userId)
+
+    res.status(200).json({
+      success: true,
+      message: "B2C user deleted successfully",
+      data: {
+        deletedUserId: userId,
+      },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 module.exports = {
   registerB2CUser,
   verifyEmailWithLink,
@@ -692,4 +771,6 @@ module.exports = {
   forgotPasswordB2C,
   verifyResetOTPB2C,
   resetPasswordB2C,
+  toggleB2CUserStatus,
+  deleteB2CUser,
 }
