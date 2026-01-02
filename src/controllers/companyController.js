@@ -117,7 +117,7 @@ const registerCompany = async (req, res, next) => {
     await company.save()
 
     try {
-      await createDefaultCompanyCurrency(company._id, defaultCurrency || "USD")
+      await createDefaultCompanyCurrency(company._id, defaultCurrency || "USD", country)
     } catch (currencyError) {
       console.error("Warning: Could not create default currency:", currencyError.message)
       // Don't fail the entire registration if currency creation fails
@@ -489,7 +489,7 @@ const adminAddCompany = async (req, res, next) => {
     await company.save()
 
     try {
-      await createDefaultCompanyCurrency(company._id, defaultCurrency || "USD")
+      await createDefaultCompanyCurrency(company._id, defaultCurrency || "USD", country)
     } catch (currencyError) {
       console.error("Warning: Could not create default currency:", currencyError.message)
       // Don't fail the entire company creation if currency creation fails

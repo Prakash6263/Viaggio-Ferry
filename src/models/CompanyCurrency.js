@@ -54,6 +54,12 @@ const CompanyCurrencySchema = new mongoose.Schema(
       trim: true,
     },
 
+    countryName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
     isDefault: {
       type: Boolean,
       default: false,
@@ -91,8 +97,8 @@ const CompanyCurrencySchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-// Indexes for efficient querying
-CompanyCurrencySchema.index({ company: 1, currencyCode: 1 }, { unique: true })
+// Now a company can have USD from USA and USD from Ecuador as separate entries
+CompanyCurrencySchema.index({ company: 1, currencyCode: 1, countryName: 1 }, { unique: true })
 CompanyCurrencySchema.index({ company: 1, isDefault: 1 })
 CompanyCurrencySchema.index({ company: 1, isActive: 1, isDeleted: 1 })
 CompanyCurrencySchema.index({ company: 1, "exchangeRates.rateDate": -1 })

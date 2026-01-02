@@ -9,7 +9,7 @@ const addCurrencyToCompany = async (req, res) => {
     await connectDB()
 
     const { companyId } = req.params
-    const { currencyId, currentRate, isDefault, exchangeRates } = req.body
+    const { currencyId, currentRate, isDefault, exchangeRates, countryName } = req.body
 
     console.log("[v0] Received companyId:", companyId)
     console.log("[v0] Received request body:", JSON.stringify(req.body, null, 2))
@@ -45,6 +45,22 @@ const addCurrencyToCompany = async (req, res) => {
       return res.status(404).json({
         success: false,
         error: "Currency not found",
+      })
+    }
+
+    const finalCountryName = countryName || currency.countryName
+
+    const existingCurrency = await CompanyCurrency.findOne({
+      company: companyId,
+      currencyCode: currency.currencyCode,
+      countryName: finalCountryName,
+      isDeleted: false,
+    })
+
+    if (existingCurrency) {
+      return res.status(400).json({
+        success: false,
+        error: `Currency ${currency.currencyCode} for country ${finalCountryName} is already added to this company`,
       })
     }
 
@@ -93,6 +109,7 @@ const addCurrencyToCompany = async (req, res) => {
       currency: currencyId,
       currencyCode: currency.currencyCode,
       currencyName: currency.currencyName,
+      countryName: finalCountryName,
       currentRate: finalCurrentRate,
       isDefault: shouldBeDefault,
       exchangeRates: finalExchangeRates,
@@ -155,6 +172,7 @@ const getCompanyCurrencies = async (req, res) => {
       filter.$or = [
         { currencyCode: { $regex: search, $options: "i" } },
         { currencyName: { $regex: search, $options: "i" } },
+        { countryName: { $regex: search, $options: "i" } },
       ]
     }
 
@@ -363,6 +381,7 @@ const getExchangeRateHistory = async (req, res) => {
       data: {
         currencyCode: companyCurrency.currencyCode,
         currencyName: companyCurrency.currencyName,
+        countryName: companyCurrency.countryName,
         history: rates,
         total: rates.length,
       },
