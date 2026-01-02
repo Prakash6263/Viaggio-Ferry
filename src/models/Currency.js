@@ -1,22 +1,13 @@
 const mongoose = require("mongoose")
 
-const RateSchema = new mongoose.Schema(
-  {
-    at: { type: Date, required: true, index: true },
-    rateUSD: { type: Number, required: true, min: 0 },
-  },
-  { _id: true },
-)
-
 const CurrencySchema = new mongoose.Schema(
   {
-    company: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Company",
-      required: true,
-      index: true,
+    currencyId: {
+      type: Number,
+      unique: true,
     },
-    code: {
+
+    currencyCode: {
       type: String,
       required: true,
       uppercase: true,
@@ -24,56 +15,37 @@ const CurrencySchema = new mongoose.Schema(
       minlength: 3,
       maxlength: 3,
     },
-    name: { type: String, required: true, trim: true },
-    rates: { type: [RateSchema], default: [] },
-    isDeleted: { type: Boolean, default: false, index: true },
+
+    currencyName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    countryName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
   },
-  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
+  { timestamps: true }
 )
 
-CurrencySchema.virtual("lastRateUpdate").get(function () {
-  if (!this.rates?.length) return null
-  const latest = [...this.rates].sort((a, b) => b.at - a.at)[0]
-  return latest?.at || null
-})
-
-CurrencySchema.virtual("currentRateUSD").get(function () {
-  if (!this.rates?.length) return null
-  const latest = [...this.rates].sort((a, b) => b.at - a.at)[0]
-  return latest?.rateUSD ?? null
-})
-
-CurrencySchema.pre("save", function (next) {
-  if (this.code) this.code = String(this.code).toUpperCase()
-  if (Array.isArray(this.rates)) {
-    this.rates = this.rates
-      .map((r) => ({ at: new Date(r.at), rateUSD: Number(r.rateUSD) }))
-      .filter((r) => r.at instanceof Date && !isNaN(r.at.getTime()) && isFinite(r.rateUSD) && r.rateUSD >= 0)
-      .sort((a, b) => a.at - b.at)
-  }
-  next()
-})
-
-CurrencySchema.index({ company: 1, code: 1 }, { unique: true })
-CurrencySchema.index({ company: 1, code: "text", name: "text" })
-
-function getEffectiveRateAt(rates = [], atDate) {
-  if (!rates.length) return null
-  const at = atDate ? new Date(atDate) : new Date()
-  if (!(at instanceof Date) || isNaN(at.getTime())) return null
-  let found = null
-  for (let i = 0; i < rates.length; i++) {
-    const r = rates[i]
-    if (r.at <= at) found = r
-    else break
-  }
-  return found
-}
-
-CurrencySchema.methods.effectiveRateAt = function (atDate) {
-  const sorted = [...(this.rates || [])].sort((a, b) => a.at - b.at)
-  return getEffectiveRateAt(sorted, atDate)
-}
+/**
+ * ✅ Compound unique index
+ * Same currencyCode allowed
+ * Same countryName allowed
+ * BUT pair must be unique
+ */
+CurrencySchema.index(
+  { currencyCode: 1, countryName: 1 },
+  { unique: true }
+)
 
 module.exports = {
   Currency: mongoose.model("Currency", CurrencySchema),

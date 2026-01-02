@@ -8,6 +8,7 @@ const {
   sendPasswordResetSuccessEmail,
 } = require("../utils/emailService")
 const { generateCompanyUrl } = require("../utils/urlGenerator")
+const { createDefaultCompanyCurrency } = require("../utils/currencyHelper")
 
 // 1️⃣ Public — Register Company
 const registerCompany = async (req, res, next) => {
@@ -95,7 +96,7 @@ const registerCompany = async (req, res, next) => {
       emailAddress,
       companySlug: slug,
       website: finalWebsite,
-      defaultCurrency,
+      defaultCurrency: defaultCurrency || "USD",
       applicableTaxes, // ✅ Save field (array or string – Mongoose will handle if frontend sends array)
       operatingPorts,
       operatingCountries, // ✅ Save field
@@ -114,6 +115,13 @@ const registerCompany = async (req, res, next) => {
     })
 
     await company.save()
+
+    try {
+      await createDefaultCompanyCurrency(company._id, defaultCurrency || "USD")
+    } catch (currencyError) {
+      console.error("Warning: Could not create default currency:", currencyError.message)
+      // Don't fail the entire registration if currency creation fails
+    }
 
     // Generate verification token
     const verificationToken = jwt.sign({ companyId: company._id }, process.env.JWT_SECRET || "your-secret-key", {
@@ -381,7 +389,7 @@ const adminAddCompany = async (req, res, next) => {
       password,
       // Basic Company Information
       dateEstablished,
-      taxVatNumber, // ✅ NEW
+      taxVatNumber,
       // Contact Details
       address,
       city,
@@ -392,10 +400,10 @@ const adminAddCompany = async (req, res, next) => {
       website,
       // Operational Details
       defaultCurrency,
-      applicableTaxes, // ✅ NEW
+      applicableTaxes,
       operatingPorts,
-      operatingCountries, // ✅ NEW
-      timeZone, // ✅ NEW
+      operatingCountries,
+      timeZone,
       workingHours,
       // About Us
       whoWeAre,
@@ -446,10 +454,10 @@ const adminAddCompany = async (req, res, next) => {
       loginEmail: loginEmail.toLowerCase(),
       passwordHash: password,
       logoUrl,
-      whoWeAreImage, // Add whoWeAreImage from admin creation
-      adminProfileImage, // Add adminProfileImage from admin creation
+      whoWeAreImage,
+      adminProfileImage,
       dateEstablished,
-      taxVatNumber, // ✅ Save field
+      taxVatNumber,
       address,
       city,
       country,
@@ -458,11 +466,11 @@ const adminAddCompany = async (req, res, next) => {
       emailAddress,
       companySlug: slug,
       website: finalWebsite,
-      defaultCurrency,
-      applicableTaxes, // ✅ Save field
+      defaultCurrency: defaultCurrency || "USD",
+      applicableTaxes,
       operatingPorts,
-      operatingCountries, // ✅ Save field
-      timeZone, // ✅ Save field
+      operatingCountries,
+      timeZone,
       workingHours,
       whoWeAre,
       vision,
@@ -479,6 +487,13 @@ const adminAddCompany = async (req, res, next) => {
     })
 
     await company.save()
+
+    try {
+      await createDefaultCompanyCurrency(company._id, defaultCurrency || "USD")
+    } catch (currencyError) {
+      console.error("Warning: Could not create default currency:", currencyError.message)
+      // Don't fail the entire company creation if currency creation fails
+    }
 
     // Exclude sensitive fields from response
     const companyResponse = company.toObject()

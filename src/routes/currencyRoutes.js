@@ -1,9 +1,9 @@
 const express = require("express")
 const router = express.Router()
-const { getCurrencies, getCurrencyByCode } = require("../controllers/currencyController")
+const { getCurrencies, getCurrencyByCode, getGlobalCurrencyCodes } = require("../controllers/currencyController")
 
-router.get("/:companyId", getCurrencies)
-
-router.get("/:companyId/:code", getCurrencyByCode)
+router.get("/codes", getGlobalCurrencyCodes)
+router.get("/", getCurrencies)
+router.get("/:code", getCurrencyByCode)
 
 module.exports = router

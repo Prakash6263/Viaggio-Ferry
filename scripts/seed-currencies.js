@@ -1,12 +1,11 @@
-const mongoose = require("mongoose")
-const connectDB = require("../src/config/db")
-// Fixed imports to match model export patterns
-const Company = require("../src/models/Company")
-const { Currency } = require("../src/models/Currency")
 require("dotenv").config()
+const mongoose = require("mongoose")
+const { Currency } = require("../src/models/Currency")
+const Counter = require("../src/models/Counter")
 
-const MONGODB_URI = "mongodb+srv://kdsinghappsol:kdsinghappsol-864-369@cluster0.rfgp5y0.mongodb.net/shipmentbackend"
-
+// ==================
+// CURRENCY DATA
+// ==================
 const currenciesData = [
   { country: "Afghanistan", name: "Afghan Afghani", code: "AFN" },
   { country: "Albania", name: "Albanian Lek", code: "ALL" },
@@ -109,7 +108,7 @@ const currenciesData = [
   { country: "Mauritius", name: "Mauritian Rupee", code: "MUR" },
   { country: "Mexico", name: "Mexican Peso", code: "MXN" },
   { country: "Moldova", name: "Moldovan Leu", code: "MDL" },
-  { country: "Mongolia", name: "Mongolian Tugrik", code: "MNT" },
+  { country: "Mongolia", name: "Mongolian Tögrög", code: "MNT" },
   { country: "Montenegro", name: "Euro", code: "EUR" },
   { country: "Morocco", name: "Moroccan Dirham", code: "MAD" },
   { country: "Mozambique", name: "Mozambican Metical", code: "MZN" },
@@ -179,124 +178,63 @@ const currenciesData = [
   { country: "Zimbabwe", name: "Zimbabwean Dollar", code: "ZWL" },
 ]
 
+// ==================
+// SEED FUNCTION
+// ==================
 async function seedCurrencies() {
-  let connection = null
   try {
-    console.log("[v0] Starting seed currencies script...")
-    console.log("[v0] Connecting to MongoDB Atlas...")
+    const mongoUri = process.env.MONGODB_URI
+    console.log("[v0] MONGODB_URI loaded:", mongoUri ? "✓ Yes" : "✗ No")
 
-    connection = await mongoose.connect(MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    })
-    console.log("[v0] Successfully connected to MongoDB")
-
-    // Validate Company model exists before querying
-    if (!Company) {
-      throw new Error("Company model failed to load")
-    }
-
-    console.log("[v0] Querying companies from database...")
-    const companies = await Company.find({})
-    console.log(`[v0] Query completed. Found ${companies ? companies.length : 0} companies`)
-
-    if (!companies || companies.length === 0) {
-      console.error("\n[v0] ==================== ERROR ====================")
-      console.error("[v0] No companies found in database!")
-      console.error("[v0] You must create at least one company before seeding currencies.")
-      console.error("[v0] Steps to fix:")
-      console.error("[v0]   1. Start your server: npm run dev")
-      console.error("[v0]   2. Create a company via admin API endpoint")
-      console.error("[v0]   3. Then run: node scripts/seed-currencies.js")
-      console.error("[v0] ================================================\n")
+    if (!mongoUri) {
+      console.error("[v0] Error: MONGODB_URI is not set")
       process.exit(1)
     }
 
-    console.log(`[v0] Beginning currency seeding for ${companies.length} company/companies...\n`)
+    await mongoose.connect(mongoUri)
+    console.log("[v0] ✓ Connected to MongoDB")
 
-    let createdCount = 0
-    let skippedCount = 0
-    let errorCount = 0
+    // Clear old data
+    await Currency.deleteMany({})
+    console.log("[v0] ✓ Cleared existing currencies")
 
-    for (const company of companies) {
-      console.log(`[v0] Processing company: "${company.companyName}" (${company._id})`)
+    // Get or create counter
+    const counter = await Counter.findOneAndUpdate(
+      { name: "currency" },
+      { $setOnInsert: { seq: 0 } },
+      { new: true, upsert: true }
+    )
 
-      for (const currencyData of currenciesData) {
-        try {
-          // Added null check before querying
-          if (!currencyData.code) {
-            console.error(`[v0]   Error: Currency data missing code field`)
-            errorCount++
-            continue
-          }
+    let currentSeq = counter.seq
 
-          const exists = await Currency.findOne({
-            company: company._id,
-            code: currencyData.code.toUpperCase(),
-          })
+    // Prepare insert data WITH currencyId
+    const currenciesToInsert = currenciesData.map((curr) => {
+      currentSeq += 1
 
-          if (exists) {
-            skippedCount++
-            continue
-          }
-
-          await Currency.create({
-            company: company._id,
-            code: currencyData.code.toUpperCase(),
-            name: currencyData.name,
-            rates: [],
-          })
-          createdCount++
-        } catch (innerError) {
-          console.error(`[v0]   Error creating ${currencyData.code}: ${innerError.message}`)
-          errorCount++
-        }
+      return {
+        currencyId: currentSeq,
+        currencyCode: curr.code,
+        currencyName: curr.name,
+        countryName: curr.country,
       }
-    }
+    })
 
-    console.log("\n[v0] ==================== SEEDING COMPLETE ====================")
-    console.log(`[v0] Created:  ${createdCount} currencies`)
-    console.log(`[v0] Skipped:  ${skippedCount} (already exist)`)
-    console.log(`[v0] Errors:   ${errorCount}`)
-    console.log("[v0] ============================================================\n")
+    const result = await Currency.insertMany(currenciesToInsert)
+    console.log(`[v0] ✓ Inserted ${result.length} currencies`)
 
+    // Update counter value
+    await Counter.updateOne(
+      { name: "currency" },
+      { $set: { seq: currentSeq } }
+    )
+
+    console.log("[v0] ✓ Counter updated to", currentSeq)
+
+    await mongoose.connection.close()
+    console.log("[v0] ✓ DB connection closed")
     process.exit(0)
   } catch (error) {
-    console.error("\n[v0] ==================== SEEDING FAILED ====================")
-    console.error("[v0] Error Type:", error.constructor.name)
-    console.error("[v0] Error Message:", error.message)
-    console.error("[v0]")
-
-    // Detailed error messages for common issues
-    if (error.message.includes("MONGODB_URI")) {
-      console.error("[v0] SOLUTION:")
-      console.error("[v0]   1. Create .env.local in project root")
-      console.error("[v0]   2. Add: MONGODB_URI=mongodb://localhost:27017/viaggio-ferry")
-      console.error("[v0]   3. Or use MongoDB Atlas connection string")
-    } else if (error.message.includes("connect ECONNREFUSED")) {
-      console.error("[v0] SOLUTION:")
-      console.error("[v0]   MongoDB server is not running!")
-      console.error("[v0]   1. Start MongoDB locally: mongod")
-      console.error("[v0]   2. Or use MongoDB Atlas cloud database")
-      console.error("[v0]   3. Check your MONGODB_URI is correct")
-    } else if (error.message.includes("getaddrinfo ENOTFOUND")) {
-      console.error("[v0] SOLUTION:")
-      console.error("[v0]   Cannot reach MongoDB server!")
-      console.error("[v0]   1. Check internet connection")
-      console.error("[v0]   2. Check MONGODB_URI is correct")
-      console.error("[v0]   3. If using Atlas, check IP whitelist")
-    } else if (error.message.includes("find")) {
-      console.error("[v0] SOLUTION:")
-      console.error("[v0]   Database query failed!")
-      console.error("[v0]   1. Check models are properly loaded")
-      console.error("[v0]   2. Check MongoDB connection")
-      console.error("[v0]   Details: " + error.message)
-    } else {
-      console.error("[v0] DETAILS:", error.message)
-      console.error("[v0] STACK:", error.stack)
-    }
-
-    console.error("[v0] ============================================================\n")
+    console.error("[v0] Error seeding currencies:", error.message)
     process.exit(1)
   }
 }
