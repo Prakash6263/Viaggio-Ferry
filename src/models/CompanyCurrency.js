@@ -18,6 +18,10 @@ const ExchangeRateSchema = new mongoose.Schema(
       type: String,
       default: "USD", // Base unit for the rate (e.g., 1 USD = X currency)
     },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
   { timestamps: false },
 )
@@ -54,9 +58,12 @@ const CompanyCurrencySchema = new mongoose.Schema(
       trim: true,
     },
 
+    // Updated countryName to track which country's version of the currency
     countryName: {
       type: String,
-      required: true,
+      required: function () {
+        return this.isNew
+      },
       trim: true,
     },
 
@@ -97,6 +104,7 @@ const CompanyCurrencySchema = new mongoose.Schema(
   { timestamps: true },
 )
 
+// Updated compound index to include countryName for proper uniqueness
 // Now a company can have USD from USA and USD from Ecuador as separate entries
 CompanyCurrencySchema.index({ company: 1, currencyCode: 1, countryName: 1 }, { unique: true })
 CompanyCurrencySchema.index({ company: 1, isDefault: 1 })

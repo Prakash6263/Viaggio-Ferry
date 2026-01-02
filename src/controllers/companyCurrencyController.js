@@ -87,6 +87,7 @@ const addCurrencyToCompany = async (req, res) => {
         rate: r.rate,
         rateDate: new Date(r.rateDate || Date.now()),
         baseUnit: r.baseUnit || "USD",
+        createdAt: new Date(),
       }))
 
       // Find the most recent rate to set as currentRate
@@ -99,6 +100,7 @@ const addCurrencyToCompany = async (req, res) => {
           rate: currentRate,
           rateDate: new Date(),
           baseUnit: "USD",
+          createdAt: new Date(),
         },
       ]
     }
@@ -292,12 +294,14 @@ const addExchangeRate = async (req, res) => {
       // Update existing rate
       existingRate.rate = rate
       existingRate.rateDate = new Date(rateDate)
+      existingRate.createdAt = new Date()
     } else {
       // Add new rate
       companyCurrency.exchangeRates.push({
         rate,
         rateDate: new Date(rateDate),
         baseUnit: "USD",
+        createdAt: new Date(),
       })
     }
 
