@@ -86,7 +86,7 @@ const addCurrencyToCompany = async (req, res) => {
       finalExchangeRates = exchangeRates.map((r) => ({
         rate: r.rate,
         rateDate: new Date(r.rateDate || Date.now()),
-        baseUnit: r.baseUnit || "USD",
+        baseUnit: r.baseUnit || company.defaultCurrency || "USD", // fallback to company default
         createdAt: new Date(),
       }))
 
@@ -99,7 +99,7 @@ const addCurrencyToCompany = async (req, res) => {
         {
           rate: currentRate,
           rateDate: new Date(),
-          baseUnit: "USD",
+          baseUnit: company.defaultCurrency || "USD", // use company default instead of hardcoded USD
           createdAt: new Date(),
         },
       ]
@@ -272,6 +272,14 @@ const addExchangeRate = async (req, res) => {
       })
     }
 
+    const company = await Company.findById(companyId)
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        error: "Company not found",
+      })
+    }
+
     const companyCurrency = await CompanyCurrency.findOne({
       _id: currencyId,
       company: companyId,
@@ -289,7 +297,7 @@ const addExchangeRate = async (req, res) => {
     companyCurrency.exchangeRates.push({
       rate,
       rateDate: new Date(rateDate),
-      baseUnit: "USD",
+      baseUnit: company.defaultCurrency || "USD", // use company default instead of hardcoded USD
       createdAt: new Date(),
     })
 
