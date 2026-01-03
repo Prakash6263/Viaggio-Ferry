@@ -285,25 +285,13 @@ const addExchangeRate = async (req, res) => {
       })
     }
 
-    // Check if rate for this date already exists
-    const existingRate = companyCurrency.exchangeRates.find(
-      (r) => new Date(r.rateDate).toDateString() === new Date(rateDate).toDateString(),
-    )
-
-    if (existingRate) {
-      // Update existing rate
-      existingRate.rate = rate
-      existingRate.rateDate = new Date(rateDate)
-      existingRate.createdAt = new Date()
-    } else {
-      // Add new rate
-      companyCurrency.exchangeRates.push({
-        rate,
-        rateDate: new Date(rateDate),
-        baseUnit: "USD",
-        createdAt: new Date(),
-      })
-    }
+    // This allows tracking multiple rate changes within the same day or even seconds
+    companyCurrency.exchangeRates.push({
+      rate,
+      rateDate: new Date(rateDate),
+      baseUnit: "USD",
+      createdAt: new Date(),
+    })
 
     // Update current rate if this is the most recent
     const mostRecentRate = companyCurrency.exchangeRates.reduce((max, current) => {
@@ -320,8 +308,13 @@ const addExchangeRate = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Exchange rate added/updated successfully",
-      data: companyCurrency,
+      message: "Exchange rate added to history successfully",
+      data: {
+        currencyCode: companyCurrency.currencyCode,
+        currentRate: companyCurrency.currentRate,
+        lastRateUpdate: companyCurrency.lastRateUpdate,
+        historyCount: companyCurrency.exchangeRates.length,
+      },
     })
   } catch (error) {
     res.status(500).json({
