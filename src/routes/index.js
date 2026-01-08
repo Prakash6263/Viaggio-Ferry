@@ -7,7 +7,7 @@ const contactMessageRoutes = require("./contactMessageRoutes")
 const b2cRoutes = require("./b2cRoutes")
 const companyCurrencyRoutes = require("./companyCurrencyRoutes")
 const currencyRoutes = require("./currencyRoutes")
-
+const partnerRoutes = require("./partnerRoutes")
 module.exports = (app) => {
   app.use("/api/exchange-rates", exchangeRateRoutes)
   app.use("/api/admin", adminRoutes)
@@ -18,4 +18,5 @@ module.exports = (app) => {
   app.use("/api/terms-and-conditions", termsAndConditionsRoutes)
   app.use("/api/contact-messages", contactMessageRoutes)
   app.use("/api/b2c", b2cRoutes)
+  app.use("/api/partners", partnerRoutes)
 }
