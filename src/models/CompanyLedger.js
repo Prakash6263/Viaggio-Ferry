@@ -26,13 +26,6 @@ const CompanyLedgerSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    // Reference to the base ledger (if inherited from SuperAdminLedger)
-    baseLedger: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "SuperAdminLedger",
-      default: null,
-      index: true,
-    },
     ledgerCode: {
       type: String,
       required: true,
@@ -116,7 +109,6 @@ CompanyLedgerSchema.index({ company: 1, ledgerCode: 1 }, { unique: true })
 CompanyLedgerSchema.index({ company: 1, ledgerType: 1 })
 CompanyLedgerSchema.index({ company: 1, status: 1 })
 CompanyLedgerSchema.index({ company: 1, systemAccount: 1 })
-CompanyLedgerSchema.index({ company: 1, baseLedger: 1 })
 CompanyLedgerSchema.index({
   company: 1,
   ledgerDescription: "text",

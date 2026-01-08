@@ -26,6 +26,15 @@ const verifySuperAdmin = (req, res, next) => {
   })
 }
 
+const verifyAdminOrCompany = (req, res, next) => {
+  verifyToken(req, res, () => {
+    if (req.user.role !== "super_admin" && req.user.role !== "company") {
+      throw createHttpError(403, "Access denied. Admin or company role required.")
+    }
+    next()
+  })
+}
+
 const verifyCompanyToken = (req, res, next) => {
   verifyToken(req, res, () => {
     if (req.user.role !== "company") {
@@ -75,4 +84,11 @@ const extractUserId = (req, res, next) => {
   }
 }
 
-module.exports = { verifyToken, verifySuperAdmin, verifyCompanyToken, extractCompanyId, extractUserId }
+module.exports = {
+  verifyToken,
+  verifySuperAdmin,
+  verifyAdminOrCompany,
+  verifyCompanyToken,
+  extractCompanyId,
+  extractUserId,
+}

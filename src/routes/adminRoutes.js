@@ -1,7 +1,8 @@
 const express = require("express")
 const router = express.Router()
 const adminController = require("../controllers/adminController")
-const { verifySuperAdmin } = require("../middleware/authMiddleware")
+const ledgerController = require("../controllers/ledgerController")
+const { verifySuperAdmin, verifyAdminOrCompany } = require("../middleware/authMiddleware")
 const { adminUpload } = require("../middleware/upload")
 
 // Public endpoints (no auth required)
@@ -10,6 +11,12 @@ router.post("/login", adminController.login)
 
 // Protected endpoints (super admin required)
 router.get("/profile", verifySuperAdmin, adminController.getProfile)
+
+// Updated ledger routes to allow company access via verifyAdminOrCompany
+router.get("/ledgers/allowed-types", verifyAdminOrCompany, ledgerController.getAllowedLedgerTypes)
+router.get("/ledgers", ledgerController.listLedgers)
+router.delete("/ledgers/:id", verifySuperAdmin, ledgerController.deleteLedger)
+
 router.patch("/profile", verifySuperAdmin, adminUpload.single("profileImage"), adminController.updateProfile)
 router.get("/companies", verifySuperAdmin, adminController.listCompanies)
 router.get("/companies/:id", verifySuperAdmin, adminController.getCompany)
