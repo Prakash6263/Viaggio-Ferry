@@ -34,12 +34,12 @@ const CompanySchema = new mongoose.Schema(
     vision: { type: String },
     mission: { type: String },
     purpose: { type: String },
-   companySlug: {
-  type: String,
-  unique: true,
-  lowercase: true,
-  trim: true,
-},
+    companySlug: {
+      type: String,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
 
     adminProfileImage: { type: String },
 
@@ -55,6 +55,7 @@ const CompanySchema = new mongoose.Schema(
     passwordHash: { type: String, required: true },
     status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
     isActive: { type: Boolean, default: true },
+    isDeleted: { type: Boolean, default: false }, // Added isDeleted field to support soft deletes
     verifiedAt: { type: Date },
     verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     rejectionReason: { type: String },
