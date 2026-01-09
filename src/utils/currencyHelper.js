@@ -50,8 +50,8 @@ const createDefaultCompanyCurrency = async (companyId, defaultCurrency = "USD", 
       exchangeRates: [
         {
           rate: 1.0,
-          rateDate: new Date(),
           baseUnit: defaultCurrency,
+          createdAt: new Date(),
         },
       ],
       lastRateUpdate: new Date(),

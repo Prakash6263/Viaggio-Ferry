@@ -85,20 +85,17 @@ const addCurrencyToCompany = async (req, res) => {
     if (exchangeRates && Array.isArray(exchangeRates) && exchangeRates.length > 0) {
       finalExchangeRates = exchangeRates.map((r) => ({
         rate: r.rate,
-        rateDate: new Date(r.rateDate || Date.now()),
         baseUnit: r.baseUnit || company.defaultCurrency || "USD", // fallback to company default
         createdAt: new Date(),
       }))
 
-      // Find the most recent rate to set as currentRate
-      const mostRecent = [...finalExchangeRates].sort((a, b) => new Date(b.rateDate) - new Date(a.rateDate))[0]
+      const mostRecent = [...finalExchangeRates].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0]
       finalCurrentRate = mostRecent.rate
-      finalRateUpdate = mostRecent.rateDate
+      finalRateUpdate = mostRecent.createdAt
     } else {
       finalExchangeRates = [
         {
           rate: currentRate,
-          rateDate: new Date(),
           baseUnit: company.defaultCurrency || "USD", // use company default instead of hardcoded USD
           createdAt: new Date(),
         },
@@ -256,7 +253,7 @@ const addExchangeRate = async (req, res) => {
     await connectDB()
 
     const { companyId, currencyId } = req.params
-    const { rate, rateDate } = req.body
+    const { rate } = req.body
 
     if (!mongoose.Types.ObjectId.isValid(companyId) || !mongoose.Types.ObjectId.isValid(currencyId)) {
       return res.status(400).json({
@@ -265,10 +262,10 @@ const addExchangeRate = async (req, res) => {
       })
     }
 
-    if (!rate || !rateDate) {
+    if (!rate) {
       return res.status(400).json({
         success: false,
-        error: "rate and rateDate are required",
+        error: "rate is required",
       })
     }
 
@@ -293,24 +290,20 @@ const addExchangeRate = async (req, res) => {
       })
     }
 
-    // This allows tracking multiple rate changes within the same day or even seconds
     companyCurrency.exchangeRates.push({
       rate,
-      rateDate: new Date(rateDate),
-      baseUnit: company.defaultCurrency || "USD", // use company default instead of hardcoded USD
+      baseUnit: company.defaultCurrency || "USD",
       createdAt: new Date(),
     })
 
-    // Update current rate if this is the most recent
     const mostRecentRate = companyCurrency.exchangeRates.reduce((max, current) => {
-      return new Date(current.rateDate) > new Date(max.rateDate) ? current : max
+      return new Date(current.createdAt) > new Date(max.createdAt) ? current : max
     })
 
     companyCurrency.currentRate = mostRecentRate.rate
-    companyCurrency.lastRateUpdate = mostRecentRate.rateDate
+    companyCurrency.lastRateUpdate = mostRecentRate.createdAt
 
-    // Sort rates by date (newest first)
-    companyCurrency.exchangeRates.sort((a, b) => new Date(b.rateDate) - new Date(a.rateDate))
+    companyCurrency.exchangeRates.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 
     await companyCurrency.save()
 
@@ -368,18 +361,23 @@ const getExchangeRateHistory = async (req, res) => {
 
     let rates = companyCurrency.exchangeRates
 
-    // Filter by date range if provided
     if (startDate || endDate) {
       rates = rates.filter((r) => {
-        const date = new Date(r.rateDate)
+        const date = new Date(r.createdAt)
         if (startDate && date < new Date(startDate)) return false
         if (endDate && date > new Date(endDate)) return false
         return true
       })
     }
 
-    // Sort by date (newest first) and limit
-    rates = rates.sort((a, b) => new Date(b.rateDate) - new Date(a.rateDate)).slice(0, limit)
+    rates = rates
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, limit)
+      .map(({ rate, baseUnit, createdAt }) => ({
+        rate,
+        baseUnit,
+        createdAt,
+      }))
 
     res.status(200).json({
       success: true,

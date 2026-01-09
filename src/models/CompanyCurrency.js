@@ -1,6 +1,6 @@
 const mongoose = require("mongoose")
 
-// Schema for exchange rate entry with date and time
+// Schema for exchange rate entry with timestamp tracking
 const ExchangeRateSchema = new mongoose.Schema(
   {
     _id: false,
@@ -9,11 +9,6 @@ const ExchangeRateSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
-    rateDate: {
-      type: Date,
-      required: true,
-      index: true,
-    },
     baseUnit: {
       type: String,
       default: "USD", // Base unit for the rate (e.g., 1 USD = X currency)
@@ -21,6 +16,7 @@ const ExchangeRateSchema = new mongoose.Schema(
     createdAt: {
       type: Date,
       default: Date.now,
+      index: true,
     },
   },
   { timestamps: false },
@@ -109,6 +105,6 @@ const CompanyCurrencySchema = new mongoose.Schema(
 CompanyCurrencySchema.index({ company: 1, currencyCode: 1, countryName: 1 }, { unique: true })
 CompanyCurrencySchema.index({ company: 1, isDefault: 1 })
 CompanyCurrencySchema.index({ company: 1, isActive: 1, isDeleted: 1 })
-CompanyCurrencySchema.index({ company: 1, "exchangeRates.rateDate": -1 })
+CompanyCurrencySchema.index({ company: 1, "exchangeRates.createdAt": -1 })
 
 module.exports = mongoose.model("CompanyCurrency", CompanyCurrencySchema)
