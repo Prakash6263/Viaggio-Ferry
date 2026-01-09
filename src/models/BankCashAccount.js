@@ -18,9 +18,9 @@ const BankCashAccountSchema = new mongoose.Schema(
       maxlength: 100,
     },
     partnerAccount: {
-      type: String,
-      default: "N/A",
-      trim: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Partner",
+      default: null,
     },
     accountType: {
       type: String,
@@ -43,6 +43,12 @@ const BankCashAccountSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Currency",
       required: true,
+      index: true,
+    },
+    ledgerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "CompanyLedger",
+      required: false,
       index: true,
     },
     ledgerCode: {
