@@ -98,9 +98,9 @@ const createTaxWithLedger = async (companyId, { code, name, value, type, form, s
       typeSequence: ledgerGen.typeSequence,
       ledgerDescription: ledgerDescription, // Set from deriveLedgerDescription rule
       status: status || "Active",
-      systemAccount: true, // System-generated ledger
-      locked: true, // Cannot be edited or deleted manually
-      createdBy: LEDGER_CREATED_BY.SYSTEM,
+      systemAccount: false,
+      locked: false,
+      createdBy: "company",
       notes: `Auto-created for Tax "${normalizedCode}" (${normalizedName || normalizedCode})`,
       isDeleted: false,
     })

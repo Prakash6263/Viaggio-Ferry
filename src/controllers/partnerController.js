@@ -30,7 +30,6 @@ const createPartner = async (req, res, next) => {
       priceList,
       creditLimit,
       contactInformation,
-      password,
       companyId: bodyCompanyId,
     } = parsedBody
 
@@ -102,13 +101,6 @@ const createPartner = async (req, res, next) => {
         email: contactInformation?.email || "",
         hotline: contactInformation?.hotline || "",
       },
-    }
-
-    if (password) {
-      if (password.length < 6) {
-        throw createHttpError(400, "Password must be at least 6 characters long")
-      }
-      partnerData.passwordHash = password
     }
 
     const partner = new Partner(partnerData)
@@ -243,8 +235,7 @@ const updatePartner = async (req, res, next) => {
       throw createHttpError(403, "Cannot update partners from other companies")
     }
 
-    const { name, phone, address, role, partnerStatus, priceList, creditLimit, contactInformation, notes, password } =
-      req.body
+    const { name, phone, address, role, partnerStatus, priceList, creditLimit, contactInformation, notes } = req.body
 
     // Prepare update object
     const updateData = {}
@@ -293,13 +284,6 @@ const updatePartner = async (req, res, next) => {
       }
     }
     if (notes !== undefined) updateData.notes = notes
-
-    if (password) {
-      if (password.length < 6) {
-        throw createHttpError(400, "Password must be at least 6 characters long")
-      }
-      updateData.passwordHash = password
-    }
 
     const updatedPartner = await Partner.findByIdAndUpdate(id, updateData, { new: true, runValidators: true })
       .populate("company", "name email")
