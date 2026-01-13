@@ -30,6 +30,11 @@ const partnerSchema = new mongoose.Schema(
     address: { type: String, required: true, trim: true },
     layer: { type: String, enum: ["Marine", "Commercial", "Selling"], required: true },
     parentAccount: { type: mongoose.Schema.Types.ObjectId, ref: "Partner", default: null },
+    parentCompany: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "Company",
+  default: null,
+},
     partnerStatus: { type: String, enum: ["Active", "Inactive"], default: "Active" },
     disabled: { type: Boolean, default: false },
     priceList: { type: String, default: "" },

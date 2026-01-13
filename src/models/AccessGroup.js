@@ -31,10 +31,26 @@ const AccessGroupSchema = new mongoose.Schema(
     },
     isActive: { type: Boolean, default: true },
     permissions: { type: [PermissionSchema], default: [] },
+    isDeleted: { type: Boolean, default: false },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true },
 )
 
 AccessGroupSchema.index({ company: 1, groupCode: 1 }, { unique: true })
+AccessGroupSchema.index({ company: 1, isDeleted: 1 })
+
+// Filter out soft-deleted documents by default
+AccessGroupSchema.pre("find", function () {
+  if (!this.getOptions()?.includeSoftDeleted) {
+    this.where({ isDeleted: false })
+  }
+})
+
+AccessGroupSchema.pre("findOne", function () {
+  if (!this.getOptions()?.includeSoftDeleted) {
+    this.where({ isDeleted: false })
+  }
+})
 
 module.exports = mongoose.model("AccessGroup", AccessGroupSchema)

@@ -51,7 +51,9 @@ const initializeDefaultB2CPartners = async (companyId) => {
       phone: company.mainPhoneNumber || "N/A",
       address: company.address || "N/A",
       layer: "Marine",
-      parentAccount: companyId,
+      parentCompany: companyId,
+      parentAccount: null,
+
       partnerStatus: "Active",
       contactInformation: {
         name: "B2C_Marine_Partner",
