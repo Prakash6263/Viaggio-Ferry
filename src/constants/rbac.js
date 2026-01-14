@@ -15,6 +15,7 @@ const MODULE_CODES = [
   "sales-bookings",
   "checkin-boardings",
   "finance",
+  "website",
 ]
 
 // ==============================
@@ -246,7 +247,26 @@ const MODULE_SUBMODULES = {
       allowedPermissions: ["read"],
     },
   ],
+
+   website: [
+    {
+      code: "issue-passenger-tickets",
+      label: "Issue Passenger Tickets",
+      allowedPermissions: ["read", "write", "edit", "delete"],
+    },
+    {
+      code: "issue-cargo-bills",
+      label: "Issue Cargo Bills",
+      allowedPermissions: ["read", "write", "edit", "delete"],
+    },
+    {
+      code: "issue-vehicle-tickets",
+      label: "Issue Vehicles Tickets",
+      allowedPermissions: ["read", "write", "edit", "delete"],
+    },
+  ],
 }
+
 
 // ==============================
 // ALL POSSIBLE PERMISSIONS
