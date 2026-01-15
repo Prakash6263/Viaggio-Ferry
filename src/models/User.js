@@ -16,12 +16,30 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
     position: { type: String, default: "", trim: true },
-    agent: { type: mongoose.Schema.Types.ObjectId, ref: "Agent", default: null },
+    layer: {
+      type: String,
+      enum: ["company", "marine-agent", "commercial-agent", "selling-agent"],
+      required: true,
+      index: true,
+    },
+    agent: { type: mongoose.Schema.Types.ObjectId, ref: "Partner", default: null },
     isSalesman: { type: Boolean, default: false },
     remarks: { type: String, default: "" },
     status: { type: String, enum: ["Active", "Inactive"], default: "Active" },
     isDeleted: { type: Boolean, default: false },
-    accessGroups: [{ type: mongoose.Schema.Types.ObjectId, ref: "AccessGroup" }],
+    moduleAccess: [
+      {
+        moduleCode: {
+          type: String,
+          required: true,
+        },
+        accessGroupId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "AccessGroup",
+          required: true,
+        },
+      },
+    ],
   },
   { timestamps: true },
 )

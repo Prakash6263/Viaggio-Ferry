@@ -11,7 +11,7 @@ const bankCashAccountRoutes = require("./bankCashAccountRoutes")
 const partnerRoutes = require("./partnerRoutes")
 const taxRoutes = require("./taxRoutes")
 const accessGroupRoutes = require("./accessGroupRoutes")
-const userAccessGroupRoutes = require("./userAccessGroupRoutes")
+const userRoutes = require("./userRoutes")
 const protectedExampleRoutes = require("./protectedExampleRoutes")
 
 module.exports = (app) => {
@@ -28,6 +28,6 @@ module.exports = (app) => {
   app.use("/api/partners", partnerRoutes)
   app.use("/api/company/taxes", taxRoutes)
   app.use("/api/access-groups", accessGroupRoutes)
-  app.use("/api/users", userAccessGroupRoutes)
+  app.use("/api/users", userRoutes)
   app.use("/api/protected-example", protectedExampleRoutes)
 }

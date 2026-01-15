@@ -25,6 +25,13 @@ const assignAccessGroupToUser = async (req, res, next) => {
       throw createHttpError(404, `Access group not found for module '${moduleCode}'`)
     }
 
+    let partnerId = req.body.partnerId || null
+    if (accessGroup.layer === "company") {
+      partnerId = companyId // Auto-assign companyId for company layer instead of null
+    } else if (!partnerId) {
+      throw createHttpError(400, `partnerId is required for layer '${accessGroup.layer}'`)
+    }
+
     // Find user and update access groups
     const user = await User.findOne({
       _id: userId,
@@ -46,11 +53,13 @@ const assignAccessGroupToUser = async (req, res, next) => {
     if (existingGroupIndex >= 0) {
       // Update existing
       user.accessGroups[existingGroupIndex].accessGroupId = accessGroupId
+      user.accessGroups[existingGroupIndex].partnerId = partnerId
     } else {
       // Add new
       user.accessGroups.push({
         moduleCode,
         accessGroupId,
+        partnerId,
       })
     }
 
@@ -172,7 +181,7 @@ const removeAccessGroupFromUser = async (req, res, next) => {
     }
 
     // Remove the access group for this module
-    user.accessGroups = user.accessGroups.filter((ag) => ag.moduleCode !== moduleCode)
+    user.moduleAccess = user.moduleAccess.filter((ag) => ag.moduleCode !== moduleCode)
 
     await user.save()
 
@@ -181,7 +190,7 @@ const removeAccessGroupFromUser = async (req, res, next) => {
       message: `Access group removed for module '${moduleCode}'`,
       data: {
         userId: user._id,
-        accessGroups: user.accessGroups,
+        moduleAccess: user.moduleAccess,
       },
     })
   } catch (error) {
