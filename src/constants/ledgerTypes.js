@@ -9,7 +9,7 @@ const LEDGER_TYPES = [
 
   "Cash & Banks",
   "Business Partners",
-  "Salesmen Receivables",
+  "Salesmen",
   "Account Receivables",
   "Prepayments",
   "Other Current Assets",
@@ -43,7 +43,7 @@ const LEDGER_TYPE_MAPPING = {
 
   "Cash & Banks": "21",
   "Business Partners": "22",
-  "Salesmen Receivables": "23",
+  "Salesmen": "23",
   "Account Receivables": "24",
   Prepayments: "25",
   "Other Current Assets": "26",
@@ -70,7 +70,7 @@ const LEDGER_TYPE_MAPPING = {
 
 const SYSTEM_ONLY_LEDGER_TYPES = [
   "Business Partners",
-  "Salesmen Receivables",
+  "Salesmen",
   "Account Receivables",
   "Account Payables",
   "Cash & Banks", // Bank ledgers are now system-generated only as per Rule 4

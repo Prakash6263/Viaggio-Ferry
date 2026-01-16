@@ -2,6 +2,8 @@ const createHttpError = require("http-errors")
 const User = require("../models/User")
 const AccessGroup = require("../models/AccessGroup")
 const Partner = require("../models/Partner")
+const { CompanyLedger } = require("../models/CompanyLedger")
+const { generateLedgerCode } = require("../utils/ledgerHelper")
 const { LAYER_CODES, MODULE_CODES } = require("../constants/rbac")
 
 /**
@@ -12,6 +14,7 @@ const { LAYER_CODES, MODULE_CODES } = require("../constants/rbac")
  * 1. If isSalesman = true:
  *    - Force layer = "selling-agent"
  *    - partnerId becomes REQUIRED
+ *    - Auto-create a Salesman Ledger with salesman name as description
  *
  * 2. If isSalesman = false:
  *    - Use provided layer value
@@ -119,15 +122,40 @@ const createUser = async (req, res, next) => {
       fullName: fullName.trim(),
       email: email.toLowerCase().trim(),
       position: position.trim(),
-      layer: resolvedLayer, // Store resolved layer on user
+      layer: resolvedLayer,
       isSalesman: isSalesman === true,
-      agent: resolvedLayer === "company" ? companyId : partnerId || null, // Auto-assign companyId when layer is company
+      agent: resolvedLayer === "company" ? companyId : partnerId || null,
       remarks: remarks ? remarks.trim() : "",
       status: "Active",
-      moduleAccess: validatedModuleAccess, // Changed from accessGroups to moduleAccess
+      moduleAccess: validatedModuleAccess,
     })
 
     await newUser.save()
+
+    if (isSalesman === true && partnerId) {
+      try {
+        const gen = await generateLedgerCode("Salesmen", companyId)
+        const newLedger = new CompanyLedger({
+          company: companyId,
+          ledgerCode: gen.ledgerCode,
+          ledgerSequenceNumber: gen.nextSequenceNumber,
+          ledgerType: "Salesmen",
+          typeSequence: gen.typeSequence,
+          ledgerDescription: fullName.trim(),
+          status: "Active",
+          systemAccount: false,
+          locked: false,
+          createdBy: "system",
+          partnerAccount: partnerId,
+          partnerModel: "Partner",
+        })
+        await newLedger.save()
+        console.log("[v0] Salesman ledger created successfully for:", fullName)
+      } catch (ledgerError) {
+        console.error("[v0] Warning: Could not auto-generate ledger for salesman:", ledgerError.message)
+        // Non-blocking: don't fail salesman creation if ledger creation fails
+      }
+    }
 
     await newUser.populate({
       path: "moduleAccess.accessGroupId",
@@ -147,7 +175,7 @@ const createUser = async (req, res, next) => {
         agent: newUser.agent,
         remarks: newUser.remarks,
         status: newUser.status,
-        moduleAccess: newUser.moduleAccess, // Changed response field to moduleAccess
+        moduleAccess: newUser.moduleAccess,
         createdAt: newUser.createdAt,
       },
     })
