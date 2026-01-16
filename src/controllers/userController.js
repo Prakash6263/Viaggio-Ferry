@@ -2,9 +2,12 @@ const createHttpError = require("http-errors")
 const User = require("../models/User")
 const AccessGroup = require("../models/AccessGroup")
 const Partner = require("../models/Partner")
+const Company = require("../models/Company")
 const { CompanyLedger } = require("../models/CompanyLedger")
 const { generateLedgerCode } = require("../utils/ledgerHelper")
 const { LAYER_CODES, MODULE_CODES } = require("../constants/rbac")
+const { sendUserCredentialsEmail } = require("../utils/emailService")
+const { generateTemporaryPassword } = require("../utils/passwordGenerator")
 
 /**
  * POST /api/users
@@ -131,6 +134,21 @@ const createUser = async (req, res, next) => {
     })
 
     await newUser.save()
+
+    let tempPassword = null
+    try {
+      tempPassword = generateTemporaryPassword()
+      const company = await Company.findById(companyId).select("companyName")
+
+      const emailResult = await sendUserCredentialsEmail(newUser, tempPassword, company?.companyName || "System")
+
+      if (!emailResult.success) {
+        console.warn("[v0] Warning: Credentials email could not be sent, but user was created successfully")
+      }
+    } catch (emailError) {
+      console.error("[v0] Warning: Could not send credentials email:", emailError.message)
+      // Non-blocking: don't fail user creation if email sending fails
+    }
 
     if (isSalesman === true && partnerId) {
       try {

@@ -553,6 +553,88 @@ const sendB2CWelcomeEmail = async (b2cUser) => {
   }
 }
 
+const sendUserCredentialsEmail = async (user, tempPassword, companyName) => {
+  const transporter = createTransporter()
+
+  const mailOptions = {
+    from: `"${companyName}" <${process.env.SMTP_USER}>`,
+    to: user.email,
+    subject: `Your Account Credentials - ${companyName}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #2196F3; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+          .content { background-color: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+          .credentials-box { background-color: #fff; border: 2px solid #2196F3; padding: 20px; margin: 20px 0; border-radius: 5px; }
+          .credentials-box p { margin: 10px 0; }
+          .label { font-weight: bold; color: #2196F3; }
+          .value { font-family: 'Courier New', monospace; color: #333; }
+          .warning { background-color: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 5px; margin: 20px 0; }
+          .button { display: inline-block; background-color: #4CAF50; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin-top: 15px; font-weight: bold; }
+          .button:hover { background-color: #45a049; }
+          .footer { margin-top: 30px; font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Welcome to ${companyName}</h1>
+          </div>
+          <div class="content">
+            <p>Dear <strong>${user.fullName}</strong>,</p>
+            <p>Your account has been successfully created. Below are your login credentials:</p>
+            
+            <div class="credentials-box">
+              <p><span class="label">Email:</span><br><span class="value">${user.email}</span></p>
+              <p><span class="label">Temporary Password:</span><br><span class="value">${tempPassword}</span></p>
+            </div>
+
+            <div class="warning">
+              <strong>Important Security Notes:</strong>
+              <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>This temporary password will expire after your first login</li>
+                <li>You will be required to change your password on first login</li>
+                <li>Never share your password with anyone</li>
+                <li>Always use a secure password</li>
+              </ul>
+            </div>
+
+            <p><strong>Your Account Details:</strong></p>
+            <ul>
+              <li><strong>Position:</strong> ${user.position}</li>
+              <li><strong>Status:</strong> ${user.status}</li>
+            </ul>
+
+            <p style="text-align: center;">
+              <a href="${process.env.FRONTEND_LOGIN_URL || "https://app.voyagian.com/login"}" class="button">Go to Login</a>
+            </p>
+
+            <p>If you did not create this account or have any questions, please contact your administrator.</p>
+            <p>Best regards,<br>The ${companyName} Team</p>
+          </div>
+          <div class="footer">
+            <p>This is an automated message. Please do not reply directly to this email.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+  }
+
+  try {
+    const info = await transporter.sendMail(mailOptions)
+    console.log("[v0] User credentials email sent:", info.messageId)
+    return { success: true, messageId: info.messageId }
+  } catch (error) {
+    console.error("[v0] Error sending user credentials email:", error)
+    return { success: false, error: error.message }
+  }
+}
+
 module.exports = {
   sendApprovalEmail,
   sendRejectionEmail,
@@ -564,4 +646,5 @@ module.exports = {
   sendB2CVerificationEmail,
   sendB2CVerificationOTPEmail,
   sendB2CWelcomeEmail,
+  sendUserCredentialsEmail, // Export new function
 }
