@@ -588,6 +588,96 @@ const getUsersByStatus = async (req, res, next) => {
   }
 }
 
+/**
+ * GET /api/users/salesman/list
+ * Get all salesman users with pagination, filtering, and sorting
+ *
+ * Query Parameters:
+ * - page (optional, default: 1)
+ * - limit (optional, default: 10)
+ * - status (optional: Active, Inactive)
+ * - search (optional: search by fullName, email, position)
+ * - sortBy (optional: default createdAt)
+ * - sortOrder (optional: asc, desc)
+ *
+ * Returns: Paginated list of salesman users with moduleAccess populated
+ */
+const getSalesmanUsers = async (req, res, next) => {
+  try {
+    const { companyId } = req
+    const { page = 1, limit = 10, status, search, sortBy = "createdAt", sortOrder = "desc" } = req.query
+
+    const pageNum = Math.max(1, Number.parseInt(page) || 1)
+    const limitNum = Math.min(100, Math.max(1, Number.parseInt(limit) || 10)) // Max 100 results per page
+
+    const filter = {
+      company: companyId,
+      isSalesman: true,
+      isDeleted: false,
+    }
+
+    if (status && ["Active", "Inactive"].includes(status)) {
+      filter.status = status
+    }
+
+    // Full text search on fullName, email, position
+    if (search && search.trim()) {
+      filter.$text = { $search: search.trim() }
+    }
+
+    // Build sort object
+    const sortObj = {}
+    sortObj[sortBy] = sortOrder === "asc" ? 1 : -1
+
+    // Execute query with pagination
+    const totalCount = await User.countDocuments(filter)
+    const users = await User.find(filter)
+      .populate({
+        path: "moduleAccess.accessGroupId",
+        select: "groupName groupCode moduleCode layer permissions",
+      })
+      .populate({
+        path: "agent",
+        select: "_id name partnerCode",
+      })
+      .sort(sortObj)
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum)
+
+    const totalPages = Math.ceil(totalCount / limitNum)
+
+    res.json({
+      success: true,
+      data: {
+        users: users.map((user) => ({
+          _id: user._id,
+          fullName: user.fullName,
+          email: user.email,
+          position: user.position,
+          layer: user.layer,
+          isSalesman: user.isSalesman,
+          agent: user.agent,
+          remarks: user.remarks,
+          status: user.status,
+          moduleAccess: user.moduleAccess,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+        })),
+        pagination: {
+          currentPage: pageNum,
+          totalPages,
+          pageSize: limitNum,
+          totalCount,
+          hasNextPage: pageNum < totalPages,
+          hasPrevPage: pageNum > 1,
+        },
+      },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 module.exports = {
   createUser,
   getAccessGroupsByModuleAndLayer,
@@ -595,4 +685,5 @@ module.exports = {
   getUserById,
   updateUser,
   getUsersByStatus,
+  getSalesmanUsers,
 }

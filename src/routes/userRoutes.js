@@ -6,6 +6,7 @@ const {
   getUserById,
   updateUser,
   getUsersByStatus,
+  getSalesmanUsers,
 } = require("../controllers/userController")
 const {
   assignAccessGroupToUser,
@@ -27,6 +28,8 @@ router.use(checkCompanyAdmin)
 // GET /api/users
 // Get list of all users
 router.get("/", getAllUsers)
+
+router.get("/salesman/list", getSalesmanUsers)
 
 // GET /api/users/by-status/:status
 // Get users filtered by status (Active or Inactive)
