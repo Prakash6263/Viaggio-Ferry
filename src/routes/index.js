@@ -12,6 +12,7 @@ const partnerRoutes = require("./partnerRoutes")
 const taxRoutes = require("./taxRoutes")
 const accessGroupRoutes = require("./accessGroupRoutes")
 const userRoutes = require("./userRoutes")
+const sidebarRoutes = require("./sidebarRoutes")
 const protectedExampleRoutes = require("./protectedExampleRoutes")
 
 module.exports = (app) => {
@@ -29,5 +30,6 @@ module.exports = (app) => {
   app.use("/api/company/taxes", taxRoutes)
   app.use("/api/access-groups", accessGroupRoutes)
   app.use("/api/users", userRoutes)
+  app.use("/api/sidebar", sidebarRoutes)
   app.use("/api/protected-example", protectedExampleRoutes)
 }

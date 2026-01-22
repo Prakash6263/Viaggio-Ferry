@@ -172,7 +172,10 @@ const registerCompany = async (req, res, next) => {
   }
 }
 
-// 2️⃣ Public — Login Company
+// 2️⃣ SMART LOGIN — Unified login for Company Admins and Users
+// POST /api/companies/login
+// Accepts: email + password
+// Returns: Standard JWT token that works with sidebar, RBAC middleware, and permission system
 const loginCompany = async (req, res, next) => {
   try {
     const { email, password } = req.body
@@ -181,42 +184,147 @@ const loginCompany = async (req, res, next) => {
       throw createHttpError(400, "Email and password are required")
     }
 
-    const company = await Company.findOne({ loginEmail: email.toLowerCase() })
-    if (!company) {
-      throw createHttpError(401, "Invalid credentials")
+    const normalizedEmail = email.toLowerCase().trim()
+
+    // ============================================================
+    // STEP 1: Try to find user first
+    // ============================================================
+    const User = require("../models/User")
+    const user = await User.findOne({ email: normalizedEmail, isDeleted: false }).select("+password").populate("company")
+
+    if (user) {
+      // ========================================
+      // USER LOGIN FLOW
+      // ========================================
+
+      // Validation: User must be active
+      if (user.status !== "Active") {
+        throw createHttpError(403, "User account is inactive")
+      }
+
+      // Validation: User must have password set
+      if (!user.password) {
+        throw createHttpError(403, "User account is not properly configured")
+      }
+
+      // Validation: User must belong to a company
+      if (!user.company || !user.company._id) {
+        throw createHttpError(403, "User account is not associated with a company")
+      }
+
+      // Validation: Company must be approved
+      if (user.company.status !== "approved") {
+        throw createHttpError(403, "User's company is not approved")
+      }
+
+      if (!user.company.isActive) {
+        throw createHttpError(403, "User's company account is disabled")
+      }
+
+      // Validation: Company must not be deleted
+      if (user.company.isDeleted) {
+        throw createHttpError(403, "User's company account has been deleted")
+      }
+
+      // Verify password using bcrypt (password is selected in query above)
+      const bcrypt = require("bcryptjs")
+      const isPasswordValid = await bcrypt.compare(password, user.password)
+      if (!isPasswordValid) {
+        throw createHttpError(401, "Invalid credentials")
+      }
+
+      // Build moduleAccess array for JWT
+      const moduleAccess = user.moduleAccess || []
+
+      // Generate STANDARD JWT TOKEN
+      const token = jwt.sign(
+        {
+          id: user._id,
+          role: "user",
+          email: user.email,
+          companyId: user.company._id,
+          layer: user.layer,
+          moduleAccess: moduleAccess,
+        },
+        process.env.JWT_SECRET || "your-secret-key",
+        { expiresIn: "24h" },
+      )
+
+      return res.status(200).json({
+        success: true,
+        message: "Login successful",
+        data: {
+          token,
+          user: {
+            id: user._id,
+            role: "user",
+            email: user.email,
+            layer: user.layer,
+            companyId: user.company._id,
+          },
+        },
+      })
     }
 
-    // Check status
-    if (company.status === "pending") {
-      throw createHttpError(403, "Company is not verified yet")
+    // ============================================================
+    // STEP 2: Try to find company
+    // ============================================================
+    const company = await Company.findOne({ loginEmail: normalizedEmail, isDeleted: false })
+
+    if (company) {
+      // ========================================
+      // COMPANY LOGIN FLOW
+      // ========================================
+
+      // Validation: Company must be approved
+      if (company.status !== "approved") {
+        throw createHttpError(403, "Company account is not approved")
+      }
+
+      // Validation: Company must be active
+      if (!company.isActive) {
+        throw createHttpError(403, "Company account has been disabled by administrator")
+      }
+
+      // Validate password using company's comparePassword method
+      const isPasswordValid = await company.comparePassword(password)
+      if (!isPasswordValid) {
+        throw createHttpError(401, "Invalid credentials")
+      }
+
+      // Generate STANDARD JWT TOKEN (same format as user)
+      const token = jwt.sign(
+        {
+          id: company._id,
+          role: "company",
+          email: company.loginEmail,
+          companyId: company._id,
+          layer: "company",
+        },
+        process.env.JWT_SECRET || "your-secret-key",
+        { expiresIn: "24h" },
+      )
+
+      return res.status(200).json({
+        success: true,
+        message: "Login successful",
+        data: {
+          token,
+          user: {
+            id: company._id,
+            role: "company",
+            email: company.loginEmail,
+            layer: "company",
+            companyId: company._id,
+          },
+        },
+      })
     }
 
-    if (company.status === "rejected") {
-      throw createHttpError(403, "Company registration was rejected")
-    }
-
-    if (!company.isActive) {
-      throw createHttpError(403, "Company account has been disabled by administrator. Please contact support.")
-    }
-
-    // Verify password
-    const isPasswordValid = await company.comparePassword(password)
-    if (!isPasswordValid) {
-      throw createHttpError(401, "Invalid credentials")
-    }
-
-    // Generate JWT
-    const token = jwt.sign(
-      { companyId: company._id, id: company._id, role: "company" },
-      process.env.JWT_SECRET || "your-secret-key",
-      { expiresIn: "24h" },
-    )
-
-    res.status(200).json({
-      success: true,
-      message: "Login successful",
-      data: { token, companyId: company._id },
-    })
+    // ============================================================
+    // STEP 3: Account not found
+    // ============================================================
+    throw createHttpError(401, "Invalid credentials")
   } catch (error) {
     next(error)
   }

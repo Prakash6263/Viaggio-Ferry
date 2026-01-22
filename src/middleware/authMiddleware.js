@@ -10,7 +10,28 @@ const verifyToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key")
-    req.user = decoded
+    
+    // Standardize the token structure
+    // The JWT payload from smart login system contains:
+    // - id: userId or companyId
+    // - role: "user" or "company"
+    // - email: user/company email
+    // - companyId: always present
+    // - layer: user layer (optional for companies)
+    // - moduleAccess: array of module access (optional for companies)
+    
+    req.user = {
+      id: decoded.id,
+      role: decoded.role,
+      email: decoded.email,
+      companyId: decoded.companyId,
+      layer: decoded.layer || undefined,
+      moduleAccess: decoded.moduleAccess || [],
+    }
+    
+    // Attach companyId separately for backward compatibility
+    req.companyId = decoded.companyId
+    
     next()
   } catch (error) {
     throw createHttpError(401, "Invalid or expired token")
@@ -46,6 +67,8 @@ const verifyCompanyToken = (req, res, next) => {
 
 const extractCompanyId = (req, res, next) => {
   try {
+    // For company login: companyId is the company's MongoDB ID
+    // For user login: companyId is the company the user belongs to
     const companyId = req.user?.companyId
 
     if (!companyId) {
@@ -66,10 +89,19 @@ const extractCompanyId = (req, res, next) => {
 
 const extractUserId = (req, res, next) => {
   try {
-    const userId = req.user?.id || req.user?.userId
+    // CRITICAL FIX:
+    // For company role: userId should be null/undefined (it's a company, not a user)
+    // For user role: userId is from req.user.userId or req.user.id
+    const userId = req.user?.userId || req.user?.id
 
     if (!userId) {
-      throw createHttpError(401, "User ID not found in token. Please login again.")
+      // Only throw error if user is not company role
+      // Company roles don't have a userId because they ARE the company
+      if (req.user?.role !== "company") {
+        throw createHttpError(401, "User ID not found in token. Please login again.")
+      }
+      req.userId = null
+      return next()
     }
 
     // Attach userId to request for use in controllers

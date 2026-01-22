@@ -1,24 +1,64 @@
 const express = require("express")
 const router = express.Router()
 const bankCashAccountController = require("../controllers/bankCashAccountController")
-const { verifyAdminOrCompany } = require("../middleware/authMiddleware")
+const { verifyToken, extractCompanyId, extractUserId } = require("../middleware/authMiddleware")
+const { checkPermission } = require("../middleware/permissionMiddleware")
 
-// All routes require authentication
-router.use(verifyAdminOrCompany)
+// ==================== AUTHENTICATION MIDDLEWARE ====================
+router.use(verifyToken)
+router.use(extractCompanyId)
+router.use(extractUserId)
 
-// Create Bank/Cash Account (with auto-generated ledger)
-router.post("/", bankCashAccountController.createBankCashAccount)
+// ==================== BANK/CASH ACCOUNT ROUTES ====================
 
-// List Bank/Cash Accounts
-router.get("/", bankCashAccountController.listBankCashAccounts)
+/**
+ * POST /api/bank-cash-accounts
+ * Create Bank/Cash Account - requires write permission on bank-cash-accounts
+ */
+router.post(
+  "/",
+  checkPermission("finance", "bank-cash-accounts", "write"),
+  bankCashAccountController.createBankCashAccount
+)
 
-// Get specific Account
-router.get("/:id", bankCashAccountController.getBankCashAccountById)
+/**
+ * GET /api/bank-cash-accounts
+ * List Bank/Cash Accounts - requires read permission on bank-cash-accounts
+ */
+router.get(
+  "/",
+  checkPermission("finance", "bank-cash-accounts", "read"),
+  bankCashAccountController.listBankCashAccounts
+)
 
-// Update Account
-router.put("/:id", bankCashAccountController.updateBankCashAccount)
+/**
+ * GET /api/bank-cash-accounts/:id
+ * Get specific Account - requires read permission on bank-cash-accounts
+ */
+router.get(
+  "/:id",
+  checkPermission("finance", "bank-cash-accounts", "read"),
+  bankCashAccountController.getBankCashAccountById
+)
 
-// Delete Account
-router.delete("/:id", bankCashAccountController.deleteBankCashAccount)
+/**
+ * PUT /api/bank-cash-accounts/:id
+ * Update Account - requires edit permission on bank-cash-accounts
+ */
+router.put(
+  "/:id",
+  checkPermission("finance", "bank-cash-accounts", "edit"),
+  bankCashAccountController.updateBankCashAccount
+)
+
+/**
+ * DELETE /api/bank-cash-accounts/:id
+ * Delete Account - requires delete permission on bank-cash-accounts
+ */
+router.delete(
+  "/:id",
+  checkPermission("finance", "bank-cash-accounts", "delete"),
+  bankCashAccountController.deleteBankCashAccount
+)
 
 module.exports = router

@@ -9,35 +9,65 @@ const {
   getModuleSubmodules,
 } = require("../controllers/accessGroupController")
 const { verifyToken, extractCompanyId, extractUserId } = require("../middleware/authMiddleware")
-const { checkCompanyAdmin } = require("../middleware/permissionMiddleware")
+const { checkPermission } = require("../middleware/permissionMiddleware")
 
 const router = express.Router()
 
-// Middleware: Require authentication for all routes
+// ==================== AUTHENTICATION MIDDLEWARE ====================
 router.use(verifyToken)
 router.use(extractCompanyId)
 router.use(extractUserId)
-router.use(checkCompanyAdmin)
 
-// Create new access group
-router.post("/", createAccessGroup)
+// ==================== ACCESS GROUP MANAGEMENT ROUTES ====================
 
-// Get list of access groups
-router.get("/", getAccessGroups)
+/**
+ * POST /api/access-groups
+ * Create new access group - requires write permission on roles-permissions
+ */
+router.post("/", checkPermission("settings", "roles-permissions", "write"), createAccessGroup)
 
-// Get available submodules for a module
-router.get("/module/:moduleCode/submodules", getModuleSubmodules)
+/**
+ * GET /api/access-groups
+ * Get list of access groups - requires read permission on roles-permissions
+ */
+router.get("/", checkPermission("settings", "roles-permissions", "read"), getAccessGroups)
 
-// Get single access group
-router.get("/:id", getAccessGroup)
+/**
+ * GET /api/access-groups/module/:moduleCode/submodules
+ * Get available submodules for a module - requires read permission on roles-permissions
+ */
+router.get(
+  "/module/:moduleCode/submodules",
+  checkPermission("settings", "roles-permissions", "read"),
+  getModuleSubmodules
+)
 
-// Update access group
-router.put("/:id", updateAccessGroup)
+/**
+ * GET /api/access-groups/:id
+ * Get single access group - requires read permission on roles-permissions
+ */
+router.get("/:id", checkPermission("settings", "roles-permissions", "read"), getAccessGroup)
 
-// Toggle access group status
-router.patch("/:id/status", toggleAccessGroupStatus)
+/**
+ * PUT /api/access-groups/:id
+ * Update access group - requires edit permission on roles-permissions
+ */
+router.put("/:id", checkPermission("settings", "roles-permissions", "edit"), updateAccessGroup)
 
-// Delete access group (soft delete)
-router.delete("/:id", deleteAccessGroup)
+/**
+ * PATCH /api/access-groups/:id/status
+ * Toggle access group status - requires edit permission on roles-permissions
+ */
+router.patch(
+  "/:id/status",
+  checkPermission("settings", "roles-permissions", "edit"),
+  toggleAccessGroupStatus
+)
+
+/**
+ * DELETE /api/access-groups/:id
+ * Delete access group (soft delete) - requires delete permission on roles-permissions
+ */
+router.delete("/:id", checkPermission("settings", "roles-permissions", "delete"), deleteAccessGroup)
 
 module.exports = router

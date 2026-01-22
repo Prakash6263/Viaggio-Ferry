@@ -6,6 +6,7 @@ const adminUploadDir = path.join(__dirname, "../uploads/admin")
 const companyUploadDir = path.join(__dirname, "../uploads/companies")
 const whoWeAreUploadDir = path.join(__dirname, "../uploads/who-we-are")
 const b2cUserUploadDir = path.join(__dirname, "../uploads/b2c-users") // Added B2C users upload directory
+const userProfileUploadDir = path.join(__dirname, "../uploads/user-profiles") // User profile images
 
 if (!fs.existsSync(adminUploadDir)) {
   fs.mkdirSync(adminUploadDir, { recursive: true })
@@ -22,6 +23,10 @@ if (!fs.existsSync(whoWeAreUploadDir)) {
 if (!fs.existsSync(b2cUserUploadDir)) {
   // Create directory if it doesn't exist
   fs.mkdirSync(b2cUserUploadDir, { recursive: true })
+}
+
+if (!fs.existsSync(userProfileUploadDir)) {
+  fs.mkdirSync(userProfileUploadDir, { recursive: true })
 }
 
 const adminStorage = multer.diskStorage({
@@ -138,12 +143,30 @@ const b2cUserUpload = multer({
   fileFilter,
 })
 
+// User profile image storage
+const userProfileStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, userProfileUploadDir)
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9)
+    cb(null, "user-profile-" + uniqueSuffix + path.extname(file.originalname))
+  },
+})
+
+const userProfileUpload = multer({
+  storage: userProfileStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter,
+})
+
 module.exports = {
   adminUpload,
   companyLogoUpload,
   b2cUserUpload, // Exported b2cUserUpload
   whoWeAreUpload,
   companyUpload,
+  userProfileUpload, // User profile image upload
   companyMultiUpload: companyMultiUpload.fields([
     { name: "logo", maxCount: 1 },
     { name: "whoWeAreImage", maxCount: 1 },

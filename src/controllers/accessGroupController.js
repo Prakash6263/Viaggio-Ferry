@@ -1,6 +1,12 @@
 const createHttpError = require("http-errors")
 const AccessGroup = require("../models/AccessGroup")
 const { MODULE_SUBMODULES } = require("../constants/rbac")
+const {
+  isValidModule,
+  isValidSubmodule,
+  getModule,
+  getSubmodule,
+} = require("../config/menuConfig")
 
 // POST /api/access-groups
 // Create a new access group
@@ -24,24 +30,48 @@ const createAccessGroup = async (req, res, next) => {
       throw createHttpError(400, "Group code already exists for this company")
     }
 
-    // Validate module has submodules
-    const validSubmodules = MODULE_SUBMODULES[moduleCode]
-    if (!validSubmodules) {
-      throw createHttpError(400, `Invalid module: ${moduleCode}`)
+    // ==================== VALIDATE AGAINST MENU CONFIG ====================
+    // This ensures permissions always map to real features in the system
+    if (!isValidModule(moduleCode)) {
+      throw createHttpError(400, `Invalid module: ${moduleCode}. Module does not exist in menu configuration.`)
+    }
+
+    const moduleConfig = getModule(moduleCode)
+    if (!moduleConfig) {
+      throw createHttpError(400, `Module configuration not found: ${moduleCode}`)
     }
 
     // Validate permissions
     if (permissions && Array.isArray(permissions)) {
       for (const perm of permissions) {
-        const submoduleExists = validSubmodules.some((sub) => sub.code === perm.submoduleCode)
-        if (!submoduleExists) {
-          throw createHttpError(400, `Submodule ${perm.submoduleCode} not found in module ${moduleCode}`)
+        // Validate submodule exists in menuConfig
+        if (!isValidSubmodule(moduleCode, perm.submoduleCode)) {
+          throw createHttpError(
+            400,
+            `Submodule ${perm.submoduleCode} not found in module ${moduleCode}. Please check menu configuration.`
+          )
         }
 
-        // Check readonly submodules
-        const submodule = validSubmodules.find((sub) => sub.code === perm.submoduleCode)
-        if (submodule.readonly && (perm.canWrite || perm.canEdit || perm.canDelete)) {
-          throw createHttpError(400, `${perm.submoduleCode} is read-only. Cannot grant write/edit/delete permissions.`)
+        const submoduleConfig = getSubmodule(moduleCode, perm.submoduleCode)
+        if (!submoduleConfig) {
+          throw createHttpError(400, `Submodule configuration not found: ${perm.submoduleCode}`)
+        }
+
+        // Validate that granted permissions are allowed for this submodule
+        const allowedActions = submoduleConfig.actions || ["read"]
+        const requestedActions = []
+        if (perm.canRead) requestedActions.push("read")
+        if (perm.canWrite) requestedActions.push("write")
+        if (perm.canEdit) requestedActions.push("edit")
+        if (perm.canDelete) requestedActions.push("delete")
+
+        for (const action of requestedActions) {
+          if (!allowedActions.includes(action)) {
+            throw createHttpError(
+              400,
+              `Permission '${action}' is not allowed for submodule '${perm.submoduleCode}'. Allowed permissions: ${allowedActions.join(", ")}`
+            )
+          }
         }
       }
     }

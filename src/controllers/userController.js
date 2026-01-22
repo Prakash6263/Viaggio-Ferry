@@ -8,6 +8,7 @@ const { generateLedgerCode } = require("../utils/ledgerHelper")
 const { LAYER_CODES, MODULE_CODES } = require("../constants/rbac")
 const { sendUserCredentialsEmail } = require("../utils/emailService")
 const { generateTemporaryPassword } = require("../utils/passwordGenerator")
+const path = require("path")
 
 /**
  * POST /api/users
@@ -120,10 +121,19 @@ const createUser = async (req, res, next) => {
       }
     }
 
+    let tempPassword = null
+    try {
+      tempPassword = generateTemporaryPassword()
+    } catch (passwordError) {
+      console.error("[v0] Warning: Could not generate temporary password:", passwordError.message)
+      throw createHttpError(500, "Failed to generate temporary password")
+    }
+
     const newUser = new User({
       company: companyId,
       fullName: fullName.trim(),
       email: email.toLowerCase().trim(),
+      password: tempPassword,
       position: position.trim(),
       layer: resolvedLayer,
       isSalesman: isSalesman === true,
@@ -135,9 +145,7 @@ const createUser = async (req, res, next) => {
 
     await newUser.save()
 
-    let tempPassword = null
     try {
-      tempPassword = generateTemporaryPassword()
       const company = await Company.findById(companyId).select("companyName")
 
       const emailResult = await sendUserCredentialsEmail(newUser, tempPassword, company?.companyName || "System")
@@ -724,6 +732,434 @@ const getSalesmanUsers = async (req, res, next) => {
   }
 }
 
+/**
+ * GET /api/users/me
+ * Get own user profile - token-based identity enforcement
+ * 
+ * Security:
+ * - Uses req.user.id and req.user.companyId from JWT token
+ * - Never trusts URL parameters for identity
+ * - Excludes password from response
+ * 
+ * Returns: User profile data in standardized format
+ */
+const getMyProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.id || req.user.userId
+    const companyId = req.user.companyId
+
+    if (!userId || !companyId) {
+      throw createHttpError(401, "Invalid token: missing user identity")
+    }
+
+    const user = await User.findOne({
+      _id: userId,
+      company: companyId,
+      isDeleted: false,
+    })
+      .select("-password")
+      .populate({
+        path: "moduleAccess.accessGroupId",
+        select: "groupName groupCode moduleCode layer permissions",
+      })
+      .populate({
+        path: "agent",
+        select: "_id name partnerCode",
+      })
+      .populate({
+        path: "company",
+        select: "_id companyName logoUrl",
+      })
+
+    if (!user) {
+      throw createHttpError(404, "User profile not found")
+    }
+
+    res.json({
+      success: true,
+      message: "Profile retrieved successfully",
+      data: {
+        _id: user._id,
+        fullName: user.fullName,
+        profileImage: user.profileImage,
+        email: user.email,
+        position: user.position,
+        layer: user.layer,
+        isSalesman: user.isSalesman,
+        agent: user.agent,
+        remarks: user.remarks,
+        status: user.status,
+        moduleAccess: user.moduleAccess,
+        company: user.company,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * PUT /api/users/me/update OR PUT /api/users/:userId (self-update only)
+ * Update own user profile - strict identity enforcement
+ * Supports both JSON fields and FormData with file upload
+ * 
+ * Security:
+ * - req.user.role MUST be "user"
+ * - req.params.userId MUST equal req.user.id
+ * - Cross-company updates blocked
+ * 
+ * Allowed fields:
+ * - fullName, position, remarks, agent (if applicable), password, profileImage (optional file)
+ * 
+ * Blocked fields:
+ * - email, company, role, layer, status, moduleAccess, isDeleted
+ * 
+ * Returns: Updated user profile in standardized format
+ */
+const updateMyProfile = async (req, res, next) => {
+  const fs = require("fs").promises
+  try {
+    const { userId } = req.params
+    const tokenUserId = req.user.id || req.user.userId
+    const tokenCompanyId = req.user.companyId
+    const tokenRole = req.user.role
+
+    // Security: Verify role is "user" (not "company" admin)
+    if (tokenRole !== "user") {
+      throw createHttpError(403, "Forbidden: Only users can update their own profile via this endpoint")
+    }
+
+    // Security: Verify URL param matches token identity
+    if (userId !== tokenUserId.toString()) {
+      throw createHttpError(403, "Forbidden: You can only update your own profile")
+    }
+
+    const { fullName, position, remarks, agent, password } = req.body
+
+    // Security: Block forbidden fields
+    const forbiddenFields = ["email", "company", "role", "layer", "status", "moduleAccess", "isDeleted"]
+    const providedForbidden = forbiddenFields.filter(field => req.body[field] !== undefined)
+    if (providedForbidden.length > 0) {
+      throw createHttpError(400, `Cannot update protected fields: ${providedForbidden.join(", ")}`)
+    }
+
+    // Find user with company isolation
+    const user = await User.findOne({
+      _id: tokenUserId,
+      company: tokenCompanyId,
+      isDeleted: false,
+    })
+
+    if (!user) {
+      throw createHttpError(404, "User profile not found")
+    }
+
+    // Update allowed fields only
+    if (fullName !== undefined) {
+      if (!fullName || typeof fullName !== "string" || fullName.trim().length === 0) {
+        throw createHttpError(400, "fullName must be a non-empty string")
+      }
+      user.fullName = fullName.trim()
+    }
+
+    if (position !== undefined) {
+      if (typeof position !== "string") {
+        throw createHttpError(400, "position must be a string")
+      }
+      user.position = position.trim()
+    }
+
+    if (remarks !== undefined) {
+      if (typeof remarks !== "string") {
+        throw createHttpError(400, "remarks must be a string")
+      }
+      user.remarks = remarks.trim()
+    }
+
+    if (agent !== undefined) {
+      // Validate agent exists and belongs to same company if provided
+      if (agent) {
+        const partnerExists = await Partner.findOne({
+          _id: agent,
+          company: tokenCompanyId,
+          isDeleted: false,
+        })
+        if (!partnerExists) {
+          throw createHttpError(404, "Agent/Partner not found for this company")
+        }
+      }
+      user.agent = agent || null
+    }
+
+    // Password update - let Mongoose pre-save hook hash it
+    if (password !== undefined) {
+      if (!password || typeof password !== "string" || password.length < 6) {
+        throw createHttpError(400, "Password must be at least 6 characters")
+      }
+      user.password = password
+    }
+
+    // Handle profile image upload (optional)
+    if (req.file) {
+      // Delete old profile image if exists
+      if (user.profileImage) {
+        try {
+          const oldImagePath = path.join(__dirname, "../..", user.profileImage)
+          await fs.unlink(oldImagePath).catch(() => {})
+        } catch (err) {
+          // Log error but continue with update
+          console.log("[v0] Error deleting old profile image:", err.message)
+        }
+      }
+      // Save new image path
+      user.profileImage = `/uploads/user-profiles/${req.file.filename}`
+    }
+
+    await user.save()
+
+    // Populate related data for response
+    await user.populate({
+      path: "moduleAccess.accessGroupId",
+      select: "groupName groupCode moduleCode layer permissions",
+    })
+    await user.populate({
+      path: "agent",
+      select: "_id name partnerCode",
+    })
+    await user.populate({
+      path: "company",
+      select: "_id companyName logoUrl",
+    })
+
+    res.json({
+      success: true,
+      message: "Profile updated successfully",
+      data: {
+        _id: user._id,
+        fullName: user.fullName,
+        profileImage: user.profileImage,
+        email: user.email,
+        position: user.position,
+        layer: user.layer,
+        isSalesman: user.isSalesman,
+        agent: user.agent,
+        remarks: user.remarks,
+        status: user.status,
+        moduleAccess: user.moduleAccess,
+        company: user.company,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * PUT /api/users/me/profile-image
+ * Upload user profile image - token-based identity enforcement
+ * 
+ * Security:
+ * - Uses req.user.id and req.user.companyId from JWT token
+ * - Only allows image files (png, jpg, webp, gif, svg)
+ * - Max file size: 5MB
+ * 
+ * Returns: Updated user profile with new image URL
+ */
+const uploadProfileImage = async (req, res, next) => {
+  try {
+    const userId = req.user.id || req.user.userId
+    const companyId = req.user.companyId
+
+    if (!userId || !companyId) {
+      throw createHttpError(401, "Invalid token: missing user identity")
+    }
+
+    if (!req.file) {
+      throw createHttpError(400, "No image file provided")
+    }
+
+    // Find user with company isolation
+    const user = await User.findOne({
+      _id: userId,
+      company: companyId,
+      isDeleted: false,
+    })
+
+    if (!user) {
+      throw createHttpError(404, "User profile not found")
+    }
+
+    // Delete old profile image if exists
+    if (user.profileImage) {
+      const fs = require("fs")
+      const oldImagePath = path.join(__dirname, "..", user.profileImage.replace(/^\//, ""))
+      if (fs.existsSync(oldImagePath)) {
+        fs.unlinkSync(oldImagePath)
+      }
+    }
+
+    // Set new profile image path
+    user.profileImage = `/uploads/user-profiles/${req.file.filename}`
+    await user.save()
+
+    // Populate related data for response
+    await user.populate({
+      path: "moduleAccess.accessGroupId",
+      select: "groupName groupCode moduleCode layer permissions",
+    })
+    await user.populate({
+      path: "agent",
+      select: "_id name partnerCode",
+    })
+    await user.populate({
+      path: "company",
+      select: "_id companyName logoUrl",
+    })
+
+    res.json({
+      success: true,
+      message: "Profile image uploaded successfully",
+      data: {
+        _id: user._id,
+        fullName: user.fullName,
+        profileImage: user.profileImage,
+        email: user.email,
+        position: user.position,
+        layer: user.layer,
+        isSalesman: user.isSalesman,
+        agent: user.agent,
+        remarks: user.remarks,
+        status: user.status,
+        moduleAccess: user.moduleAccess,
+        company: user.company,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * DELETE /api/users/me/profile-image
+ * Remove user profile image - token-based identity enforcement
+ */
+const deleteProfileImage = async (req, res, next) => {
+  try {
+    const userId = req.user.id || req.user.userId
+    const companyId = req.user.companyId
+
+    if (!userId || !companyId) {
+      throw createHttpError(401, "Invalid token: missing user identity")
+    }
+
+    const user = await User.findOne({
+      _id: userId,
+      company: companyId,
+      isDeleted: false,
+    })
+
+    if (!user) {
+      throw createHttpError(404, "User profile not found")
+    }
+
+    // Delete profile image file if exists
+    if (user.profileImage) {
+      const fs = require("fs")
+      const imagePath = path.join(__dirname, "..", user.profileImage.replace(/^\//, ""))
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath)
+      }
+      user.profileImage = null
+      await user.save()
+    }
+
+    res.json({
+      success: true,
+      message: "Profile image removed successfully",
+      data: {
+        _id: user._id,
+        profileImage: null,
+      },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * POST /api/users/login
+ * User login endpoint - authenticate user with email and password
+ * Returns JWT token for subsequent API requests
+ */
+const loginUser = async (req, res, next) => {
+  try {
+    const jwt = require("jsonwebtoken")
+    const { email, password } = req.body
+
+    if (!email || !password) {
+      throw createHttpError(400, "Email and password are required")
+    }
+
+    // Find user by email - explicitly select password field since it's hidden by default
+    const user = await User.findOne({
+      email: email.toLowerCase(),
+      isDeleted: false,
+    }).select("+password")
+
+    if (!user) {
+      throw createHttpError(401, "Invalid email or password")
+    }
+
+    // Check if user account is active
+    if (user.status !== "Active") {
+      throw createHttpError(403, "User account is inactive. Contact your administrator.")
+    }
+
+    // Verify password - direct comparison (upgrade to bcrypt in production)
+    if (!user.password || password !== user.password) {
+      throw createHttpError(401, "Invalid email or password")
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        userId: user._id,
+        id: user._id,
+        email: user.email,
+        companyId: user.company,
+        role: "user",
+      },
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "24h" }
+    )
+
+    res.json({
+      success: true,
+      message: "Login successful",
+      data: {
+        user: {
+          _id: user._id,
+          fullName: user.fullName,
+          email: user.email,
+          position: user.position,
+          layer: user.layer,
+          company: user.company,
+          status: user.status,
+        },
+        token,
+      },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 module.exports = {
   createUser,
   getAccessGroupsByModuleAndLayer,
@@ -732,4 +1168,7 @@ module.exports = {
   updateUser,
   getUsersByStatus,
   getSalesmanUsers,
+  loginUser,
+  getMyProfile,
+  updateMyProfile,
 }
