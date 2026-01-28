@@ -2,6 +2,30 @@ const mongoose = require("mongoose")
 
 const STATUS = ["Active", "Inactive"]
 
+const CreatorSchema = new mongoose.Schema(
+  {
+    id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    name: {
+      type: String,
+      default: "Unknown",
+    },
+    type: {
+      type: String,
+      enum: ["company", "user", "system"],
+      default: "system",
+    },
+    layer: {
+      type: String,
+      default: undefined, // NO ENUM — free-form
+    },
+  },
+  { _id: false }
+)
+
+
 const PortSchema = new mongoose.Schema(
   {
     company: {
@@ -44,6 +68,19 @@ const PortSchema = new mongoose.Schema(
       trim: true,
       default: "",
       maxlength: 2000,
+    },
+    createdBy: {
+      type: CreatorSchema,
+      default: () => ({
+        id: null,
+        name: "Unknown",
+        type: "system",
+        layer: undefined,
+      }),
+    },
+    updatedBy: {
+      type: CreatorSchema,
+      default: null,
     },
     isDeleted: { type: Boolean, default: false, index: true },
   },
