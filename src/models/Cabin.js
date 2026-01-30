@@ -1,7 +1,30 @@
 const mongoose = require("mongoose")
 
-const CABIN_TYPES = ["Passengers", "Vehicles", "Cargo"]
+const CABIN_TYPES = ["passenger", "vehicle", "cargo"]
 const STATUS = ["Active", "Inactive"]
+
+const CreatorSchema = new mongoose.Schema(
+  {
+    id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    name: {
+      type: String,
+      default: "Unknown",
+    },
+    type: {
+      type: String,
+      enum: ["company", "user", "system"],
+      default: "system",
+    },
+    layer: {
+      type: String,
+      default: undefined, // NO ENUM — free-form
+    },
+  },
+  { _id: false }
+)
 
 const CabinSchema = new mongoose.Schema(
   {
@@ -15,7 +38,20 @@ const CabinSchema = new mongoose.Schema(
     description: { type: String, trim: true, default: "", maxlength: 4000 },
     remarks: { type: String, trim: true, default: "", maxlength: 2000 },
     type: { type: String, enum: CABIN_TYPES, required: true, index: true },
-    status: { type: String, enum: STATUS, default: "Inactive", index: true },
+    status: { type: String, enum: STATUS, default: "Active", index: true },
+    createdBy: {
+      type: CreatorSchema,
+      default: () => ({
+        id: null,
+        name: "Unknown",
+        type: "system",
+        layer: undefined,
+      }),
+    },
+    updatedBy: {
+      type: CreatorSchema,
+      default: null,
+    },
     isDeleted: { type: Boolean, default: false, index: true },
   },
   { timestamps: true },
