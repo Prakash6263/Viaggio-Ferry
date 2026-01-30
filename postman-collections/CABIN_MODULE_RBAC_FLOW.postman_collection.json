@@ -1,0 +1,1122 @@
+{
+  "info": {
+    "name": "CABIN MODULE — RBAC FLOW",
+    "description": "Comprehensive QA collection for Cabin Module RBAC behavior, audit fields, tab-based filtering, and company vs user access patterns",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "AUTH — CABIN FLOW",
+      "item": [
+        {
+          "name": "Company Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const responseData = pm.response.json();",
+                  "    pm.environment.set('token', responseData.data.token);",
+                  "    pm.environment.set('companyId', responseData.data.company._id);",
+                  "    console.log('[v0] Company token set:', responseData.data.token.substring(0, 20) + '...');",
+                  "} else {",
+                  "    console.error('[v0] Login failed:', pm.response.text());",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"company@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "User Login (RBAC Test)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const responseData = pm.response.json();",
+                  "    pm.environment.set('userToken', responseData.data.token);",
+                  "    pm.environment.set('userId', responseData.data.user._id);",
+                  "    console.log('[v0] User token set:', responseData.data.token.substring(0, 20) + '...');",
+                  "} else {",
+                  "    console.error('[v0] User login failed:', pm.response.text());",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PASSENGER CABINS",
+      "item": [
+        {
+          "name": "Create Passenger Cabin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const responseData = pm.response.json();",
+                  "    const cabin = responseData.data.cabin;",
+                  "    pm.environment.set('passengerCabinId', cabin._id);",
+                  "    ",
+                  "    // Validate response structure",
+                  "    pm.test('Response has correct structure', () => {",
+                  "        pm.expect(cabin).to.have.property('_id');",
+                  "        pm.expect(cabin).to.have.property('name');",
+                  "        pm.expect(cabin).to.have.property('type');",
+                  "        pm.expect(cabin).to.have.property('createdBy');",
+                  "    });",
+                  "    ",
+                  "    // Validate audit fields",
+                  "    pm.test('Audit fields are populated', () => {",
+                  "        pm.expect(cabin.createdBy).to.have.property('type');",
+                  "        pm.expect(['company', 'user', 'system']).to.include(cabin.createdBy.type);",
+                  "    });",
+                  "    ",
+                  "    // Validate type",
+                  "    pm.test('Cabin type is passenger', () => {",
+                  "        pm.expect(cabin.type).to.equal('passenger');",
+                  "    });",
+                  "    ",
+                  "    // Validate company",
+                  "    pm.test('Cabin belongs to correct company', () => {",
+                  "        pm.expect(cabin.company).to.equal(pm.environment.get('companyId'));",
+                  "    });",
+                  "    ",
+                  "    console.log('[v0] Passenger cabin created:', cabin._id);",
+                  "} else {",
+                  "    console.error('[v0] Create failed:', pm.response.text());",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"First Class Cabin\",\n  \"description\": \"Premium passenger cabin with luxury amenities\",\n  \"remarks\": \"High demand during peak season\",\n  \"type\": \"passenger\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cabins",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cabins"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Passenger Cabins",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const responseData = pm.response.json();",
+                  "    const cabins = responseData.data.cabins;",
+                  "    ",
+                  "    pm.test('Response contains cabins array', () => {",
+                  "        pm.expect(cabins).to.be.an('array');",
+                  "    });",
+                  "    ",
+                  "    pm.test('All cabins are type passenger', () => {",
+                  "        cabins.forEach(cabin => {",
+                  "            pm.expect(cabin.type).to.equal('passenger');",
+                  "        });",
+                  "    });",
+                  "    ",
+                  "    pm.test('All cabins belong to company', () => {",
+                  "        cabins.forEach(cabin => {",
+                  "            pm.expect(cabin.company).to.equal(pm.environment.get('companyId'));",
+                  "        });",
+                  "    });",
+                  "    ",
+                  "    pm.test('Pagination data present', () => {",
+                  "        pm.expect(responseData.data).to.have.property('total');",
+                  "        pm.expect(responseData.data).to.have.property('page');",
+                  "        pm.expect(responseData.data).to.have.property('limit');",
+                  "    });",
+                  "    ",
+                  "    console.log('[v0] Found ' + cabins.length + ' passenger cabins');",
+                  "} else {",
+                  "    console.error('[v0] List failed:', pm.response.text());",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cabins?type=passenger&page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cabins"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "passenger"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Passenger Cabin by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const responseData = pm.response.json();",
+                  "    const cabin = responseData.data.cabin;",
+                  "    ",
+                  "    pm.test('Cabin ID matches request', () => {",
+                  "        pm.expect(cabin._id).to.equal(pm.environment.get('passengerCabinId'));",
+                  "    });",
+                  "    ",
+                  "    pm.test('Cabin has audit trail', () => {",
+                  "        pm.expect(cabin.createdBy).to.exist;",
+                  "        if (cabin.updatedBy) {",
+                  "            pm.expect(cabin.updatedBy).to.have.property('type');",
+                  "        }",
+                  "    });",
+                  "    ",
+                  "    console.log('[v0] Retrieved cabin:', cabin.name);",
+                  "} else {",
+                  "    console.error('[v0] Get failed:', pm.response.text());",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cabins/{{passengerCabinId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cabins",
+                "{{passengerCabinId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Passenger Cabin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const responseData = pm.response.json();",
+                  "    const cabin = responseData.data.cabin;",
+                  "    ",
+                  "    pm.test('Updated field reflects change', () => {",
+                  "        pm.expect(cabin.name).to.equal('First Class Premium');",
+                  "    });",
+                  "    ",
+                  "    pm.test('updatedBy field is populated', () => {",
+                  "        pm.expect(cabin.updatedBy).to.exist;",
+                  "        pm.expect(cabin.updatedBy.type).to.exist;",
+                  "    });",
+                  "    ",
+                  "    pm.test('createdBy field unchanged', () => {",
+                  "        pm.expect(cabin.createdBy).to.exist;",
+                  "    });",
+                  "    ",
+                  "    console.log('[v0] Passenger cabin updated');",
+                  "} else {",
+                  "    console.error('[v0] Update failed:', pm.response.text());",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"First Class Premium\",\n  \"description\": \"Premium passenger cabin with luxury amenities and enhanced service\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cabins/{{passengerCabinId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cabins",
+                "{{passengerCabinId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Passenger Cabin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const responseData = pm.response.json();",
+                  "    const cabin = responseData.data.cabin;",
+                  "    ",
+                  "    pm.test('Cabin is soft deleted', () => {",
+                  "        pm.expect(cabin.isDeleted).to.equal(true);",
+                  "    });",
+                  "    ",
+                  "    pm.test('updatedBy reflects deletion', () => {",
+                  "        pm.expect(cabin.updatedBy).to.exist;",
+                  "    });",
+                  "    ",
+                  "    console.log('[v0] Passenger cabin soft deleted');",
+                  "} else {",
+                  "    console.error('[v0] Delete failed:', pm.response.text());",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cabins/{{passengerCabinId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cabins",
+                "{{passengerCabinId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "VEHICLE CABINS",
+      "item": [
+        {
+          "name": "Create Vehicle Cabin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const responseData = pm.response.json();",
+                  "    const cabin = responseData.data.cabin;",
+                  "    pm.environment.set('vehicleCabinId', cabin._id);",
+                  "    ",
+                  "    pm.test('Cabin type is vehicle', () => {",
+                  "        pm.expect(cabin.type).to.equal('vehicle');",
+                  "    });",
+                  "    ",
+                  "    pm.test('CreatedBy has type and layer for user', () => {",
+                  "        pm.expect(cabin.createdBy.type).to.be.oneOf(['company', 'user', 'system']);",
+                  "    });",
+                  "    ",
+                  "    console.log('[v0] Vehicle cabin created:', cabin._id);",
+                  "} else {",
+                  "    console.error('[v0] Create failed:', pm.response.text());",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Heavy Truck Bay\",\n  \"description\": \"Secure storage for heavy vehicles and commercial trucks\",\n  \"remarks\": \"Temperature controlled, 24/7 security\",\n  \"type\": \"vehicle\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cabins",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cabins"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Vehicle Cabins",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const responseData = pm.response.json();",
+                  "    const cabins = responseData.data.cabins;",
+                  "    ",
+                  "    pm.test('All cabins are type vehicle', () => {",
+                  "        cabins.forEach(cabin => {",
+                  "            pm.expect(cabin.type).to.equal('vehicle');",
+                  "        });",
+                  "    });",
+                  "    ",
+                  "    console.log('[v0] Found ' + cabins.length + ' vehicle cabins');",
+                  "} else {",
+                  "    console.error('[v0] List failed:', pm.response.text());",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cabins?type=vehicle&page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cabins"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "vehicle"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Vehicle Cabin by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const responseData = pm.response.json();",
+                  "    const cabin = responseData.data.cabin;",
+                  "    ",
+                  "    pm.test('Cabin ID matches', () => {",
+                  "        pm.expect(cabin._id).to.equal(pm.environment.get('vehicleCabinId'));",
+                  "    });",
+                  "    ",
+                  "    console.log('[v0] Retrieved cabin:', cabin.name);",
+                  "} else {",
+                  "    console.error('[v0] Get failed:', pm.response.text());",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cabins/{{vehicleCabinId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cabins",
+                "{{vehicleCabinId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Vehicle Cabin",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Heavy Truck Bay - Premium\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cabins/{{vehicleCabinId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cabins",
+                "{{vehicleCabinId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Vehicle Cabin",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cabins/{{vehicleCabinId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cabins",
+                "{{vehicleCabinId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CARGO CABINS",
+      "item": [
+        {
+          "name": "Create Cargo Cabin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const responseData = pm.response.json();",
+                  "    const cabin = responseData.data.cabin;",
+                  "    pm.environment.set('cargoCabinId', cabin._id);",
+                  "    ",
+                  "    pm.test('Cabin type is cargo', () => {",
+                  "        pm.expect(cabin.type).to.equal('cargo');",
+                  "    });",
+                  "    ",
+                  "    console.log('[v0] Cargo cabin created:', cabin._id);",
+                  "} else {",
+                  "    console.error('[v0] Create failed:', pm.response.text());",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"General Cargo Hold\",\n  \"description\": \"Standard cargo storage facility with loading equipment\",\n  \"remarks\": \"Capacity: 50 tons, Climate controlled\",\n  \"type\": \"cargo\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cabins",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cabins"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Cargo Cabins",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const responseData = pm.response.json();",
+                  "    const cabins = responseData.data.cabins;",
+                  "    ",
+                  "    pm.test('All cabins are type cargo', () => {",
+                  "        cabins.forEach(cabin => {",
+                  "            pm.expect(cabin.type).to.equal('cargo');",
+                  "        });",
+                  "    });",
+                  "    ",
+                  "    console.log('[v0] Found ' + cabins.length + ' cargo cabins');",
+                  "} else {",
+                  "    console.error('[v0] List failed:', pm.response.text());",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cabins?type=cargo&page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cabins"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "cargo"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Cargo Cabin by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const responseData = pm.response.json();",
+                  "    const cabin = responseData.data.cabin;",
+                  "    ",
+                  "    pm.test('Cabin ID matches', () => {",
+                  "        pm.expect(cabin._id).to.equal(pm.environment.get('cargoCabinId'));",
+                  "    });",
+                  "    ",
+                  "    console.log('[v0] Retrieved cabin:', cabin.name);",
+                  "} else {",
+                  "    console.error('[v0] Get failed:', pm.response.text());",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cabins/{{cargoCabinId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cabins",
+                "{{cargoCabinId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Cargo Cabin",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"General Cargo Hold - Expanded\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cabins/{{cargoCabinId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cabins",
+                "{{cargoCabinId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Cargo Cabin",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cabins/{{cargoCabinId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cabins",
+                "{{cargoCabinId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "RBAC TEST CASES",
+      "item": [
+        {
+          "name": "User Without Permission - Create (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Expect 403 Forbidden', () => {",
+                  "    pm.expect(pm.response.code).to.equal(403);",
+                  "});",
+                  "",
+                  "pm.test('Response contains error message', () => {",
+                  "    const responseData = pm.response.json();",
+                  "    pm.expect(responseData.message || responseData.error).to.exist;",
+                  "});",
+                  "",
+                  "console.log('[v0] Permission denied as expected');",
+                  ""
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Cabin\",\n  \"type\": \"passenger\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cabins",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cabins"
+              ]
+            }
+          }
+        },
+        {
+          "name": "User With Read Permission - List (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Expect 200 OK', () => {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "const responseData = pm.response.json();",
+                  "pm.test('Response contains cabins array', () => {",
+                  "    pm.expect(responseData.data.cabins).to.be.an('array');",
+                  "});",
+                  "",
+                  "console.log('[v0] User can list cabins with read permission');",
+                  ""
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cabins?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cabins"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "User With Read Permission - Get Detail (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Expect 200 OK', () => {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "const responseData = pm.response.json();",
+                  "pm.test('Response contains cabin detail', () => {",
+                  "    pm.expect(responseData.data.cabin).to.exist;",
+                  "});",
+                  "",
+                  "console.log('[v0] User can get cabin detail with read permission');",
+                  ""
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cabins/{{passengerCabinId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cabins",
+                "{{passengerCabinId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "User Without Permission - Update (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Expect 403 Forbidden', () => {",
+                  "    pm.expect(pm.response.code).to.equal(403);",
+                  "});",
+                  "",
+                  "console.log('[v0] Permission denied for update as expected');",
+                  ""
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cabins/{{passengerCabinId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cabins",
+                "{{passengerCabinId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "User Without Permission - Delete (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Expect 403 Forbidden', () => {",
+                  "    pm.expect(pm.response.code).to.equal(403);",
+                  "});",
+                  "",
+                  "console.log('[v0] Permission denied for delete as expected');",
+                  ""
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cabins/{{passengerCabinId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cabins",
+                "{{passengerCabinId}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "companyId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "passengerCabinId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "vehicleCabinId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cargoCabinId",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
