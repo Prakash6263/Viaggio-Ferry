@@ -29,8 +29,6 @@ const getCountries = (req, res) => {
   try {
     const sortedCountries = getCountriesSorted()
     const query = sanitizeQuery(req.query.q || "")
-    const page = Math.max(1, parseInt(req.query.page) || 1)
-    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 50)) // Cap at 100
 
     // Filter by search query if provided
     let filteredCountries = sortedCountries
@@ -45,19 +43,14 @@ const getCountries = (req, res) => {
       )
     }
 
-    // Calculate pagination
     const total = filteredCountries.length
-    const skip = (page - 1) * limit
-    const paginatedCountries = filteredCountries.slice(skip, skip + limit)
 
     res.status(200).json({
       success: true,
       message: "Countries fetched successfully",
       data: {
         total,
-        page,
-        limit,
-        countries: paginatedCountries
+        countries: filteredCountries
       }
     })
   } catch (error) {
@@ -73,3 +66,4 @@ const getCountries = (req, res) => {
 module.exports = {
   getCountries
 }
+
