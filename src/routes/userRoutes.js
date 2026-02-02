@@ -5,6 +5,7 @@ const {
   getAllUsers,
   getUserById,
   updateUser,
+  deleteUser,
   getUsersByStatus,
   getSalesmanUsers,
   loginUser,
@@ -118,16 +119,16 @@ router.put("/:userId", checkPermission("administration", "users", "edit"), updat
 
 /**
  * DELETE /api/users/:userId
- * Delete user - requires delete permission on users
- * Note: Users should be soft-deleted in practice
+ * Delete user (soft delete) - requires delete permission on users submodule
+ * 
+ * Business Rules:
+ * - Requires: administration:users:delete permission
+ * - Cannot delete own account (403 Forbidden)
+ * - Implements soft delete (isDeleted = true)
+ * 
+ * Response: Deleted user details with confirmation
  */
-router.delete("/:userId", checkPermission("administration", "users", "delete"), (req, res, next) => {
-  // Not implemented yet - add handler when needed
-  res.status(501).json({
-    success: false,
-    message: "User deletion not yet implemented. Contact administrator.",
-  })
-})
+router.delete("/:userId", checkPermission("administration", "users", "delete"), deleteUser)
 
 // ==================== ACCESS GROUP ASSIGNMENT ROUTES ====================
 
