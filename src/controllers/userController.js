@@ -1097,6 +1097,67 @@ const deleteProfileImage = async (req, res, next) => {
  * User login endpoint - authenticate user with email and password
  * Returns JWT token for subsequent API requests
  */
+/**
+ * DELETE /api/users/:userId
+ * Delete user (soft delete) with role-based access control
+ *
+ * Business Rules:
+ * 1. Requires delete permission on users submodule in administration module
+ * 2. Cannot delete your own account
+ * 3. Implements soft delete (sets isDeleted = true)
+ * 4. Verifies user belongs to the same company
+ *
+ * Returns: Deleted user data with confirmation
+ */
+const deleteUser = async (req, res, next) => {
+  try {
+    const { userId } = req.params
+    const { companyId, user: currentUser } = req
+
+    // Validate userId parameter
+    if (!userId) {
+      throw createHttpError(400, "User ID is required")
+    }
+
+    // Security: Prevent self-deletion
+    const currentUserId = (currentUser.id || currentUser.userId || "").toString()
+    if (userId === currentUserId) {
+      throw createHttpError(403, "You cannot delete your own account")
+    }
+
+    // Find the user to delete
+    const userToDelete = await User.findOne({
+      _id: userId,
+      company: companyId,
+      isDeleted: false,
+    })
+
+    if (!userToDelete) {
+      throw createHttpError(404, "User not found")
+    }
+
+    // Soft delete: set isDeleted to true
+    userToDelete.isDeleted = true
+    await userToDelete.save()
+
+    res.json({
+      success: true,
+      message: "User deleted successfully",
+      data: {
+        _id: userToDelete._id,
+        fullName: userToDelete.fullName,
+        email: userToDelete.email,
+        position: userToDelete.position,
+        layer: userToDelete.layer,
+        deletedAt: new Date(),
+        deletedBy: currentUserId,
+      },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 const loginUser = async (req, res, next) => {
   try {
     const jwt = require("jsonwebtoken")
@@ -1166,6 +1227,7 @@ module.exports = {
   getAllUsers,
   getUserById,
   updateUser,
+  deleteUser,
   getUsersByStatus,
   getSalesmanUsers,
   loginUser,
