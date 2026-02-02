@@ -125,8 +125,8 @@ const menuConfig = {
     displayOrder: 4,
     description: "Manage business partners and customers",
     submodules: {
-      partners: {
-        submoduleCode: "partners",
+      "business-partners": {
+        submoduleCode: "business-partners",
         label: "Business Partners",
         route: "/company/partners",
         displayOrder: 1,
