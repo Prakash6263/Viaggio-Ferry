@@ -17,11 +17,13 @@ const protectedExampleRoutes = require("./protectedExampleRoutes")
 const publicCountryRoutes = require("./publicCountryRoutes")
 const portRoutes = require("./portRoutes")
 const cabinRoutes = require("./cabinRoutes")
+const payloadTypeRoutes = require("./payloadTypeRoutes")
 
 module.exports = (app) => {
   app.use("/api/public", publicCountryRoutes)
   app.use("/api/ports", portRoutes)
   app.use("/api/cabins", cabinRoutes)
+  app.use("/api/payload-types", payloadTypeRoutes)
   app.use("/api/exchange-rates", exchangeRateRoutes)
   app.use("/api/admin", adminRoutes)
   app.use("/api/companies", companyRoutes)
