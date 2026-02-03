@@ -1,10 +1,29 @@
 const mongoose = require("mongoose")
 
 const SHIP_STATUS = ["Active", "Inactive"]
-const SHIP_TYPES = ["Container", "Bulk Carrier", "Tanker", "General Cargo", "Passenger", "RoRo", "Refrigerated"]
-const CABIN_TYPES = ["First Class", "Business Class", "Economy", "Standard"]
-const CARGO_TYPES = ["Pallet", "Container", "Breakbulk", "Breakbulk"]
-const VEHICLE_TYPES = ["Car", "Truck", "Motorcycle", "Bus"]
+
+const CreatorSchema = new mongoose.Schema(
+  {
+    id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    name: {
+      type: String,
+      default: "Unknown",
+    },
+    type: {
+      type: String,
+      enum: ["company", "user"],
+      default: "system",
+    },
+    layer: {
+      type: String,
+      default: undefined,
+    },
+  },
+  { _id: false }
+)
 
 const ShipSchema = new mongoose.Schema(
   {
@@ -14,6 +33,7 @@ const ShipSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+
     // General Information
     name: {
       type: String,
@@ -23,160 +43,110 @@ const ShipSchema = new mongoose.Schema(
     },
     imoNumber: {
       type: String,
-      required: true,
       trim: true,
-      uppercase: true,
+      sparse: true,
+      unique: true,
     },
     mmsiNumber: {
       type: String,
-      required: true,
       trim: true,
-      uppercase: true,
+      sparse: true,
+      unique: true,
     },
-    flagState: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+
     shipType: {
       type: String,
-      enum: SHIP_TYPES,
-      required: true,
+      trim: true,
     },
     yearBuilt: {
       type: Number,
-      required: true,
       min: 1900,
       max: new Date().getFullYear(),
+    },
+    flagState: {
+      type: String,
+      trim: true,
     },
     classificationSociety: {
       type: String,
       trim: true,
-      default: "",
     },
+
     status: {
       type: String,
       enum: SHIP_STATUS,
       default: "Active",
       index: true,
     },
+
     remarks: {
       type: String,
       trim: true,
-      default: "",
       maxlength: 2000,
     },
 
     // Technical Specifications
-    grossTonnage: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    netTonnage: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    lengthOverall: {
-      type: Number,
-      required: true,
-      min: 0,
-      description: "Length Overall (LOA) in meters",
-    },
-    beam: {
-      type: Number,
-      required: true,
-      min: 0,
-      description: "Beam width in meters",
-    },
-    draft: {
-      type: Number,
-      required: true,
-      min: 0,
-      description: "Draft depth in meters",
+    technical: {
+      grossTonnage: { type: Number, min: 0 },
+      netTonnage: { type: Number, min: 0 },
+      loa: { type: Number, min: 0, description: "Length Overall in meters" },
+      beam: { type: Number, min: 0, description: "Beam width in meters" },
+      draft: { type: Number, min: 0, description: "Draft depth in meters" },
     },
 
     // Passenger Capacity
     passengerCapacity: [
       {
-        _id: mongoose.Schema.Types.ObjectId,
-        cabinType: {
-          type: String,
-          enum: CABIN_TYPES,
-          required: true,
+        cabinId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Cabin",
         },
-        totalWeight: {
-          type: Number,
-          required: true,
-          min: 0,
-          description: "Total weight in kg",
-        },
-        numberOfSeats: {
-          type: Number,
-          required: true,
-          min: 0,
-        },
-        createdAt: {
-          type: Date,
-          default: Date.now,
-        },
+        cabinName: String,
+        totalWeightKg: { type: Number, min: 0 },
+        seats: { type: Number, min: 0 },
       },
     ],
 
     // Cargo Capacity
     cargoCapacity: [
       {
-        _id: mongoose.Schema.Types.ObjectId,
-        cargoType: {
-          type: String,
-          enum: CARGO_TYPES,
-          required: true,
+        cabinId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Cabin",
         },
-        totalWeight: {
-          type: Number,
-          required: true,
-          min: 0,
-          description: "Total weight in metric tons",
-        },
-        spots: {
-          type: Number,
-          required: true,
-          min: 0,
-        },
-        createdAt: {
-          type: Date,
-          default: Date.now,
-        },
+        cabinName: String,
+        totalWeightTons: { type: Number, min: 0 },
+        spots: { type: Number, min: 0 },
       },
     ],
 
     // Vehicle Capacity
     vehicleCapacity: [
       {
-        _id: mongoose.Schema.Types.ObjectId,
-        vehicleType: {
-          type: String,
-          enum: VEHICLE_TYPES,
-          required: true,
+        cabinId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Cabin",
         },
-        totalWeight: {
-          type: Number,
-          required: true,
-          min: 0,
-          description: "Total weight in metric tons",
-        },
-        spots: {
-          type: Number,
-          required: true,
-          min: 0,
-        },
-        createdAt: {
-          type: Date,
-          default: Date.now,
-        },
+        cabinName: String,
+        totalWeightTons: { type: Number, min: 0 },
+        spots: { type: Number, min: 0 },
       },
     ],
+
+    // Audit
+    createdBy: {
+      type: CreatorSchema,
+      default: () => ({
+        id: null,
+        name: "Unknown",
+        type: "system",
+        layer: undefined,
+      }),
+    },
+    updatedBy: {
+      type: CreatorSchema,
+      default: null,
+    },
 
     isDeleted: {
       type: Boolean,
@@ -184,19 +154,15 @@ const ShipSchema = new mongoose.Schema(
       index: true,
     },
   },
-  { timestamps: true },
+  { timestamps: true }
 )
 
-ShipSchema.index({ company: 1, name: "text", imoNumber: "text", mmsiNumber: "text" })
-ShipSchema.index({ company: 1, shipType: 1 })
+// Compound indexes
+ShipSchema.index({ company: 1, name: "text", imoNumber: "text", flagState: "text" })
 ShipSchema.index({ company: 1, status: 1 })
 ShipSchema.index({ company: 1, isDeleted: 1 })
 
 module.exports = {
   Ship: mongoose.model("Ship", ShipSchema),
   SHIP_STATUS,
-  SHIP_TYPES,
-  CABIN_TYPES,
-  CARGO_TYPES,
-  VEHICLE_TYPES,
 }
