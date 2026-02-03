@@ -138,11 +138,15 @@
                   "  pm.expect(jsonData.data.payloadType.category).to.equal('passenger');",
                   "});",
                   "",
-                  "pm.test('ageRange field exists with numeric format', function () {",
+                  "pm.test('ageRange field exists and is correct', function () {",
                   "  var jsonData = pm.response.json();",
-                  "  pm.expect(jsonData.data.payloadType.ageRange).to.be.an('object');",
-                  "  pm.expect(jsonData.data.payloadType.ageRange.from).to.equal(18);",
-                  "  pm.expect(jsonData.data.payloadType.ageRange.to).to.equal(65);",
+                  "  pm.expect(jsonData.data.payloadType.ageRange).to.equal('18-65');",
+                  "});",
+                  "",
+                  "pm.test('maxWeight and dimensions are null', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.data.payloadType.maxWeight).to.be.null;",
+                  "  pm.expect(jsonData.data.payloadType.dimensions).to.be.null;",
                   "});",
                   "",
                   "pm.test('createdBy has correct structure (company or user type)', function () {",
@@ -169,7 +173,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Adult Passenger\",\n  \"code\": \"ADT\",\n  \"description\": \"Standard adult passenger\",\n  \"category\": \"passenger\",\n  \"ageRange\": {\n    \"from\": 18,\n    \"to\": 65\n  },\n  \"status\": \"Active\"\n}"
+              "raw": "{\n  \"name\": \"Adult Passenger\",\n  \"code\": \"ADT\",\n  \"description\": \"Standard adult passenger\",\n  \"category\": \"passenger\",\n  \"ageRange\": \"18-65\",\n  \"maxWeight\": null,\n  \"dimensions\": null,\n  \"status\": \"Active\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/payload-types",
@@ -337,7 +341,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Senior Passenger\",\n  \"code\": \"SNR\",\n  \"description\": \"Senior passenger aged 65 and above\",\n  \"category\": \"passenger\",\n  \"ageRange\": {\n    \"from\": 65,\n    \"to\": 100\n  },\n  \"status\": \"Active\"\n}"
+              "raw": "{\n  \"name\": \"Senior Passenger\",\n  \"code\": \"SNR\",\n  \"description\": \"Senior passenger aged 65 and above\",\n  \"category\": \"passenger\",\n  \"ageRange\": \"65+\",\n  \"maxWeight\": null,\n  \"dimensions\": null,\n  \"status\": \"Active\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/payload-types/{{payloadTypeId}}",
@@ -427,11 +431,9 @@
                   "  pm.expect(jsonData.data.payloadType.dimensions).to.equal('120x100x150');",
                   "});",
                   "",
-                  "pm.test('ageRange is undefined or null', function () {",
+                  "pm.test('ageRange is null', function () {",
                   "  var jsonData = pm.response.json();",
-                  "  pm.expect(jsonData.data.payloadType.ageRange).to.satisfy(function(val) {",
-                  "    return val === null || val === undefined;",
-                  "  });",
+                  "  pm.expect(jsonData.data.payloadType.ageRange).to.be.null;",
                   "});"
                 ]
               }
@@ -717,7 +719,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Standard Vehicle\",\n  \"code\": \"STD-VEH\",\n  \"description\": \"Standard vehicle for transport\",\n  \"category\": \"vehicle\",\n  \"maxWeight\": 2500,\n  \"dimensions\": \"500x200x200\",\n  \"status\": \"Active\"\n}"
+              "raw": "{\n  \"name\": \"Standard Vehicle\",\n  \"code\": \"STD-VEH\",\n  \"description\": \"Standard vehicle for transport\",\n  \"category\": \"vehicle\",\n  \"ageRange\": null,\n  \"maxWeight\": 2500,\n  \"dimensions\": \"500x200x200\",\n  \"status\": \"Active\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/payload-types",
@@ -872,7 +874,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Heavy Vehicle\",\n  \"code\": \"HVY-VEH\",\n  \"description\": \"Heavy vehicle for large payloads\",\n  \"category\": \"vehicle\",\n  \"maxWeight\": 3500,\n  \"dimensions\": \"600x250x250\",\n  \"status\": \"Active\"\n}"
+              "raw": "{\n  \"name\": \"Heavy Vehicle\",\n  \"code\": \"HVY-VEH\",\n  \"description\": \"Heavy vehicle for large payloads\",\n  \"category\": \"vehicle\",\n  \"ageRange\": null,\n  \"maxWeight\": 3500,\n  \"dimensions\": \"600x250x250\",\n  \"status\": \"Active\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/payload-types/{{payloadTypeId}}",
