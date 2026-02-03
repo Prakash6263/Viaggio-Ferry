@@ -160,7 +160,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\\n  \\\"name\\\": \\\"Adult Passenger\\\",\\n  \\\"code\\\": \\\"ADT\\\",\\n  \\\"description\\\": \\\"Standard adult passenger\\\",\\n  \\\"category\\\": \\\"passenger\\\",\\n  \\\"ageRange\\\": \\\"18-65\\\",\\n  \\\"status\\\": \\\"Active\\\"\\n}"
+              "raw": "{\\n  \\\"name\\\": \\\"Adult Passenger\\\",\\n  \\\"code\\\": \\\"ADT\\\",\\n  \\\"description\\\": \\\"Standard adult passenger\\\",\\n  \\\"category\\\": \\\"passenger\\\",\\n  \\\"ageRange\\\": \\\"18-65\\\",\\n  \\\"maxWeight\\\": null,\\n  \\\"dimensions\\\": null,\\n  \\\"status\\\": \\\"Active\\\"\\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/payload-types",
@@ -326,7 +326,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\\n  \\\"name\\\": \\\"Senior Passenger\\\",\\n  \\\"code\\\": \\\"SNR\\\",\\n  \\\"description\\\": \\\"Senior passenger aged 65 and above\\\",\\n  \\\"category\\\": \\\"passenger\\\",\\n  \\\"ageRange\\\": \\\"65+\\\",\\n  \\\"status\\\": \\\"Active\\\"\\n}"
+              "raw": "{\\n  \\\"name\\\": \\\"Senior Passenger\\\",\\n  \\\"code\\\": \\\"SNR\\\",\\n  \\\"description\\\": \\\"Senior passenger aged 65 and above\\\",\\n  \\\"category\\\": \\\"passenger\\\",\\n  \\\"ageRange\\\": \\\"65+\\\",\\n  \\\"maxWeight\\\": null,\\n  \\\"dimensions\\\": null,\\n  \\\"status\\\": \\\"Active\\\"\\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/payload-types/{{payloadTypeId}}",
@@ -433,7 +433,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\\n  \\\"name\\\": \\\"Standard Cargo Box\\\",\\n  \\\"code\\\": \\\"SCB\\\",\\n  \\\"description\\\": \\\"Standard cargo box for general freight\\\",\\n  \\\"category\\\": \\\"cargo\\\",\\n  \\\"maxWeight\\\": 5000,\\n  \\\"dimensions\\\": \\\"120x100x150\\\",\\n  \\\"status\\\": \\\"Active\\\"\\n}"
+              "raw": "{\\n  \\\"name\\\": \\\"Standard Cargo Box\\\",\\n  \\\"code\\\": \\\"SCB\\\",\\n  \\\"description\\\": \\\"Standard cargo box for general freight\\\",\\n  \\\"category\\\": \\\"cargo\\\",\\n  \\\"ageRange\\\": null,\\n  \\\"maxWeight\\\": 5000,\\n  \\\"dimensions\\\": \\\"120x100x150\\\",\\n  \\\"status\\\": \\\"Active\\\"\\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/payload-types",
@@ -575,7 +575,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\\n  \\\"name\\\": \\\"Heavy Cargo Box\\\",\\n  \\\"code\\\": \\\"HCB\\\",\\n  \\\"description\\\": \\\"Heavy cargo box for large freight\\\",\\n  \\\"category\\\": \\\"cargo\\\",\\n  \\\"maxWeight\\\": 7500,\\n  \\\"dimensions\\\": \\\"150x120x180\\\",\\n  \\\"status\\\": \\\"Active\\\"\\n}"
+              "raw": "{\\n  \\\"name\\\": \\\"Heavy Cargo Box\\\",\\n  \\\"code\\\": \\\"HCB\\\",\\n  \\\"description\\\": \\\"Heavy cargo box for heavy freight\\\",\\n  \\\"category\\\": \\\"cargo\\\",\\n  \\\"ageRange\\\": null,\\n  \\\"maxWeight\\\": 7500,\\n  \\\"dimensions\\\": \\\"150x120x180\\\",\\n  \\\"status\\\": \\\"Active\\\"\\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/payload-types/{{payloadTypeId}}",
@@ -675,7 +675,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\\n  \\\"name\\\": \\\"Standard Vehicle\\\",\\n  \\\"code\\\": \\\"STD-VEH\\\",\\n  \\\"description\\\": \\\"Standard vehicle for transport\\\",\\n  \\\"category\\\": \\\"vehicle\\\",\\n  \\\"maxWeight\\\": 2500,\\n  \\\"dimensions\\\": \\\"500x200x200\\\",\\n  \\\"status\\\": \\\"Active\\\"\\n}"
+              "raw": "{\\n  \\\"name\\\": \\\"Standard Vehicle\\\",\\n  \\\"code\\\": \\\"STD-VEH\\\",\\n  \\\"description\\\": \\\"Standard vehicle for transport\\\",\\n  \\\"category\\\": \\\"vehicle\\\",\\n  \\\"ageRange\\\": null,\\n  \\\"maxWeight\\\": 2500,\\n  \\\"dimensions\\\": \\\"500x200x200\\\",\\n  \\\"status\\\": \\\"Active\\\"\\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/payload-types",
@@ -817,7 +817,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\\n  \\\"name\\\": \\\"Heavy Vehicle\\\",\\n  \\\"code\\\": \\\"HVY-VEH\\\",\\n  \\\"description\\\": \\\"Heavy vehicle for large payloads\\\",\\n  \\\"category\\\": \\\"vehicle\\\",\\n  \\\"maxWeight\\\": 3500,\\n  \\\"dimensions\\\": \\\"600x250x250\\\",\\n  \\\"status\\\": \\\"Active\\\"\\n}"
+              "raw": "{\\n  \\\"name\\\": \\\"Heavy Vehicle\\\",\\n  \\\"code\\\": \\\"HVY-VEH\\\",\\n  \\\"description\\\": \\\"Heavy vehicle for large payloads\\\",\\n  \\\"category\\\": \\\"vehicle\\\",\\n  \\\"ageRange\\\": null,\\n  \\\"maxWeight\\\": 3500,\\n  \\\"dimensions\\\": \\\"600x250x250\\\",\\n  \\\"status\\\": \\\"Active\\\"\\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/payload-types/{{payloadTypeId}}",
