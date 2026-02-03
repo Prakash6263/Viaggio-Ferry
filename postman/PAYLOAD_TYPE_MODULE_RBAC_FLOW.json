@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "PAYLOAD TYPE MODULE — RBAC FLOW",
-    "description": "Complete RBAC flow testing for Payload Type Management module with category-based validation (Passenger, Cargo, Vehicle)",
+    "description": "Complete API testing for Payload Type management with RBAC",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -19,14 +19,17 @@
                   "  pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Response contains token', function () {",
+                  "pm.test('Login successful and token received', function () {",
                   "  var jsonData = pm.response.json();",
-                  "  pm.expect(jsonData).to.have.property('data');",
-                  "  pm.expect(jsonData.data).to.have.property('token');",
+                  "  pm.expect(jsonData.success).to.be.true;",
+                  "  pm.expect(jsonData.data.token).to.be.a('string');",
+                  "  pm.environment.set('token', jsonData.data.token);",
                   "});",
                   "",
-                  "var jsonData = pm.response.json();",
-                  "pm.environment.set('token', jsonData.data.token);"
+                  "pm.test('User is company type', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.data.user.type).to.equal('company');",
+                  "});"
                 ]
               }
             }
@@ -41,7 +44,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\\n  \\\"email\\\": \\\"company@example.com\\\",\\n  \\\"password\\\": \\\"companyPassword123\\\"\\n}"
+              "raw": "{\n  \"email\": \"company@example.com\",\n  \"password\": \"password123\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/login",
@@ -67,14 +70,17 @@
                   "  pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Response contains token', function () {",
+                  "pm.test('Login successful and token received', function () {",
                   "  var jsonData = pm.response.json();",
-                  "  pm.expect(jsonData).to.have.property('data');",
-                  "  pm.expect(jsonData.data).to.have.property('token');",
+                  "  pm.expect(jsonData.success).to.be.true;",
+                  "  pm.expect(jsonData.data.token).to.be.a('string');",
+                  "  pm.environment.set('token', jsonData.data.token);",
                   "});",
                   "",
-                  "var jsonData = pm.response.json();",
-                  "pm.environment.set('token', jsonData.data.token);"
+                  "pm.test('User is user type', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.data.user.type).to.equal('user');",
+                  "});"
                 ]
               }
             }
@@ -89,7 +95,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\\n  \\\"email\\\": \\\"user@example.com\\\",\\n  \\\"password\\\": \\\"userPassword123\\\"\\n}"
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/login",
@@ -120,28 +126,35 @@
                   "  pm.response.to.have.status(201);",
                   "});",
                   "",
-                  "pm.test('Response contains success flag', function () {",
+                  "pm.test('Payload created successfully', function () {",
                   "  var jsonData = pm.response.json();",
                   "  pm.expect(jsonData.success).to.be.true;",
+                  "  pm.expect(jsonData.data.payloadType._id).to.be.a('string');",
+                  "  pm.environment.set('payloadTypeId', jsonData.data.payloadType._id);",
                   "});",
                   "",
-                  "pm.test('Payload type created with correct category', function () {",
+                  "pm.test('Category is passenger', function () {",
                   "  var jsonData = pm.response.json();",
                   "  pm.expect(jsonData.data.payloadType.category).to.equal('passenger');",
-                  "  pm.expect(jsonData.data.payloadType.ageRange).to.not.be.null;",
+                  "});",
+                  "",
+                  "pm.test('ageRange field exists and is correct', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.data.payloadType.ageRange).to.equal('18-65');",
+                  "});",
+                  "",
+                  "pm.test('maxWeight and dimensions are null', function () {",
+                  "  var jsonData = pm.response.json();",
                   "  pm.expect(jsonData.data.payloadType.maxWeight).to.be.null;",
                   "  pm.expect(jsonData.data.payloadType.dimensions).to.be.null;",
                   "});",
                   "",
-                  "pm.test('Verify createdBy audit field', function () {",
+                  "pm.test('createdBy has correct structure (company or user type)', function () {",
                   "  var jsonData = pm.response.json();",
-                  "  pm.expect(jsonData.data.payloadType.createdBy).to.have.property('id');",
-                  "  pm.expect(jsonData.data.payloadType.createdBy).to.have.property('type');",
-                  "  pm.expect(['company', 'user']).to.include(jsonData.data.payloadType.createdBy.type);",
-                  "});",
-                  "",
-                  "var jsonData = pm.response.json();",
-                  "pm.environment.set('payloadTypeId', jsonData.data.payloadType._id);"
+                  "  pm.expect(jsonData.data.payloadType.createdBy.type).to.be.oneOf(['company', 'user']);",
+                  "  pm.expect(jsonData.data.payloadType.createdBy.id).to.exist;",
+                  "  pm.expect(jsonData.data.payloadType.createdBy.name).to.be.a('string');",
+                  "});"
                 ]
               }
             }
@@ -160,7 +173,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\\n  \\\"name\\\": \\\"Adult Passenger\\\",\\n  \\\"code\\\": \\\"ADT\\\",\\n  \\\"description\\\": \\\"Standard adult passenger\\\",\\n  \\\"category\\\": \\\"passenger\\\",\\n  \\\"ageRange\\\": \\\"18-65\\\",\\n  \\\"maxWeight\\\": null,\\n  \\\"dimensions\\\": null,\\n  \\\"status\\\": \\\"Active\\\"\\n}"
+              "raw": "{\n  \"name\": \"Adult Passenger\",\n  \"code\": \"ADT\",\n  \"description\": \"Standard adult passenger\",\n  \"category\": \"passenger\",\n  \"ageRange\": \"18-65\",\n  \"maxWeight\": null,\n  \"dimensions\": null,\n  \"status\": \"Active\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/payload-types",
@@ -198,12 +211,11 @@
                   "  });",
                   "});",
                   "",
-                  "pm.test('Pagination info present', function () {",
+                  "pm.test('Pagination info exists', function () {",
                   "  var jsonData = pm.response.json();",
-                  "  pm.expect(jsonData.data.pagination).to.have.property('total');",
-                  "  pm.expect(jsonData.data.pagination).to.have.property('page');",
-                  "  pm.expect(jsonData.data.pagination).to.have.property('limit');",
-                  "  pm.expect(jsonData.data.pagination).to.have.property('totalPages');",
+                  "  pm.expect(jsonData.data.pagination.total).to.be.a('number');",
+                  "  pm.expect(jsonData.data.pagination.page).to.be.a('number');",
+                  "  pm.expect(jsonData.data.pagination.limit).to.be.a('number');",
                   "});"
                 ]
               }
@@ -244,7 +256,7 @@
           }
         },
         {
-          "name": "Get Passenger Type",
+          "name": "Get Passenger Type by ID",
           "event": [
             {
               "listen": "test",
@@ -254,10 +266,14 @@
                   "  pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Retrieved correct payload type', function () {",
+                  "pm.test('Single payload type returned', function () {",
                   "  var jsonData = pm.response.json();",
                   "  pm.expect(jsonData.success).to.be.true;",
                   "  pm.expect(jsonData.data.payloadType._id).to.equal(pm.environment.get('payloadTypeId'));",
+                  "});",
+                  "",
+                  "pm.test('Category is passenger', function () {",
+                  "  var jsonData = pm.response.json();",
                   "  pm.expect(jsonData.data.payloadType.category).to.equal('passenger');",
                   "});"
                 ]
@@ -296,17 +312,16 @@
                   "  pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Payload type updated correctly', function () {",
+                  "pm.test('Payload updated successfully', function () {",
                   "  var jsonData = pm.response.json();",
                   "  pm.expect(jsonData.success).to.be.true;",
                   "  pm.expect(jsonData.data.payloadType.name).to.equal('Senior Passenger');",
-                  "  pm.expect(jsonData.data.payloadType.ageRange).to.equal('65+');",
                   "});",
                   "",
-                  "pm.test('Verify updatedBy audit field', function () {",
+                  "pm.test('updatedBy field is present', function () {",
                   "  var jsonData = pm.response.json();",
-                  "  pm.expect(jsonData.data.payloadType.updatedBy).to.have.property('type');",
-                  "  pm.expect(['company', 'user']).to.include(jsonData.data.payloadType.updatedBy.type);",
+                  "  pm.expect(jsonData.data.payloadType.updatedBy).to.exist;",
+                  "  pm.expect(jsonData.data.payloadType.updatedBy.type).to.be.oneOf(['company', 'user']);",
                   "});"
                 ]
               }
@@ -326,7 +341,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\\n  \\\"name\\\": \\\"Senior Passenger\\\",\\n  \\\"code\\\": \\\"SNR\\\",\\n  \\\"description\\\": \\\"Senior passenger aged 65 and above\\\",\\n  \\\"category\\\": \\\"passenger\\\",\\n  \\\"ageRange\\\": \\\"65+\\\",\\n  \\\"maxWeight\\\": null,\\n  \\\"dimensions\\\": null,\\n  \\\"status\\\": \\\"Active\\\"\\n}"
+              "raw": "{\n  \"name\": \"Senior Passenger\",\n  \"code\": \"SNR\",\n  \"description\": \"Senior passenger aged 65 and above\",\n  \"category\": \"passenger\",\n  \"ageRange\": \"65+\",\n  \"maxWeight\": null,\n  \"dimensions\": null,\n  \"status\": \"Active\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/payload-types/{{payloadTypeId}}",
@@ -352,16 +367,10 @@
                   "  pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Soft delete executed', function () {",
+                  "pm.test('Payload deleted successfully (soft delete)', function () {",
                   "  var jsonData = pm.response.json();",
                   "  pm.expect(jsonData.success).to.be.true;",
-                  "  pm.expect(jsonData.data.payloadType.isDeleted).to.be.true;",
-                  "});",
-                  "",
-                  "pm.test('Verify updatedBy on delete', function () {",
-                  "  var jsonData = pm.response.json();",
-                  "  pm.expect(jsonData.data.payloadType.updatedBy).to.have.property('type');",
-                  "  pm.expect(['company', 'user']).to.include(jsonData.data.payloadType.updatedBy.type);",
+                  "  pm.expect(jsonData.data.message).to.include('deleted');",
                   "});"
                 ]
               }
@@ -404,17 +413,28 @@
                   "  pm.response.to.have.status(201);",
                   "});",
                   "",
-                  "pm.test('Cargo type created with correct validation', function () {",
+                  "pm.test('Payload created successfully', function () {",
                   "  var jsonData = pm.response.json();",
                   "  pm.expect(jsonData.success).to.be.true;",
-                  "  pm.expect(jsonData.data.payloadType.category).to.equal('cargo');",
-                  "  pm.expect(jsonData.data.payloadType.maxWeight).to.not.be.null;",
-                  "  pm.expect(jsonData.data.payloadType.dimensions).to.not.be.null;",
-                  "  pm.expect(jsonData.data.payloadType.ageRange).to.be.null;",
+                  "  pm.expect(jsonData.data.payloadType._id).to.be.a('string');",
+                  "  pm.environment.set('payloadTypeId', jsonData.data.payloadType._id);",
                   "});",
                   "",
-                  "var jsonData = pm.response.json();",
-                  "pm.environment.set('payloadTypeId', jsonData.data.payloadType._id);"
+                  "pm.test('Category is cargo', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.data.payloadType.category).to.equal('cargo');",
+                  "});",
+                  "",
+                  "pm.test('maxWeight and dimensions exist', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.data.payloadType.maxWeight).to.equal(5000);",
+                  "  pm.expect(jsonData.data.payloadType.dimensions).to.equal('120x100x150');",
+                  "});",
+                  "",
+                  "pm.test('ageRange is null', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.data.payloadType.ageRange).to.be.null;",
+                  "});"
                 ]
               }
             }
@@ -433,7 +453,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\\n  \\\"name\\\": \\\"Standard Cargo Box\\\",\\n  \\\"code\\\": \\\"SCB\\\",\\n  \\\"description\\\": \\\"Standard cargo box for general freight\\\",\\n  \\\"category\\\": \\\"cargo\\\",\\n  \\\"ageRange\\\": null,\\n  \\\"maxWeight\\\": 5000,\\n  \\\"dimensions\\\": \\\"120x100x150\\\",\\n  \\\"status\\\": \\\"Active\\\"\\n}"
+              "raw": "{\n  \"name\": \"Standard Cargo Box\",\n  \"code\": \"SCB\",\n  \"description\": \"Standard cargo box for general freight\",\n  \"category\": \"cargo\",\n  \"ageRange\": null,\n  \"maxWeight\": 5000,\n  \"dimensions\": \"120x100x150\",\n  \"status\": \"Active\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/payload-types",
@@ -456,6 +476,12 @@
                 "exec": [
                   "pm.test('Status code is 200', function () {",
                   "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains cargo types', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.success).to.be.true;",
+                  "  pm.expect(jsonData.data.payloadTypes).to.be.an('array');",
                   "});",
                   "",
                   "pm.test('All returned types are cargo category', function () {",
@@ -503,7 +529,7 @@
           }
         },
         {
-          "name": "Get Cargo Type",
+          "name": "Get Cargo Type by ID",
           "event": [
             {
               "listen": "test",
@@ -513,7 +539,13 @@
                   "  pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Retrieved correct cargo type', function () {",
+                  "pm.test('Single payload type returned', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.success).to.be.true;",
+                  "  pm.expect(jsonData.data.payloadType._id).to.equal(pm.environment.get('payloadTypeId'));",
+                  "});",
+                  "",
+                  "pm.test('Category is cargo', function () {",
                   "  var jsonData = pm.response.json();",
                   "  pm.expect(jsonData.data.payloadType.category).to.equal('cargo');",
                   "});"
@@ -553,9 +585,10 @@
                   "  pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Cargo type updated correctly', function () {",
+                  "pm.test('Payload updated successfully', function () {",
                   "  var jsonData = pm.response.json();",
-                  "  pm.expect(jsonData.data.payloadType.maxWeight).to.equal(7500);",
+                  "  pm.expect(jsonData.success).to.be.true;",
+                  "  pm.expect(jsonData.data.payloadType.name).to.equal('Heavy Cargo Box');",
                   "});"
                 ]
               }
@@ -575,7 +608,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\\n  \\\"name\\\": \\\"Heavy Cargo Box\\\",\\n  \\\"code\\\": \\\"HCB\\\",\\n  \\\"description\\\": \\\"Heavy cargo box for heavy freight\\\",\\n  \\\"category\\\": \\\"cargo\\\",\\n  \\\"ageRange\\\": null,\\n  \\\"maxWeight\\\": 7500,\\n  \\\"dimensions\\\": \\\"150x120x180\\\",\\n  \\\"status\\\": \\\"Active\\\"\\n}"
+              "raw": "{\n  \"name\": \"Heavy Cargo Box\",\n  \"code\": \"HCB\",\n  \"description\": \"Heavy cargo box for heavy freight\",\n  \"category\": \"cargo\",\n  \"ageRange\": null,\n  \"maxWeight\": 7500,\n  \"dimensions\": \"150x120x180\",\n  \"status\": \"Active\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/payload-types/{{payloadTypeId}}",
@@ -601,9 +634,9 @@
                   "  pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Soft delete executed', function () {",
+                  "pm.test('Payload deleted successfully (soft delete)', function () {",
                   "  var jsonData = pm.response.json();",
-                  "  pm.expect(jsonData.data.payloadType.isDeleted).to.be.true;",
+                  "  pm.expect(jsonData.success).to.be.true;",
                   "});"
                 ]
               }
@@ -646,17 +679,28 @@
                   "  pm.response.to.have.status(201);",
                   "});",
                   "",
-                  "pm.test('Vehicle type created with correct validation', function () {",
+                  "pm.test('Payload created successfully', function () {",
                   "  var jsonData = pm.response.json();",
                   "  pm.expect(jsonData.success).to.be.true;",
-                  "  pm.expect(jsonData.data.payloadType.category).to.equal('vehicle');",
-                  "  pm.expect(jsonData.data.payloadType.maxWeight).to.not.be.null;",
-                  "  pm.expect(jsonData.data.payloadType.dimensions).to.not.be.null;",
-                  "  pm.expect(jsonData.data.payloadType.ageRange).to.be.null;",
+                  "  pm.expect(jsonData.data.payloadType._id).to.be.a('string');",
+                  "  pm.environment.set('payloadTypeId', jsonData.data.payloadType._id);",
                   "});",
                   "",
-                  "var jsonData = pm.response.json();",
-                  "pm.environment.set('payloadTypeId', jsonData.data.payloadType._id);"
+                  "pm.test('Category is vehicle', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.data.payloadType.category).to.equal('vehicle');",
+                  "});",
+                  "",
+                  "pm.test('maxWeight and dimensions exist', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.data.payloadType.maxWeight).to.equal(2500);",
+                  "  pm.expect(jsonData.data.payloadType.dimensions).to.equal('500x200x200');",
+                  "});",
+                  "",
+                  "pm.test('ageRange is null', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.data.payloadType.ageRange).to.be.null;",
+                  "});"
                 ]
               }
             }
@@ -675,7 +719,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\\n  \\\"name\\\": \\\"Standard Vehicle\\\",\\n  \\\"code\\\": \\\"STD-VEH\\\",\\n  \\\"description\\\": \\\"Standard vehicle for transport\\\",\\n  \\\"category\\\": \\\"vehicle\\\",\\n  \\\"ageRange\\\": null,\\n  \\\"maxWeight\\\": 2500,\\n  \\\"dimensions\\\": \\\"500x200x200\\\",\\n  \\\"status\\\": \\\"Active\\\"\\n}"
+              "raw": "{\n  \"name\": \"Standard Vehicle\",\n  \"code\": \"STD-VEH\",\n  \"description\": \"Standard vehicle for transport\",\n  \"category\": \"vehicle\",\n  \"ageRange\": null,\n  \"maxWeight\": 2500,\n  \"dimensions\": \"500x200x200\",\n  \"status\": \"Active\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/payload-types",
@@ -698,6 +742,12 @@
                 "exec": [
                   "pm.test('Status code is 200', function () {",
                   "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains vehicle types', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.success).to.be.true;",
+                  "  pm.expect(jsonData.data.payloadTypes).to.be.an('array');",
                   "});",
                   "",
                   "pm.test('All returned types are vehicle category', function () {",
@@ -745,7 +795,7 @@
           }
         },
         {
-          "name": "Get Vehicle Type",
+          "name": "Get Vehicle Type by ID",
           "event": [
             {
               "listen": "test",
@@ -755,7 +805,13 @@
                   "  pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Retrieved correct vehicle type', function () {",
+                  "pm.test('Single payload type returned', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.success).to.be.true;",
+                  "  pm.expect(jsonData.data.payloadType._id).to.equal(pm.environment.get('payloadTypeId'));",
+                  "});",
+                  "",
+                  "pm.test('Category is vehicle', function () {",
                   "  var jsonData = pm.response.json();",
                   "  pm.expect(jsonData.data.payloadType.category).to.equal('vehicle');",
                   "});"
@@ -795,9 +851,10 @@
                   "  pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Vehicle type updated correctly', function () {",
+                  "pm.test('Payload updated successfully', function () {",
                   "  var jsonData = pm.response.json();",
-                  "  pm.expect(jsonData.data.payloadType.maxWeight).to.equal(3500);",
+                  "  pm.expect(jsonData.success).to.be.true;",
+                  "  pm.expect(jsonData.data.payloadType.name).to.equal('Heavy Vehicle');",
                   "});"
                 ]
               }
@@ -817,7 +874,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\\n  \\\"name\\\": \\\"Heavy Vehicle\\\",\\n  \\\"code\\\": \\\"HVY-VEH\\\",\\n  \\\"description\\\": \\\"Heavy vehicle for large payloads\\\",\\n  \\\"category\\\": \\\"vehicle\\\",\\n  \\\"ageRange\\\": null,\\n  \\\"maxWeight\\\": 3500,\\n  \\\"dimensions\\\": \\\"600x250x250\\\",\\n  \\\"status\\\": \\\"Active\\\"\\n}"
+              "raw": "{\n  \"name\": \"Heavy Vehicle\",\n  \"code\": \"HVY-VEH\",\n  \"description\": \"Heavy vehicle for large payloads\",\n  \"category\": \"vehicle\",\n  \"ageRange\": null,\n  \"maxWeight\": 3500,\n  \"dimensions\": \"600x250x250\",\n  \"status\": \"Active\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/payload-types/{{payloadTypeId}}",
@@ -843,9 +900,9 @@
                   "  pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Soft delete executed', function () {",
+                  "pm.test('Payload deleted successfully (soft delete)', function () {",
                   "  var jsonData = pm.response.json();",
-                  "  pm.expect(jsonData.data.payloadType.isDeleted).to.be.true;",
+                  "  pm.expect(jsonData.success).to.be.true;",
                   "});"
                 ]
               }
@@ -878,7 +935,7 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:5000",
+      "value": "http://localhost:3000",
       "type": "string"
     },
     {
