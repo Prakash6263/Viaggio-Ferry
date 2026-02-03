@@ -1,0 +1,895 @@
+{
+  "info": {
+    "name": "PAYLOAD TYPE MODULE — RBAC FLOW",
+    "description": "Complete RBAC flow testing for Payload Type Management module with category-based validation (Passenger, Cargo, Vehicle)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "AUTH",
+      "item": [
+        {
+          "name": "Company Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains token', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData).to.have.property('data');",
+                  "  pm.expect(jsonData.data).to.have.property('token');",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set('token', jsonData.data.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"email\\\": \\\"company@example.com\\\",\\n  \\\"password\\\": \\\"companyPassword123\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "User Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains token', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData).to.have.property('data');",
+                  "  pm.expect(jsonData.data).to.have.property('token');",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set('token', jsonData.data.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"email\\\": \\\"user@example.com\\\",\\n  \\\"password\\\": \\\"userPassword123\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PASSENGER TYPES",
+      "item": [
+        {
+          "name": "Create Passenger Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response contains success flag', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('Payload type created with correct category', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.data.payloadType.category).to.equal('passenger');",
+                  "  pm.expect(jsonData.data.payloadType.ageRange).to.not.be.null;",
+                  "  pm.expect(jsonData.data.payloadType.maxWeight).to.be.null;",
+                  "  pm.expect(jsonData.data.payloadType.dimensions).to.be.null;",
+                  "});",
+                  "",
+                  "pm.test('Verify createdBy audit field', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.data.payloadType.createdBy).to.have.property('id');",
+                  "  pm.expect(jsonData.data.payloadType.createdBy).to.have.property('type');",
+                  "  pm.expect(['company', 'user']).to.include(jsonData.data.payloadType.createdBy.type);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set('payloadTypeId', jsonData.data.payloadType._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"name\\\": \\\"Adult Passenger\\\",\\n  \\\"code\\\": \\\"ADT\\\",\\n  \\\"description\\\": \\\"Standard adult passenger\\\",\\n  \\\"category\\\": \\\"passenger\\\",\\n  \\\"ageRange\\\": \\\"18-65\\\",\\n  \\\"status\\\": \\\"Active\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payload-types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payload-types"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Passenger Types",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains passenger types', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.success).to.be.true;",
+                  "  pm.expect(jsonData.data.payloadTypes).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('All returned types are passenger category', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  jsonData.data.payloadTypes.forEach(function(type) {",
+                  "    pm.expect(type.category).to.equal('passenger');",
+                  "  });",
+                  "});",
+                  "",
+                  "pm.test('Pagination info present', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.data.pagination).to.have.property('total');",
+                  "  pm.expect(jsonData.data.pagination).to.have.property('page');",
+                  "  pm.expect(jsonData.data.pagination).to.have.property('limit');",
+                  "  pm.expect(jsonData.data.pagination).to.have.property('totalPages');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payload-types?category=passenger&page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payload-types"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "passenger"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Passenger Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Retrieved correct payload type', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.success).to.be.true;",
+                  "  pm.expect(jsonData.data.payloadType._id).to.equal(pm.environment.get('payloadTypeId'));",
+                  "  pm.expect(jsonData.data.payloadType.category).to.equal('passenger');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payload-types/{{payloadTypeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payload-types",
+                "{{payloadTypeId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Passenger Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Payload type updated correctly', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.success).to.be.true;",
+                  "  pm.expect(jsonData.data.payloadType.name).to.equal('Senior Passenger');",
+                  "  pm.expect(jsonData.data.payloadType.ageRange).to.equal('65+');",
+                  "});",
+                  "",
+                  "pm.test('Verify updatedBy audit field', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.data.payloadType.updatedBy).to.have.property('type');",
+                  "  pm.expect(['company', 'user']).to.include(jsonData.data.payloadType.updatedBy.type);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"name\\\": \\\"Senior Passenger\\\",\\n  \\\"code\\\": \\\"SNR\\\",\\n  \\\"description\\\": \\\"Senior passenger aged 65 and above\\\",\\n  \\\"category\\\": \\\"passenger\\\",\\n  \\\"ageRange\\\": \\\"65+\\\",\\n  \\\"status\\\": \\\"Active\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payload-types/{{payloadTypeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payload-types",
+                "{{payloadTypeId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Passenger Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Soft delete executed', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.success).to.be.true;",
+                  "  pm.expect(jsonData.data.payloadType.isDeleted).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('Verify updatedBy on delete', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.data.payloadType.updatedBy).to.have.property('type');",
+                  "  pm.expect(['company', 'user']).to.include(jsonData.data.payloadType.updatedBy.type);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payload-types/{{payloadTypeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payload-types",
+                "{{payloadTypeId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CARGO TYPES",
+      "item": [
+        {
+          "name": "Create Cargo Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Cargo type created with correct validation', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.success).to.be.true;",
+                  "  pm.expect(jsonData.data.payloadType.category).to.equal('cargo');",
+                  "  pm.expect(jsonData.data.payloadType.maxWeight).to.not.be.null;",
+                  "  pm.expect(jsonData.data.payloadType.dimensions).to.not.be.null;",
+                  "  pm.expect(jsonData.data.payloadType.ageRange).to.be.null;",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set('payloadTypeId', jsonData.data.payloadType._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"name\\\": \\\"Standard Cargo Box\\\",\\n  \\\"code\\\": \\\"SCB\\\",\\n  \\\"description\\\": \\\"Standard cargo box for general freight\\\",\\n  \\\"category\\\": \\\"cargo\\\",\\n  \\\"maxWeight\\\": 5000,\\n  \\\"dimensions\\\": \\\"120x100x150\\\",\\n  \\\"status\\\": \\\"Active\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payload-types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payload-types"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Cargo Types",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('All returned types are cargo category', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  jsonData.data.payloadTypes.forEach(function(type) {",
+                  "    pm.expect(type.category).to.equal('cargo');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payload-types?category=cargo&page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payload-types"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "cargo"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Cargo Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Retrieved correct cargo type', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.data.payloadType.category).to.equal('cargo');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payload-types/{{payloadTypeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payload-types",
+                "{{payloadTypeId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Cargo Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Cargo type updated correctly', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.data.payloadType.maxWeight).to.equal(7500);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"name\\\": \\\"Heavy Cargo Box\\\",\\n  \\\"code\\\": \\\"HCB\\\",\\n  \\\"description\\\": \\\"Heavy cargo box for large freight\\\",\\n  \\\"category\\\": \\\"cargo\\\",\\n  \\\"maxWeight\\\": 7500,\\n  \\\"dimensions\\\": \\\"150x120x180\\\",\\n  \\\"status\\\": \\\"Active\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payload-types/{{payloadTypeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payload-types",
+                "{{payloadTypeId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Cargo Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Soft delete executed', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.data.payloadType.isDeleted).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payload-types/{{payloadTypeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payload-types",
+                "{{payloadTypeId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "VEHICLE TYPES",
+      "item": [
+        {
+          "name": "Create Vehicle Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Vehicle type created with correct validation', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.success).to.be.true;",
+                  "  pm.expect(jsonData.data.payloadType.category).to.equal('vehicle');",
+                  "  pm.expect(jsonData.data.payloadType.maxWeight).to.not.be.null;",
+                  "  pm.expect(jsonData.data.payloadType.dimensions).to.not.be.null;",
+                  "  pm.expect(jsonData.data.payloadType.ageRange).to.be.null;",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set('payloadTypeId', jsonData.data.payloadType._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"name\\\": \\\"Standard Vehicle\\\",\\n  \\\"code\\\": \\\"STD-VEH\\\",\\n  \\\"description\\\": \\\"Standard vehicle for transport\\\",\\n  \\\"category\\\": \\\"vehicle\\\",\\n  \\\"maxWeight\\\": 2500,\\n  \\\"dimensions\\\": \\\"500x200x200\\\",\\n  \\\"status\\\": \\\"Active\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payload-types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payload-types"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Vehicle Types",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('All returned types are vehicle category', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  jsonData.data.payloadTypes.forEach(function(type) {",
+                  "    pm.expect(type.category).to.equal('vehicle');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payload-types?category=vehicle&page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payload-types"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "vehicle"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Vehicle Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Retrieved correct vehicle type', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.data.payloadType.category).to.equal('vehicle');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payload-types/{{payloadTypeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payload-types",
+                "{{payloadTypeId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Vehicle Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Vehicle type updated correctly', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.data.payloadType.maxWeight).to.equal(3500);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"name\\\": \\\"Heavy Vehicle\\\",\\n  \\\"code\\\": \\\"HVY-VEH\\\",\\n  \\\"description\\\": \\\"Heavy vehicle for large payloads\\\",\\n  \\\"category\\\": \\\"vehicle\\\",\\n  \\\"maxWeight\\\": 3500,\\n  \\\"dimensions\\\": \\\"600x250x250\\\",\\n  \\\"status\\\": \\\"Active\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payload-types/{{payloadTypeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payload-types",
+                "{{payloadTypeId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Vehicle Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Soft delete executed', function () {",
+                  "  var jsonData = pm.response.json();",
+                  "  pm.expect(jsonData.data.payloadType.isDeleted).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payload-types/{{payloadTypeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payload-types",
+                "{{payloadTypeId}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "payloadTypeId",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
