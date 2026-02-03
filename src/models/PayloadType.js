@@ -60,9 +60,18 @@ const PayloadTypeSchema = new mongoose.Schema(
       index: true,
     },
     ageRange: {
-      type: String,
-      trim: true,
-      default: undefined,
+      from: {
+        type: Number,
+        min: 0,
+        max: 150,
+        default: undefined,
+      },
+      to: {
+        type: Number,
+        min: 0,
+        max: 150,
+        default: undefined,
+      },
     },
     maxWeight: {
       type: Number,

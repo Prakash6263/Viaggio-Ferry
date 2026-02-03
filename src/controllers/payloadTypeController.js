@@ -28,14 +28,42 @@ function buildActor(user) {
 
 /**
  * Validate payload type fields based on category
+ * Handles both old (string) and new (numeric) ageRange formats for backward compatibility
  */
 function validateCategoryFields(category, body) {
   const errors = []
 
   if (category === "passenger") {
+    // Accept both old string format and new numeric format
     if (!body.ageRange) {
       errors.push("ageRange is required for passenger category")
+    } else if (typeof body.ageRange === "object") {
+      // New numeric format
+      if (body.ageRange.from === undefined || body.ageRange.from === null) {
+        errors.push("ageRange.from is required for passenger category")
+      } else if (typeof body.ageRange.from !== "number") {
+        errors.push("ageRange.from must be a number")
+      } else if (body.ageRange.from < 0 || body.ageRange.from > 150) {
+        errors.push("ageRange.from must be between 0 and 150")
+      }
+
+      if (body.ageRange.to === undefined || body.ageRange.to === null) {
+        errors.push("ageRange.to is required for passenger category")
+      } else if (typeof body.ageRange.to !== "number") {
+        errors.push("ageRange.to must be a number")
+      } else if (body.ageRange.to < 0 || body.ageRange.to > 150) {
+        errors.push("ageRange.to must be between 0 and 150")
+      }
+
+      if (
+        body.ageRange.from !== undefined &&
+        body.ageRange.to !== undefined &&
+        body.ageRange.from > body.ageRange.to
+      ) {
+        errors.push("ageRange.from must be less than or equal to ageRange.to")
+      }
     }
+
     if (body.maxWeight !== undefined && body.maxWeight !== null) {
       errors.push("maxWeight must be null for passenger category")
     }

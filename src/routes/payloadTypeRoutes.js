@@ -3,6 +3,7 @@ const router = express.Router()
 const payloadTypeController = require("../controllers/payloadTypeController")
 const { verifyToken, extractCompanyId, extractUserId } = require("../middleware/authMiddleware")
 const { checkPermission } = require("../middleware/permissionMiddleware")
+const validatePayloadType = require("../middleware/validatePayloadType")
 
 // ==================== AUTHENTICATION MIDDLEWARE ====================
 // All routes require authentication and company extraction
@@ -39,6 +40,7 @@ router.get(
 router.post(
   "/",
   checkPermission("settings", "payload-type", "create"),
+  validatePayloadType,
   payloadTypeController.createPayloadType
 )
 
@@ -49,6 +51,7 @@ router.post(
 router.put(
   "/:id",
   checkPermission("settings", "payload-type", "update"),
+  validatePayloadType,
   payloadTypeController.updatePayloadType
 )
 
