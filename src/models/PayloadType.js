@@ -15,8 +15,8 @@ const CreatorSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["company", "user", "system"],
-      default: "system",
+      enum: ["company", "user"],
+      default: "user",
     },
     layer: {
       type: String,
@@ -86,7 +86,7 @@ const PayloadTypeSchema = new mongoose.Schema(
       default: () => ({
         id: null,
         name: "Unknown",
-        type: "system",
+        type: "user",
         layer: undefined,
       }),
     },
