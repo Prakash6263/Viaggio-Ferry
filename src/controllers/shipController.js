@@ -48,15 +48,27 @@ async function validateAndCleanCapacity(capacityArray, cabinType, companyId) {
       throw createHttpError(400, `Invalid cabin ID format: ${row.cabinId}`)
     }
 
+    console.log("[v0] Validating cabin - ID:", row.cabinId, "Expected type:", cabinType, "Company:", companyId)
+
     // Fetch cabin and validate type
     const cabin = await Cabin.findOne({
       _id: row.cabinId,
       company: companyId,
-      type: cabinType,
+      type: cabinType.toLowerCase(),
       isDeleted: false,
     }).lean()
 
+    console.log("[v0] Found cabin:", cabin ? { _id: cabin._id, type: cabin.type, name: cabin.name } : "NOT FOUND")
+
     if (!cabin) {
+      // Debug: Check if cabin exists at all (regardless of type)
+      const cabinAny = await Cabin.findOne({
+        _id: row.cabinId,
+        company: companyId,
+        isDeleted: false,
+      }).lean()
+      console.log("[v0] Cabin exists (any type)?", cabinAny ? { _id: cabinAny._id, type: cabinAny.type } : "NO")
+      
       throw createHttpError(400, `Cabin ${row.cabinId} not found or type mismatch for ${cabinType}`)
     }
 
@@ -206,10 +218,14 @@ const createShip = async (req, res, next) => {
       throw createHttpError(400, `Status must be one of: ${validStatuses.join(", ")}`)
     }
 
-    // Validate and clean capacity arrays with cabin integration
+    // Validate and clean capacity arrays with cabin integration (ensure lowercase types)
     const validPassengerCapacity = await validateAndCleanCapacity(passengerCapacity, "passenger", companyId)
     const validCargoCapacity = await validateAndCleanCapacity(cargoCapacity, "cargo", companyId)
     const validVehicleCapacity = await validateAndCleanCapacity(vehicleCapacity, "vehicle", companyId)
+    
+    console.log("[v0] Create ship - passengerCapacity validated:", validPassengerCapacity)
+    console.log("[v0] Create ship - cargoCapacity validated:", validCargoCapacity)
+    console.log("[v0] Create ship - vehicleCapacity validated:", validVehicleCapacity)
 
     // Build createdBy object
     const createdBy = buildActor(user)
