@@ -768,7 +768,7 @@ const getMyProfile = async (req, res, next) => {
       })
       .populate({
         path: "company",
-        select: "_id companyName logoUrl",
+        select: "_id companyName logoUrl website",
       })
 
     if (!user) {
