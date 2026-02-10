@@ -122,9 +122,6 @@ const listShips = async (req, res, next) => {
     // Fetch ships and total count
     const [ships, total] = await Promise.all([
       Ship.find(query)
-        .select(
-          "_id name imoNumber mmsiNumber shipType yearBuilt flagState status createdBy updatedBy createdAt updatedAt"
-        )
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limitNum)
@@ -169,11 +166,7 @@ const getShipById = async (req, res, next) => {
       _id: id,
       company: companyId,
       isDeleted: false,
-    })
-      .select(
-        "_id name imoNumber mmsiNumber shipType yearBuilt flagState classificationSociety status remarks technical passengerCapacity cargoCapacity vehicleCapacity createdBy updatedBy createdAt updatedAt"
-      )
-      .lean()
+    }).lean()
 
     if (!ship) {
       throw createHttpError(404, "Ship not found")
@@ -190,18 +183,85 @@ const getShipById = async (req, res, next) => {
 }
 
 /**
+ * Helper function to safely parse and convert numeric fields in capacity arrays
+ */
+const parseAndConvertCapacity = (capacity) => {
+  if (!capacity) return [];
+  if (typeof capacity === "string") {
+    try {
+      capacity = JSON.parse(capacity);
+    } catch (err) {
+      throw createHttpError(400, `Invalid capacity format: ${err.message}`);
+    }
+  }
+  if (!Array.isArray(capacity)) {
+    throw createHttpError(400, "Capacity must be an array");
+  }
+  // Convert numeric strings to numbers
+  return capacity.map(item => ({
+    ...item,
+    totalWeightKg: item.totalWeightKg ? Number(item.totalWeightKg) : 0,
+    totalWeightTons: item.totalWeightTons ? Number(item.totalWeightTons) : 0,
+    seats: item.seats ? Number(item.seats) : 0,
+    spots: item.spots ? Number(item.spots) : 0,
+  }));
+};
+
+/**
+ * Helper function to safely parse and convert technical specifications
+ */
+const parseAndConvertTechnical = (technical) => {
+  if (!technical) return {};
+  if (typeof technical === "string") {
+    try {
+      technical = JSON.parse(technical);
+    } catch (err) {
+      throw createHttpError(400, `Invalid technical specifications format: ${err.message}`);
+    }
+  }
+  if (typeof technical !== "object") {
+    throw createHttpError(400, "Technical specifications must be an object");
+  }
+  // Convert numeric strings to numbers
+  return {
+    grossTonnage: technical.grossTonnage ? Number(technical.grossTonnage) : 0,
+    netTonnage: technical.netTonnage ? Number(technical.netTonnage) : 0,
+    loa: technical.loa ? Number(technical.loa) : 0,
+    beam: technical.beam ? Number(technical.beam) : 0,
+    draft: technical.draft ? Number(technical.draft) : 0,
+  };
+};
+
+/**
  * POST /api/ships
  * Create a new ship
  */
 const createShip = async (req, res, next) => {
   try {
     const { companyId, user } = req
-    const { name, status = "Active", passengerCapacity = [], cargoCapacity = [], vehicleCapacity = [], ...rest } =
+    let { name, status = "Active", passengerCapacity = [], cargoCapacity = [], vehicleCapacity = [], technical = {}, ...rest } =
       req.body
+
+    console.log("[v0] Create ship - Raw req.body:", JSON.stringify(req.body, null, 2))
 
     if (!companyId) {
       throw createHttpError(400, "Company ID is required")
     }
+
+    // Parse and convert nested objects and arrays with error handling
+    try {
+      passengerCapacity = parseAndConvertCapacity(passengerCapacity)
+      cargoCapacity = parseAndConvertCapacity(cargoCapacity)
+      vehicleCapacity = parseAndConvertCapacity(vehicleCapacity)
+      technical = parseAndConvertTechnical(technical)
+    } catch (parseErr) {
+      return next(parseErr)
+    }
+
+    console.log("[v0] Create ship - Parsed passengerCapacity:", passengerCapacity)
+    console.log("[v0] Create ship - Parsed cargoCapacity:", cargoCapacity)
+    console.log("[v0] Create ship - Parsed vehicleCapacity:", vehicleCapacity)
+    console.log("[v0] Create ship - Parsed technical:", technical)
 
     // Validate required fields
     if (!name || !name.trim()) {
@@ -227,6 +287,18 @@ const createShip = async (req, res, next) => {
     console.log("[v0] Create ship - cargoCapacity validated:", validCargoCapacity)
     console.log("[v0] Create ship - vehicleCapacity validated:", validVehicleCapacity)
 
+    // Process uploaded documents
+    const documents = []
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        documents.push({
+          fileName: file.originalname,
+          fileUrl: `/uploads/ships/${file.filename}`,
+          fileType: file.mimetype === "application/pdf" ? "pdf" : "image",
+        })
+      }
+    }
+
     // Build createdBy object
     const createdBy = buildActor(user)
 
@@ -238,6 +310,8 @@ const createShip = async (req, res, next) => {
       passengerCapacity: validPassengerCapacity,
       cargoCapacity: validCargoCapacity,
       vehicleCapacity: validVehicleCapacity,
+      technical,
+      documents,
       createdBy,
       ...rest,
     })
@@ -262,11 +336,36 @@ const updateShip = async (req, res, next) => {
   try {
     const { id } = req.params
     const { companyId, user } = req
-    const { passengerCapacity, cargoCapacity, vehicleCapacity, ...updates } = req.body
+    let { passengerCapacity, cargoCapacity, vehicleCapacity, technical, ...updates } = req.body
+
+    console.log("[v0] Update ship - Raw req.body:", JSON.stringify(req.body, null, 2))
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw createHttpError(400, "Invalid ship ID format")
     }
+
+    // Parse and convert nested objects and arrays with error handling
+    try {
+      if (passengerCapacity) {
+        passengerCapacity = parseAndConvertCapacity(passengerCapacity)
+      }
+      if (cargoCapacity) {
+        cargoCapacity = parseAndConvertCapacity(cargoCapacity)
+      }
+      if (vehicleCapacity) {
+        vehicleCapacity = parseAndConvertCapacity(vehicleCapacity)
+      }
+      if (technical) {
+        technical = parseAndConvertTechnical(technical)
+      }
+    } catch (parseErr) {
+      return next(parseErr)
+    }
+
+    console.log("[v0] Update ship - Parsed passengerCapacity:", passengerCapacity)
+    console.log("[v0] Update ship - Parsed cargoCapacity:", cargoCapacity)
+    console.log("[v0] Update ship - Parsed vehicleCapacity:", vehicleCapacity)
+    console.log("[v0] Update ship - Parsed technical:", technical)
 
     // Fetch the ship
     const ship = await Ship.findOne({
@@ -281,18 +380,32 @@ const updateShip = async (req, res, next) => {
 
     // Update fields
     Object.assign(ship, updates)
+    if (technical) {
+      ship.technical = { ...ship.technical, ...technical }
+    }
 
     // Update capacity arrays with validation
-    if (passengerCapacity) {
+    if (passengerCapacity && Array.isArray(passengerCapacity) && passengerCapacity.length > 0) {
       ship.passengerCapacity = await validateAndCleanCapacity(passengerCapacity, "passenger", companyId)
     }
 
-    if (cargoCapacity) {
+    if (cargoCapacity && Array.isArray(cargoCapacity) && cargoCapacity.length > 0) {
       ship.cargoCapacity = await validateAndCleanCapacity(cargoCapacity, "cargo", companyId)
     }
 
-    if (vehicleCapacity) {
+    if (vehicleCapacity && Array.isArray(vehicleCapacity) && vehicleCapacity.length > 0) {
       ship.vehicleCapacity = await validateAndCleanCapacity(vehicleCapacity, "vehicle", companyId)
+    }
+
+    // Process uploaded documents - push to existing array
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        ship.documents.push({
+          fileName: file.originalname,
+          fileUrl: `/uploads/ships/${file.filename}`,
+          fileType: file.mimetype === "application/pdf" ? "pdf" : "image",
+        })
+      }
     }
 
     // Build updatedBy object

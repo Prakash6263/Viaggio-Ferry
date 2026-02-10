@@ -133,6 +133,22 @@ const ShipSchema = new mongoose.Schema(
       },
     ],
 
+    // Document Management
+    documents: [
+      {
+        fileName: String,
+        fileUrl: String,
+        fileType: {
+          type: String,
+          enum: ["image", "pdf"],
+        },
+        uploadedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+
     // Audit
     createdBy: {
       type: CreatorSchema,

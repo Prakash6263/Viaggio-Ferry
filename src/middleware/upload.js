@@ -7,6 +7,7 @@ const companyUploadDir = path.join(__dirname, "../uploads/companies")
 const whoWeAreUploadDir = path.join(__dirname, "../uploads/who-we-are")
 const b2cUserUploadDir = path.join(__dirname, "../uploads/b2c-users") // Added B2C users upload directory
 const userProfileUploadDir = path.join(__dirname, "../uploads/user-profiles") // User profile images
+const shipUploadDir = path.join(__dirname, "../uploads/ships") // Ship documents upload directory
 
 if (!fs.existsSync(adminUploadDir)) {
   fs.mkdirSync(adminUploadDir, { recursive: true })
@@ -27,6 +28,10 @@ if (!fs.existsSync(b2cUserUploadDir)) {
 
 if (!fs.existsSync(userProfileUploadDir)) {
   fs.mkdirSync(userProfileUploadDir, { recursive: true })
+}
+
+if (!fs.existsSync(shipUploadDir)) {
+  fs.mkdirSync(shipUploadDir, { recursive: true })
 }
 
 const adminStorage = multer.diskStorage({
@@ -73,6 +78,20 @@ const whoWeAreStorage = multer.diskStorage({
 const fileFilter = (req, file, cb) => {
   const ok = /^image\/(png|jpe?g|webp|gif|svg\+xml)$/.test(file.mimetype)
   if (!ok) return cb(new Error("Only image files are allowed"))
+  cb(null, true)
+}
+
+const shipDocumentFilter = (req, file, cb) => {
+  const allowedMimes = [
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+    "image/webp",
+    "application/pdf",
+  ]
+  if (!allowedMimes.includes(file.mimetype)) {
+    return cb(new Error("Only image files (PNG, JPEG, JPG, WebP) and PDF files are allowed"))
+  }
   cb(null, true)
 }
 
@@ -160,6 +179,22 @@ const userProfileUpload = multer({
   fileFilter,
 })
 
+const shipStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, shipUploadDir)
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9)
+    cb(null, "ship-doc-" + uniqueSuffix + path.extname(file.originalname))
+  },
+})
+
+const shipUpload = multer({
+  storage: shipStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: shipDocumentFilter,
+})
+
 module.exports = {
   adminUpload,
   companyLogoUpload,
@@ -167,6 +202,7 @@ module.exports = {
   whoWeAreUpload,
   companyUpload,
   userProfileUpload, // User profile image upload
+  shipUpload, // Ship documents upload
   companyMultiUpload: companyMultiUpload.fields([
     { name: "logo", maxCount: 1 },
     { name: "whoWeAreImage", maxCount: 1 },

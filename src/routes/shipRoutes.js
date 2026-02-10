@@ -3,6 +3,7 @@ const router = express.Router()
 const shipController = require("../controllers/shipController")
 const { verifyToken, extractCompanyId, extractUserId } = require("../middleware/authMiddleware")
 const { checkPermission } = require("../middleware/permissionMiddleware")
+const { shipUpload } = require("../middleware/upload")
 
 // ==================== AUTHENTICATION MIDDLEWARE ====================
 // All routes require authentication and company extraction
@@ -28,13 +29,13 @@ router.get("/:id", checkPermission("ship-trips", "ships", "read"), shipControlle
  * POST /api/ships
  * Create a new ship - requires create permission on ships
  */
-router.post("/", checkPermission("ship-trips", "ships", "create"), shipController.createShip)
+router.post("/", checkPermission("ship-trips", "ships", "create"), shipUpload.array("documents", 10), shipController.createShip)
 
 /**
  * PUT /api/ships/:id
  * Update an existing ship - requires update permission on ships
  */
-router.put("/:id", checkPermission("ship-trips", "ships", "update"), shipController.updateShip)
+router.put("/:id", checkPermission("ship-trips", "ships", "update"), shipUpload.array("documents", 10), shipController.updateShip)
 
 /**
  * DELETE /api/ships/:id
