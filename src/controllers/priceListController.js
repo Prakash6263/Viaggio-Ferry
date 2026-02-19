@@ -602,6 +602,7 @@ const addPriceListDetail = async (req, res, next) => {
         .populate("taxIds"),
     })
   } catch (error) {
+    // Let global error handler catch E11000 errors
     next(error)
   }
 }

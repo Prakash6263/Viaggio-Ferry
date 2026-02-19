@@ -7,6 +7,7 @@ require("dotenv").config()
 
 const connectDB = require("./src/config/db")
 const setupRoutes = require("./src/routes")
+const { notFound, errorHandler } = require("./src/middleware/errorHandler")
 
 const app = express()
 
@@ -58,14 +59,11 @@ app.get("/api/health", (req, res) => res.json({ status: "ok" }))
 
 setupRoutes(app)
 
-app.use((err, req, res, next) => {
-  console.error(err.stack)
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || "Internal Server Error",
-    error: process.env.NODE_ENV === "development" ? err : {},
-  })
-})
+// Handle 404
+app.use(notFound)
+
+// Global error handler (must be last)
+app.use(errorHandler)
 
 const PORT = process.env.PORT || 3001
 ;(async () => {
