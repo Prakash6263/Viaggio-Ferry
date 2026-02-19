@@ -168,23 +168,23 @@ const createPriceList = async (req, res, next) => {
       savedDetail = await PriceListDetail.findById(savedDetail._id)
         .populate({
           path: "passengerType",
-          select: "_id name code category description status",
+          select: "_id name payloadTypeCode",
         })
         .populate({
           path: "cabin",
-          select: "_id name code",
+          select: "_id name cabinCode",
         })
         .populate({
           path: "originPort",
-          select: "_id name code portType",
+          select: "_id name portCode",
         })
         .populate({
           path: "destinationPort",
-          select: "_id name code portType",
+          select: "_id name portCode",
         })
         .populate({
           path: "taxIds",
-          select: "_id taxName taxCode taxRate taxType",
+          select: "_id code name value type form status",
         })
     }
 
@@ -325,30 +325,30 @@ const getPriceListById = async (req, res, next) => {
     })
       .populate({
         path: "passengerType",
-        select: "_id name code category description status",
+        select: "_id name payloadTypeCode",
       })
       .populate({
         path: "cabin",
-        select: "_id name code",
+        select: "_id name cabinCode",
       })
       .populate({
         path: "originPort",
-        select: "_id name code portType",
+        select: "_id name portCode",
       })
       .populate({
         path: "destinationPort",
-        select: "_id name code portType",
+        select: "_id name portCode",
       })
       .populate({
         path: "taxIds",
-        select: "_id taxName taxCode taxRate taxType",
+        select: "_id code name value type form status",
       })
 
     res.status(200).json({
       success: true,
       data: {
-        header: priceList,
-        details,
+        header: priceList.toObject(),
+        details: details.map(d => d.toObject()),
       },
     })
   } catch (error) {
@@ -586,6 +586,7 @@ const addPriceListDetail = async (req, res, next) => {
       allowedLuggageWeight: allowedLuggageWeight || 0,
       excessLuggagePricePerKg: excessLuggagePricePerKg || 0,
       totalPrice,
+      isDisabled: false, // Always set to false on creation
     })
 
     await detail.save()
@@ -594,26 +595,11 @@ const addPriceListDetail = async (req, res, next) => {
       success: true,
       message: "Price list detail added successfully",
       data: await PriceListDetail.findById(detail._id)
-        .populate({
-          path: "passengerType",
-          select: "_id name code category description status",
-        })
-        .populate({
-          path: "cabin",
-          select: "_id name code",
-        })
-        .populate({
-          path: "originPort",
-          select: "_id name code portType",
-        })
-        .populate({
-          path: "destinationPort",
-          select: "_id name code portType",
-        })
-        .populate({
-          path: "taxIds",
-          select: "_id taxName taxCode taxRate taxType",
-        }),
+        .populate("passengerType")
+        .populate("cabin")
+        .populate("originPort")
+        .populate("destinationPort")
+        .populate("taxIds"),
     })
   } catch (error) {
     next(error)
@@ -695,6 +681,57 @@ const assignPartners = async (req, res, next) => {
   }
 }
 
+/**
+ * PATCH /api/price-lists/details/:detailId/disable
+ * Permanently disable a price list detail (irreversible)
+ */
+const disablePriceListDetail = async (req, res, next) => {
+  try {
+    await connectDB()
+
+    const { detailId } = req.params
+    const companyId = req.companyId
+
+    if (!companyId) {
+      throw createHttpError(400, "Company ID is required")
+    }
+
+    // Find detail
+    const detail = await PriceListDetail.findById(detailId)
+
+    if (!detail) {
+      throw createHttpError(404, "Detail not found")
+    }
+
+    // Verify the detail belongs to a price list in this company
+    const priceList = await PriceList.findOne({
+      _id: detail.priceList,
+      company: companyId,
+    })
+
+    if (!priceList) {
+      throw createHttpError(403, "You do not have permission to modify this detail")
+    }
+
+    // Check if already disabled
+    if (detail.isDisabled === true) {
+      throw createHttpError(400, "Detail already disabled. This action is irreversible.")
+    }
+
+    // Disable the detail
+    detail.isDisabled = true
+    await detail.save()
+
+    res.status(200).json({
+      success: true,
+      message: "Detail permanently disabled. This action cannot be undone.",
+      data: detail,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 module.exports = {
   createPriceList,
   listPriceLists,
@@ -702,4 +739,5 @@ module.exports = {
   updatePriceList,
   deletePriceList,
   addPriceListDetail,
+  disablePriceListDetail,
 }

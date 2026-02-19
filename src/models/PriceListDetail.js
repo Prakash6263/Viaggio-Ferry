@@ -1,6 +1,6 @@
 const mongoose = require("mongoose")
 
-const TICKET_TYPE_OPTIONS = ["one_way", "round_trip"]
+const TICKET_TYPE_OPTIONS = ["one_way", "round_trip","return"]
 const TAX_FORM_OPTIONS = ["refundable", "non_refundable"]
 
 const priceListDetailSchema = new mongoose.Schema(
@@ -77,6 +77,10 @@ const priceListDetailSchema = new mongoose.Schema(
       min: 0,
     },
     isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    isDisabled: {
       type: Boolean,
       default: false,
     },

@@ -3,7 +3,7 @@ const mongoose = require("mongoose")
 const PRICE_LIST_STATUS = ["active", "inactive"]
 const TAX_BASE_OPTIONS = ["fare_only", "fare_plus_tax"]
 const CATEGORY_OPTIONS = ["passenger", "vehicle", "cargo"]
-const TICKET_TYPE_OPTIONS = ["one_way", "round_trip"]
+const TICKET_TYPE_OPTIONS = ["one_way", "round_trip","return"]
 const TAX_FORM_OPTIONS = ["refundable", "non_refundable"]
 
 const priceListSchema = new mongoose.Schema(

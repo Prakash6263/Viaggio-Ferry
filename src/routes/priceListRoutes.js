@@ -5,7 +5,8 @@ const {
   getPriceListById, 
   updatePriceList, 
   deletePriceList,
-  addPriceListDetail
+  addPriceListDetail,
+  disablePriceListDetail
 } = require("../controllers/priceListController")
 const { verifyToken, extractCompanyId, extractUserId } = require("../middleware/authMiddleware")
 const { checkPermission } = require("../middleware/permissionMiddleware")
@@ -58,6 +59,12 @@ router.delete("/:id", checkPermission("administration", "price_lists", "delete")
  * Add single detail to price list
  */
 router.post("/:id/details", checkPermission("administration", "price_lists", "write"), addPriceListDetail)
+
+/**
+ * PATCH /api/price-lists/details/:detailId/disable
+ * Permanently disable a price list detail (irreversible)
+ */
+router.patch("/details/:detailId/disable", checkPermission("administration", "price_lists", "edit"), disablePriceListDetail)
 
 module.exports = router
 

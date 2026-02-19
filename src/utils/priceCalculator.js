@@ -1,5 +1,4 @@
 const { Tax } = require("../models/Tax")
-const connectDB = require("../config/db")
 
 /**
  * Calculate total price based on fare, taxes, and tax base option
@@ -26,9 +25,8 @@ const connectDB = require("../config/db")
  */
 const calculateTotalPrice = async (basicPrice, taxIds = [], taxBase = "fare_only", companyId) => {
   try {
-    await connectDB()
-
-    if (!basicPrice || basicPrice < 0) {
+    // Validate basic price (allow 0, but not negative or undefined)
+    if (basicPrice === undefined || basicPrice === null || basicPrice < 0) {
       throw new Error("Invalid basic price")
     }
 
@@ -36,14 +34,23 @@ const calculateTotalPrice = async (basicPrice, taxIds = [], taxBase = "fare_only
       return basicPrice
     }
 
-    // Fetch tax details
-    const taxes = await Tax.find({
+    // Fetch tax details from database
+    const taxesFromDB = await Tax.find({
       _id: { $in: taxIds },
       company: companyId,
       isDeleted: false,
     })
 
-    if (!taxes || taxes.length === 0) {
+    if (!taxesFromDB || taxesFromDB.length === 0) {
+      return basicPrice
+    }
+
+    // Preserve tax order by mapping taxIds to fetched taxes
+    const taxes = taxIds
+      .map(id => taxesFromDB.find(t => t._id.toString() === id.toString()))
+      .filter(Boolean)
+
+    if (taxes.length === 0) {
       return basicPrice
     }
 
@@ -52,30 +59,42 @@ const calculateTotalPrice = async (basicPrice, taxIds = [], taxBase = "fare_only
     if (taxBase === "fare_only") {
       // All taxes calculated on original basicPrice
       for (const tax of taxes) {
-        if (tax.type === "%") {
+        const taxType = tax.type?.toLowerCase()
+        
+        if (taxType === "%" || taxType === "percentage") {
           // Percentage tax
           const taxAmount = (basicPrice * tax.value) / 100
           totalPrice += taxAmount
-        } else if (tax.type === "Fixed") {
+          // Apply rounding after each calculation for precision
+          totalPrice = Math.round(totalPrice * 100) / 100
+        } else if (taxType === "fixed") {
           // Fixed amount tax
           totalPrice += tax.value
+          // Apply rounding after each calculation for precision
+          totalPrice = Math.round(totalPrice * 100) / 100
         }
       }
     } else if (taxBase === "fare_plus_tax") {
-      // Each tax calculated on running total
+      // Each tax calculated on running total (compound)
       for (const tax of taxes) {
-        if (tax.type === "%") {
+        const taxType = tax.type?.toLowerCase()
+        
+        if (taxType === "%" || taxType === "percentage") {
           // Percentage tax on current total
           const taxAmount = (totalPrice * tax.value) / 100
           totalPrice += taxAmount
-        } else if (tax.type === "Fixed") {
+          // Apply rounding after each calculation for precision
+          totalPrice = Math.round(totalPrice * 100) / 100
+        } else if (taxType === "fixed") {
           // Fixed amount tax
           totalPrice += tax.value
+          // Apply rounding after each calculation for precision
+          totalPrice = Math.round(totalPrice * 100) / 100
         }
       }
     }
 
-    // Round to 2 decimal places
+    // Final rounding to ensure 2 decimal places
     return Math.round(totalPrice * 100) / 100
   } catch (error) {
     console.error("Error calculating total price:", error.message)
@@ -91,17 +110,20 @@ const calculateTotalPrice = async (basicPrice, taxIds = [], taxBase = "fare_only
  */
 const getTaxDetails = async (taxIds = [], companyId) => {
   try {
-    await connectDB()
-
     if (!taxIds || taxIds.length === 0) {
       return []
     }
 
-    const taxes = await Tax.find({
+    const taxesFromDB = await Tax.find({
       _id: { $in: taxIds },
       company: companyId,
       isDeleted: false,
     })
+
+    // Preserve tax order
+    const taxes = taxIds
+      .map(id => taxesFromDB.find(t => t._id.toString() === id.toString()))
+      .filter(Boolean)
 
     return taxes
   } catch (error) {
@@ -121,8 +143,6 @@ const validateTaxIds = async (taxIds = [], companyId) => {
     if (!taxIds || taxIds.length === 0) {
       return true
     }
-
-    await connectDB()
 
     const count = await Tax.countDocuments({
       _id: { $in: taxIds },
