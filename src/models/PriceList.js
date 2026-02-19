@@ -1,57 +1,112 @@
 const mongoose = require("mongoose")
 
+const PRICE_LIST_STATUS = ["active", "inactive"]
+const TAX_BASE_OPTIONS = ["fare_only", "fare_plus_tax"]
+const CATEGORY_OPTIONS = ["passenger", "vehicle", "cargo"]
+const TICKET_TYPE_OPTIONS = ["one_way", "round_trip"]
+const TAX_FORM_OPTIONS = ["refundable", "non_refundable"]
+
 const priceListSchema = new mongoose.Schema(
   {
     company: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
       required: true,
+      index: true,
     },
-    type: {
-      type: String,
-      enum: ["Passenger", "Vehicle", "Cargo"],
-      required: true,
-    },
-    name: {
+    priceListName: {
       type: String,
       required: true,
       trim: true,
+      maxlength: 100,
     },
-    effectiveDate: {
+    effectiveDateTime: {
       type: Date,
       required: true,
     },
     taxBase: {
       type: String,
-      enum: ["Fare Only", "Fare & Taxes"],
-      default: "Fare Only",
-    },
-    ticketForm: {
-      type: String,
-      enum: ["Refundable", "Non Refundable"],
-      default: "Refundable",
+      enum: TAX_BASE_OPTIONS,
+      required: true,
+      default: "fare_only",
     },
     currency: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "CompanyCurrency",
+      required: true,
+    },
+    category: {
       type: String,
-      default: "USD",
-      trim: true,
+      enum: CATEGORY_OPTIONS,
+      required: true,
     },
     status: {
       type: String,
-      enum: ["Active", "Inactive", "Draft"],
-      default: "Draft",
+      enum: PRICE_LIST_STATUS,
+      default: "active",
     },
+    partners: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Partner",
+      },
+    ],
     createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
+      id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+      },
+      name: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      type: {
+        type: String,
+        enum: ["company", "user"],
+        required: true,
+      },
+      layer: {
+        type: String,
+        trim: true,
+      },
     },
     updatedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      id: {
+        type: mongoose.Schema.Types.ObjectId,
+      },
+      name: {
+        type: String,
+        trim: true,
+      },
+      type: {
+        type: String,
+        enum: ["company", "user"],
+      },
+      layer: {
+        type: String,
+        trim: true,
+      },
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true },
 )
 
-module.exports = mongoose.model("PriceList", priceListSchema)
+priceListSchema.index({ company: 1, priceListName: 1 })
+priceListSchema.index({ company: 1, category: 1 })
+priceListSchema.index({ company: 1, status: 1 })
+priceListSchema.index({ company: 1, currency: 1 })
+priceListSchema.index({ partners: 1 })
+
+module.exports = {
+  PriceList: mongoose.model("PriceList", priceListSchema),
+  PRICE_LIST_STATUS,
+  TAX_BASE_OPTIONS,
+  CATEGORY_OPTIONS,
+  TICKET_TYPE_OPTIONS,
+  TAX_FORM_OPTIONS,
+}

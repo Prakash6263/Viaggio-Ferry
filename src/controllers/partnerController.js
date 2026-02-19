@@ -664,6 +664,7 @@ const listPartners = async (req, res, next) => {
   try {
     const userRole = req.user?.role
     const tokenCompanyId = req.user?.companyId || req.user?.id
+    const { layer, role, status, page = 1, limit = 10 } = req.query
 
     const filter = { isDeleted: false }
 
@@ -671,7 +672,26 @@ const listPartners = async (req, res, next) => {
       filter.company = tokenCompanyId
     }
 
-  const partners = await Partner.find(filter)
+    // Filter by layer if provided (e.g., layer=Marine)
+    if (layer) {
+      filter.layer = layer
+    }
+
+    // Filter by role if provided
+    if (role) {
+      filter.role = role
+    }
+
+    // Filter by partner status if provided
+    if (status) {
+      filter.partnerStatus = status
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit)
+    const total = await Partner.countDocuments(filter)
+    const partners = await Partner.find(filter)
+      .skip(skip)
+      .limit(parseInt(limit))
   .populate("company", "name email")
   .populate("parentCompany", "companyName")
   .populate("parentAccount", "name layer")
@@ -697,6 +717,10 @@ const listPartners = async (req, res, next) => {
     res.json({
       success: true,
       count: transformedPartners.length,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      pages: Math.ceil(total / parseInt(limit)),
       data: transformedPartners,
     })
   } catch (error) {
@@ -1074,6 +1098,122 @@ const getParentPartnersByLayer = async (req, res, next) => {
   }
 }
 
+/**
+ * GET /api/partners/layer/:layer
+ * Get all partners by layer (Marine, Commercial, Selling)
+ */
+const getPartnersByLayer = async (req, res, next) => {
+  try {
+    const { layer } = req.params
+    const userRole = req.user?.role
+    const tokenCompanyId = req.user?.companyId || req.user?.id
+    const { status, page = 1, limit = 10 } = req.query
+
+    // Validate layer
+    const validLayers = ["Marine", "Commercial", "Selling"]
+    if (!validLayers.includes(layer)) {
+      throw createHttpError(400, `Invalid layer. Allowed: ${validLayers.join(", ")}`)
+    }
+
+    const filter = { 
+      layer, 
+      isDeleted: false,
+      partnerStatus: "Active"
+    }
+
+    // Company can see all their partners by layer
+    if (userRole === "company") {
+      filter.company = tokenCompanyId
+    }
+
+    // Filter by status if provided
+    if (status) {
+      filter.partnerStatus = status
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit)
+    const total = await Partner.countDocuments(filter)
+    const partners = await Partner.find(filter)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate("company", "name email")
+      .populate("parentCompany", "companyName")
+      .populate("parentAccount", "name layer")
+      .sort({ createdAt: -1 })
+
+    const transformedPartners = partners.map((partner) => partner.toObject())
+
+    res.json({
+      success: true,
+      layer,
+      count: transformedPartners.length,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      pages: Math.ceil(total / parseInt(limit)),
+      data: transformedPartners,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * GET /api/partners/all/layers
+ * Get all partners across all layers (Marine, Commercial, Selling)
+ */
+const getAllPartnersByAllLayers = async (req, res, next) => {
+  try {
+    const userRole = req.user?.role
+    const tokenCompanyId = req.user?.companyId || req.user?.id
+    const { status, page = 1, limit = 10 } = req.query
+
+    const filter = { 
+      isDeleted: false,
+      partnerStatus: status || "Active"
+    }
+
+    // Company can see all their partners across all layers
+    if (userRole === "company") {
+      filter.company = tokenCompanyId
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit)
+    const total = await Partner.countDocuments(filter)
+    const partners = await Partner.find(filter)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate("company", "name email")
+      .populate("parentCompany", "companyName")
+      .populate("parentAccount", "name layer")
+      .sort({ layer: 1, createdAt: -1 })
+
+    const transformedPartners = partners.map((partner) => partner.toObject())
+
+    // Group by layer for better organization
+    const groupedByLayer = {}
+    transformedPartners.forEach((partner) => {
+      if (!groupedByLayer[partner.layer]) {
+        groupedByLayer[partner.layer] = []
+      }
+      groupedByLayer[partner.layer].push(partner)
+    })
+
+    res.json({
+      success: true,
+      count: transformedPartners.length,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      pages: Math.ceil(total / parseInt(limit)),
+      groupedByLayer,
+      data: transformedPartners,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 module.exports = {
   createPartner,
   listPartners,
@@ -1082,4 +1222,6 @@ module.exports = {
   disablePartner,
   enablePartner,
   getParentPartnersByLayer,
+  getPartnersByLayer,
+  getAllPartnersByAllLayers,
 }
