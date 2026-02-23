@@ -326,6 +326,38 @@ const PERMISSION_MAPPING = {
     action: "delete",
     description: "Delete exchange rate",
   },
+
+  // ==================== TICKETING RULES ====================
+  "POST /api/ticketing-rules": {
+    module: "sales-bookings",
+    submodule: "ticketing-rules",
+    action: "write",
+    description: "Create ticketing rule",
+  },
+  "GET /api/ticketing-rules": {
+    module: "sales-bookings",
+    submodule: "ticketing-rules",
+    action: "read",
+    description: "List ticketing rules",
+  },
+  "GET /api/ticketing-rules/:id": {
+    module: "sales-bookings",
+    submodule: "ticketing-rules",
+    action: "read",
+    description: "Get ticketing rule details",
+  },
+  "PUT /api/ticketing-rules/:id": {
+    module: "sales-bookings",
+    submodule: "ticketing-rules",
+    action: "edit",
+    description: "Update ticketing rule",
+  },
+  "DELETE /api/ticketing-rules/:id": {
+    module: "sales-bookings",
+    submodule: "ticketing-rules",
+    action: "delete",
+    description: "Delete ticketing rule",
+  },
 }
 
 /**
