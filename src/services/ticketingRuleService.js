@@ -136,28 +136,15 @@ const calculateTicketPenalty = async ({
  * 
  * @param {string} companyId
  * @param {string} ruleType - "VOID", "REFUND", or "REISSUE"
- * @param {string} payloadType - "PASSENGER", "CARGO", "VEHICLE", or "ALL"
  * @returns {Promise<Object|null>}
  */
-const getApplicableRule = async (companyId, ruleType, payloadType) => {
+const getApplicableRule = async (companyId, ruleType) => {
   try {
-    // Try exact payload type match first
-    let rule = await TicketingRule.findOne({
+    const rule = await TicketingRule.findOne({
       company: companyId,
       ruleType,
-      payloadType,
       isDeleted: false,
     }).lean()
-
-    // If not found, try "ALL" fallback
-    if (!rule) {
-      rule = await TicketingRule.findOne({
-        company: companyId,
-        ruleType,
-        payloadType: "ALL",
-        isDeleted: false,
-      }).lean()
-    }
 
     return rule || null
   } catch (error) {

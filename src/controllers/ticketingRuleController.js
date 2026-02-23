@@ -1,5 +1,5 @@
 const createHttpError = require("http-errors")
-const { TicketingRule, RULE_TYPES, PAYLOAD_TYPES, PENALTY_TYPES } = require("../models/TicketingRule")
+const { TicketingRule, RULE_TYPES, PENALTY_TYPES } = require("../models/TicketingRule")
 
 // POST /api/ticketing-rules
 const createTicketingRule = async (req, res, next) => {
@@ -8,7 +8,6 @@ const createTicketingRule = async (req, res, next) => {
     const {
       ruleType,
       ruleName,
-      payloadType = "ALL",
       sameDayOnly = false,
       startOffsetDays = 0,
       restrictedWindowHours,
@@ -24,8 +23,6 @@ const createTicketingRule = async (req, res, next) => {
       throw createHttpError(400, `Invalid ruleType. Must be one of: ${RULE_TYPES.join(", ")}`)
     if (!ruleName || ruleName.trim().length === 0)
       throw createHttpError(400, "ruleName is required")
-    if (payloadType && !PAYLOAD_TYPES.includes(payloadType))
-      throw createHttpError(400, `Invalid payloadType. Must be one of: ${PAYLOAD_TYPES.join(", ")}`)
     if (restrictedWindowHours === undefined || restrictedWindowHours === null)
       throw createHttpError(400, "restrictedWindowHours is required")
     if (typeof restrictedWindowHours !== "number" || restrictedWindowHours < 0)
@@ -57,7 +54,6 @@ const createTicketingRule = async (req, res, next) => {
       company: companyId,
       ruleType,
       ruleName: ruleName.trim(),
-      payloadType,
       sameDayOnly,
       startOffsetDays: Math.max(0, Math.floor(startOffsetDays)),
       restrictedWindowHours,
@@ -85,7 +81,7 @@ const createTicketingRule = async (req, res, next) => {
 const listTicketingRules = async (req, res, next) => {
   try {
     const { companyId } = req
-    const { page = 1, limit = 10, search, ruleType, payloadType } = req.query
+    const { page = 1, limit = 10, search, ruleType } = req.query
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
 
@@ -94,10 +90,6 @@ const listTicketingRules = async (req, res, next) => {
 
     if (ruleType && RULE_TYPES.includes(ruleType)) {
       filter.ruleType = ruleType
-    }
-
-    if (payloadType && PAYLOAD_TYPES.includes(payloadType)) {
-      filter.payloadType = payloadType
     }
 
     if (search && search.trim().length > 0) {
@@ -159,7 +151,6 @@ const updateTicketingRule = async (req, res, next) => {
     const { companyId, userId } = req
     const {
       ruleName,
-      payloadType,
       sameDayOnly,
       startOffsetDays,
       restrictedWindowHours,
@@ -185,12 +176,6 @@ const updateTicketingRule = async (req, res, next) => {
       if (typeof ruleName !== "string" || ruleName.trim().length === 0)
         throw createHttpError(400, "ruleName must be a non-empty string")
       rule.ruleName = ruleName.trim()
-    }
-
-    if (payloadType !== undefined) {
-      if (!PAYLOAD_TYPES.includes(payloadType))
-        throw createHttpError(400, `Invalid payloadType. Must be one of: ${PAYLOAD_TYPES.join(", ")}`)
-      rule.payloadType = payloadType
     }
 
     if (sameDayOnly !== undefined) {

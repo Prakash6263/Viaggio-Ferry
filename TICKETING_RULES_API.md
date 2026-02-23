@@ -30,7 +30,6 @@ src/
 - `company` (ObjectId, required, indexed) - Multi-tenant isolation
 - `ruleType` (enum: VOID | REFUND | REISSUE, required) - Rule classification (NO_SHOW is NOT a ruleType)
 - `ruleName` (String, required, max 150 chars) - Human-readable name
-- `payloadType` (enum: PASSENGER | CARGO | VEHICLE | ALL, default: ALL) - Applies to payload type
 
 **Time Configuration:**
 - `sameDayOnly` (Boolean, default: false) - Restrict to same calendar day
@@ -64,7 +63,6 @@ All penalty objects follow the structure: `{ type, value }`
 ```javascript
 { company: 1, ruleName: 1 }  // unique, sparse
 { company: 1, ruleType: 1 }
-{ company: 1, payloadType: 1 }
 { company: 1, isDeleted: 1 }
 ```
 
@@ -171,7 +169,6 @@ Create new ticketing rule.
 {
   "ruleType": "REFUND",
   "ruleName": "Refund - Next Day 3 Hours Rule",
-  "payloadType": "PASSENGER",
   "sameDayOnly": false,
   "startOffsetDays": 1,
   "restrictedWindowHours": 3,
@@ -187,7 +184,7 @@ Create new ticketing rule.
     "type": "PERCENTAGE",
     "value": 25
   },
-  "conditions": "Applies to all routes except long-haul international"
+  "conditions": "Refund allowed until 3 hours before departure"
 }
 ```
 
@@ -207,7 +204,6 @@ List all rules with pagination, filtering, and search.
 - `page` (default: 1) - Page number
 - `limit` (default: 10) - Records per page
 - `ruleType` (optional) - Filter by VOID | REFUND | REISSUE
-- `payloadType` (optional) - Filter by PASSENGER | CARGO | VEHICLE | ALL
 - `search` (optional) - Search by ruleName (case-insensitive)
 
 **Response (200):**
@@ -348,10 +344,6 @@ Standard `createHttpError()` responses:
 - String, max 150 chars
 - Unique per company
 
-**payloadType:**
-- Optional (defaults to ALL)
-- Must be one of: PASSENGER | CARGO | VEHICLE | ALL
-
 **sameDayOnly:**
 - Boolean, default false
 - For VOID: restricts action to issue calendar day
@@ -384,7 +376,7 @@ Standard `createHttpError()` responses:
 
 Consuming systems must:
 
-1. **Query Rule:** Call `getApplicableRule(companyId, ruleType, payloadType)`
+1. **Query Rule:** Call `getApplicableRule(companyId, ruleType)`
 2. **Calculate Penalty:** Call `calculateTicketPenalty()` with ticket/trip/rule/baseAmount
 3. **Handle Charge:** If `mode` is RESTRICTED or NO_SHOW and `totalCharge > 0`:
    - Deduct from refund amount

@@ -1,7 +1,6 @@
 const mongoose = require("mongoose")
 
 const RULE_TYPES = ["VOID", "REFUND", "REISSUE"]
-const PAYLOAD_TYPES = ["PASSENGER", "CARGO", "VEHICLE", "ALL"]
 const PENALTY_TYPES = ["NONE", "FIXED", "PERCENTAGE"]
 
 const PenaltyConfigSchema = new mongoose.Schema(
@@ -30,11 +29,6 @@ const TicketingRuleSchema = new mongoose.Schema(
       required: true,
       trim: true,
       maxlength: 150,
-    },
-    payloadType: {
-      type: String,
-      enum: PAYLOAD_TYPES,
-      default: "ALL",
     },
     sameDayOnly: {
       type: Boolean,
@@ -90,7 +84,6 @@ const TicketingRuleSchema = new mongoose.Schema(
 // Indexes
 TicketingRuleSchema.index({ company: 1, ruleName: 1 }, { unique: true, sparse: true })
 TicketingRuleSchema.index({ company: 1, ruleType: 1 })
-TicketingRuleSchema.index({ company: 1, payloadType: 1 })
 TicketingRuleSchema.index({ company: 1, isDeleted: 1 })
 
 // Middleware: auto-filter deleted records
@@ -104,7 +97,6 @@ TicketingRuleSchema.pre("findOne", function () {
 
 module.exports = {
   RULE_TYPES,
-  PAYLOAD_TYPES,
   PENALTY_TYPES,
   TicketingRule: mongoose.model("TicketingRule", TicketingRuleSchema),
 }
