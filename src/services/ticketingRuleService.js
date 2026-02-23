@@ -3,10 +3,7 @@ const { TicketingRule } = require("../models/TicketingRule")
 
 /**
  * Calculate ticket penalty based on rule and timing
- * Implements FINAL CLIENT RULES strictly:
- * - VOID: same-day only, >3 hours before ETD, no penalty
- * - REFUND/REISSUE: next-day rule, then 3-hour window logic
- * - NO_SHOW: auto-applied when refund/reissue within 3 hrs of ETD or after ETD (if not already refunded/reissued)
+ * Implements strict penalty logic per rule type
  * 
  * @param {Object} params
  * @param {Object} params.ticket - Ticket object with status, createdAt
@@ -44,90 +41,69 @@ const calculateTicketPenalty = async ({
     let baseCharge = 0
     let penaltyCharge = 0
 
+    // Helper to calculate charge from penalty config
+    const calculateCharge = (penaltyConfig, amount) => {
+      if (!penaltyConfig || penaltyConfig.type === "NONE") return 0
+      if (penaltyConfig.type === "FIXED") return parseFloat(penaltyConfig.value)
+      if (penaltyConfig.type === "PERCENTAGE") return parseFloat((amount * penaltyConfig.value) / 100)
+      return 0
+    }
+
     // ===== VOID RULE =====
     if (ruleType === "VOID") {
       // Enforce: same calendar day of issue
       const isSameDay = issueDay.getTime() === nowDay.getTime()
+      // Enforce: more than restrictedWindowHours before departure
+      const isEnoughTimeBeforeETD = hoursBeforeDeparture > rule.restrictedWindowHours
 
-      // Enforce: more than 3 hours before departure
-      const isMoreThan3HoursBefore = hoursBeforeDeparture > 3
-
-      if (isSameDay && isMoreThan3HoursBefore) {
+      if (isSameDay && isEnoughTimeBeforeETD) {
         allowed = true
         mode = "ALLOWED"
         baseCharge = 0
         penaltyCharge = 0
       } else {
         allowed = false
-        mode = "ALLOWED" // Mode still ALLOWED, but allowed=false rejects the request
+        mode = "ALLOWED"
         baseCharge = 0
         penaltyCharge = 0
       }
     }
     // ===== REFUND or REISSUE RULE =====
     else if (ruleType === "REFUND" || ruleType === "REISSUE") {
-      // Enforce: starting from next day after issue
-      const nextDay = new Date(issueDay.getTime() + 24 * 60 * 60 * 1000)
-      const isNextDayOrLater = nowDay.getTime() >= nextDay.getTime()
+      // Enforce: starting from startOffsetDays after issue
+      const eligibleDay = new Date(issueDay.getTime() + rule.startOffsetDays * 24 * 60 * 60 * 1000)
+      const isEligible = nowDay.getTime() >= eligibleDay.getTime()
 
-      if (!isNextDayOrLater) {
-        // Before next day - not allowed
+      if (!isEligible) {
+        // Before eligible day - not allowed
         allowed = false
         mode = "ALLOWED"
         baseCharge = 0
         penaltyCharge = 0
       } else {
-        // Valid from next day onwards - check 3-hour window
-        if (hoursBeforeDeparture > 3) {
-          // Case 1: More than 3 hours before ETD → ALLOWED, no charge
+        // Valid from eligible day onwards - check time window logic
+        if (hoursBeforeDeparture > rule.restrictedWindowHours) {
+          // Case 1: Beyond restricted window → ALLOWED with normalFee
           allowed = true
           mode = "ALLOWED"
-          baseCharge = 0
+          baseCharge = calculateCharge(rule.normalFee, baseAmount)
           penaltyCharge = 0
-        } else if (hoursBeforeDeparture >= 0 && hoursBeforeDeparture <= 3) {
-          // Case 2: Within 3 hours before ETD → RESTRICTED with charges
+        } else if (hoursBeforeDeparture >= 0 && hoursBeforeDeparture <= rule.restrictedWindowHours) {
+          // Case 2: Within restricted window → RESTRICTED with both fees
           allowed = true
           mode = "RESTRICTED"
-
-          // Apply normalFee if configured
-          if (rule.normalFeeType && rule.normalFeeValue !== null) {
-            if (rule.normalFeeType === "FIXED") {
-              baseCharge = parseFloat(rule.normalFeeValue)
-            } else if (rule.normalFeeType === "PERCENTAGE") {
-              baseCharge = parseFloat((baseAmount * rule.normalFeeValue) / 100)
-            }
-          }
-
-          // Apply restrictedPenalty
-          if (rule.restrictedPenalty && rule.restrictedPenalty.feeType) {
-            if (rule.restrictedPenalty.feeType === "FIXED") {
-              penaltyCharge = parseFloat(rule.restrictedPenalty.feeValue)
-            } else if (rule.restrictedPenalty.feeType === "PERCENTAGE") {
-              penaltyCharge = parseFloat(
-                (baseAmount * rule.restrictedPenalty.feeValue) / 100
-              )
-            }
-          }
+          baseCharge = calculateCharge(rule.normalFee, baseAmount)
+          penaltyCharge = calculateCharge(rule.restrictedPenalty, baseAmount)
         } else if (hoursBeforeDeparture < 0) {
           // Case 3: After ETD
           const ticketStatus = (ticket.status || "").toUpperCase()
 
           if (!["REFUNDED", "REISSUED"].includes(ticketStatus)) {
-            // Ticket NOT already refunded/reissued → NO_SHOW applies
+            // Ticket NOT already refunded/reissued → NO_SHOW
             allowed = true
             mode = "NO_SHOW"
             baseCharge = 0
-
-            // NO_SHOW: Apply restrictedPenalty only
-            if (rule.restrictedPenalty && rule.restrictedPenalty.feeType) {
-              if (rule.restrictedPenalty.feeType === "FIXED") {
-                penaltyCharge = parseFloat(rule.restrictedPenalty.feeValue)
-              } else if (rule.restrictedPenalty.feeType === "PERCENTAGE") {
-                penaltyCharge = parseFloat(
-                  (baseAmount * rule.restrictedPenalty.feeValue) / 100
-                )
-              }
-            }
+            penaltyCharge = calculateCharge(rule.noShowPenalty, baseAmount)
           } else {
             // Already refunded/reissued → no additional penalty
             allowed = true

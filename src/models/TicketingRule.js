@@ -2,12 +2,12 @@ const mongoose = require("mongoose")
 
 const RULE_TYPES = ["VOID", "REFUND", "REISSUE"]
 const PAYLOAD_TYPES = ["PASSENGER", "CARGO", "VEHICLE", "ALL"]
-const FEE_TYPES = ["FIXED", "PERCENTAGE"]
+const PENALTY_TYPES = ["NONE", "FIXED", "PERCENTAGE"]
 
-const RestrictedPenaltySchema = new mongoose.Schema(
+const PenaltyConfigSchema = new mongoose.Schema(
   {
-    feeType: { type: String, enum: FEE_TYPES, required: true },
-    feeValue: { type: Number, required: true, min: 0 },
+    type: { type: String, enum: PENALTY_TYPES, default: "NONE" },
+    value: { type: Number, default: 0, min: 0 },
   },
   { _id: false }
 )
@@ -50,27 +50,17 @@ const TicketingRuleSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
-    normalFeeType: {
-      type: String,
-      enum: FEE_TYPES,
-      default: null,
-    },
-    normalFeeValue: {
-      type: Number,
-      default: null,
-      min: 0,
+    normalFee: {
+      type: PenaltyConfigSchema,
+      default: { type: "NONE", value: 0 },
     },
     restrictedPenalty: {
-      type: RestrictedPenaltySchema,
-      required: true,
+      type: PenaltyConfigSchema,
+      default: { type: "NONE", value: 0 },
     },
-    taxRefundable: {
-      type: Boolean,
-      default: false,
-    },
-    commissionReversal: {
-      type: Boolean,
-      default: true,
+    noShowPenalty: {
+      type: PenaltyConfigSchema,
+      default: { type: "NONE", value: 0 },
     },
     isDeleted: {
       type: Boolean,
@@ -109,6 +99,6 @@ TicketingRuleSchema.pre("findOne", function () {
 module.exports = {
   RULE_TYPES,
   PAYLOAD_TYPES,
-  FEE_TYPES,
+  PENALTY_TYPES,
   TicketingRule: mongoose.model("TicketingRule", TicketingRuleSchema),
 }

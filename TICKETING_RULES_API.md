@@ -28,25 +28,26 @@ src/
 
 **Core Fields:**
 - `company` (ObjectId, required, indexed) - Multi-tenant isolation
-- `ruleType` (enum: VOID | REFUND | REISSUE, required) - Rule classification
+- `ruleType` (enum: VOID | REFUND | REISSUE, required) - Rule classification (NO_SHOW is NOT a ruleType)
 - `ruleName` (String, required, max 150 chars) - Human-readable name
 - `payloadType` (enum: PASSENGER | CARGO | VEHICLE | ALL, default: ALL) - Applies to payload type
 
 **Time Configuration:**
 - `sameDayOnly` (Boolean, default: false) - Restrict to same calendar day
-- `startOffsetDays` (Number, default: 0) - Rule effective after N days
+- `startOffsetDays` (Number, default: 0) - Rule effective after N days from issue
 - `restrictedWindowHours` (Number, required) - Hours before ETD when penalties apply
 
-**Financial Configuration:**
-- `normalFeeType` (enum: FIXED | PERCENTAGE) - Optional base fee when in restricted window
-- `normalFeeValue` (Number) - Fee amount or percentage
-- `restrictedPenalty` (Object, required) - Penalty when within restricted window
-  - `feeType` (enum: FIXED | PERCENTAGE, required)
-  - `feeValue` (Number, required)
-
-**Flags:**
-- `taxRefundable` (Boolean, default: false) - Tax included in refund
-- `commissionReversal` (Boolean, default: true) - Reverse commission on charge
+**Penalty Configuration (All Optional):**
+All penalty objects follow the structure: `{ type, value }`
+- `normalFee` (Object) - Base fee when action is beyond restricted window
+  - `type` (enum: NONE | FIXED | PERCENTAGE, default: NONE)
+  - `value` (Number, default: 0)
+- `restrictedPenalty` (Object) - Penalty when within restricted window or NO_SHOW mode
+  - `type` (enum: NONE | FIXED | PERCENTAGE, default: NONE)
+  - `value` (Number, default: 0)
+- `noShowPenalty` (Object) - Penalty when ticket requested after ETD (NO_SHOW mode)
+  - `type` (enum: NONE | FIXED | PERCENTAGE, default: NONE)
+  - `value` (Number, default: 0)
 
 **System Fields:**
 - `isDeleted` (Boolean, default: false, indexed) - Soft delete
@@ -70,28 +71,49 @@ TicketingRuleSchema.pre("findOne", function() { this.where({ isDeleted: false })
 
 ## Penalty Calculation Engine
 
-### Time-Based Logic
+### Core Logic
 
-The `calculateTicketPenalty()` service implements strict NO_SHOW logic:
+The `calculateTicketPenalty()` service implements strict time-based eligibility and penalty configuration:
+
+**Three Rule Types:**
+1. **VOID** - Voids ticket on same day with sufficient hours before ETD
+2. **REFUND** - Refunds after startOffsetDays with time-based penalties
+3. **REISSUE** - Reissues after startOffsetDays with time-based penalties
+
+**Three Operation Modes (returned):**
+1. **ALLOWED** - Action permitted, no charge (or normalFee if configured)
+2. **RESTRICTED** - Action permitted with penalty (within restrictedWindowHours of ETD)
+3. **NO_SHOW** - Auto-applied when action requested after ETD (only for REFUND/REISSUE)
+
+### Penalty Engine Logic
 
 ```
-hoursBeforeDeparture = (trip.ETD - now) / (1000 * 60 * 60)
+FOR VOID ruleType:
+   IF sameDayOnly AND NOT same calendar day → NOT_ALLOWED
+   IF hoursBeforeDeparture <= restrictedWindowHours → NOT_ALLOWED
+   ELSE → ALLOWED (no charge)
 
-IF hoursBeforeDeparture > restrictedWindowHours
-  → Mode: ALLOWED
-  → baseCharge = 0, penaltyCharge = 0
+FOR REFUND or REISSUE ruleType:
+   Enforce startOffsetDays eligibility
+   
+   IF hoursBeforeDeparture > restrictedWindowHours:
+       mode = ALLOWED
+       baseCharge = normalFee (if configured)
+       penaltyCharge = 0
 
-IF 0 <= hoursBeforeDeparture <= restrictedWindowHours
-  → Mode: RESTRICTED
-  → baseCharge = normalFee (if configured)
-  → penaltyCharge = restrictedPenalty
+   IF 0 <= hoursBeforeDeparture <= restrictedWindowHours:
+       mode = RESTRICTED
+       baseCharge = normalFee (if configured)
+       penaltyCharge = restrictedPenalty
 
-IF hoursBeforeDeparture < 0
-  AND ticket.status NOT IN [REFUNDED, REISSUED]
-  AND boardingStatus != BOARDED
-  → Mode: NO_SHOW
-  → baseCharge = 0
-  → penaltyCharge = restrictedPenalty only
+   IF hoursBeforeDeparture < 0:
+       IF ticket NOT already refunded/reissued:
+           mode = NO_SHOW
+           baseCharge = 0
+           penaltyCharge = noShowPenalty
+       ELSE:
+           mode = ALLOWED
+           (no additional charge)
 ```
 
 ### Service Usage
@@ -100,22 +122,34 @@ IF hoursBeforeDeparture < 0
 const { calculateTicketPenalty } = require("../services/ticketingRuleService")
 
 const result = await calculateTicketPenalty({
-  ticket: ticketObject,
-  trip: tripObject,
-  actionType: "REFUND",  // or "REISSUE"
-  rule: ruleObject,
-  baseAmount: 1000       // original ticket price
+  ticket: ticketObject,           // { status, createdAt, ... }
+  trip: tripObject,               // { ETD, ... }
+  ruleType: "REFUND",            // "VOID" | "REFUND" | "REISSUE"
+  rule: ruleObject,              // TicketingRule from DB
+  baseAmount: 1000               // original ticket price
 })
 
 // Returns:
 // {
+//   allowed: true/false,
 //   mode: "ALLOWED" | "RESTRICTED" | "NO_SHOW",
-//   baseCharge: number,
-//   penaltyCharge: number,
-//   totalCharge: number,
-//   hoursBeforeDeparture: number
+//   baseCharge: 0 (or normalFee),
+//   penaltyCharge: 0 (or restrictedPenalty/noShowPenalty),
+//   totalCharge: sum,
+//   hoursBeforeDeparture: number (can be negative)
 // }
 ```
+
+### Charge Calculation
+
+**FIXED Type:**
+- Charge = penalty.value (flat amount)
+
+**PERCENTAGE Type:**
+- Charge = (baseAmount × penalty.value) / 100
+
+**NONE Type:**
+- Charge = 0
 
 ## API Endpoints
 
@@ -131,19 +165,23 @@ Create new ticketing rule.
 ```json
 {
   "ruleType": "REFUND",
-  "ruleName": "Standard Refund Policy",
+  "ruleName": "Refund - Next Day 3 Hours Rule",
   "payloadType": "PASSENGER",
   "sameDayOnly": false,
-  "startOffsetDays": 0,
-  "restrictedWindowHours": 24,
-  "normalFeeType": "FIXED",
-  "normalFeeValue": 50,
-  "restrictedPenalty": {
-    "feeType": "PERCENTAGE",
-    "feeValue": 10
+  "startOffsetDays": 1,
+  "restrictedWindowHours": 3,
+  "normalFee": {
+    "type": "NONE",
+    "value": 0
   },
-  "taxRefundable": false,
-  "commissionReversal": true
+  "restrictedPenalty": {
+    "type": "FIXED",
+    "value": 50
+  },
+  "noShowPenalty": {
+    "type": "PERCENTAGE",
+    "value": 25
+  }
 }
 ```
 
@@ -197,11 +235,19 @@ Update rule (all fields optional).
 **Request Body:** (Any subset of fields)
 ```json
 {
-  "ruleName": "Updated Policy",
-  "restrictedWindowHours": 48,
+  "ruleName": "Updated Refund - Next Day 4 Hours Rule",
+  "restrictedWindowHours": 4,
+  "normalFee": {
+    "type": "FIXED",
+    "value": 25
+  },
   "restrictedPenalty": {
-    "feeType": "FIXED",
-    "feeValue": 100
+    "type": "PERCENTAGE",
+    "value": 20
+  },
+  "noShowPenalty": {
+    "type": "PERCENTAGE",
+    "value": 30
   }
 }
 ```
@@ -288,37 +334,54 @@ Standard `createHttpError()` responses:
 **ruleType:**
 - Required
 - Must be one of: VOID | REFUND | REISSUE
+- NO_SHOW is NOT a ruleType (it's a penalty mode in REFUND/REISSUE)
 
 **ruleName:**
 - Required
 - String, max 150 chars
-- Unique per company (with payloadType context)
+- Unique per company
 
 **payloadType:**
 - Optional (defaults to ALL)
 - Must be one of: PASSENGER | CARGO | VEHICLE | ALL
 
+**sameDayOnly:**
+- Boolean, default false
+- For VOID: restricts action to issue calendar day
+
+**startOffsetDays:**
+- Non-negative integer
+- Default 0
+- For REFUND/REISSUE: rule effective after N days from issue
+
 **restrictedWindowHours:**
 - Required
-- Non-negative number
+- Non-negative number (can be 0)
+- Hours before ETD when penalties apply
 
-**normalFeeType & normalFeeValue:**
-- If feeType is provided, feeValue must be non-negative
-- If feeType is null, feeValue must be null
-
-**restrictedPenalty:**
-- Required
-- Must have feeType (FIXED | PERCENTAGE) and feeValue (non-negative)
+**Penalty Config (normalFee, restrictedPenalty, noShowPenalty):**
+- Each is optional (defaults to NONE)
+- `type`: Must be NONE | FIXED | PERCENTAGE
+- `value`: Must be non-negative number
 
 ## Financial Integration
 
-When `totalCharge > 0` during refund/reissue:
+**Important:** Ticketing Rule is a **time + penalty engine ONLY**. It returns penalty amounts but does NOT post to ledger.
 
-1. **Deduct from Refund Amount:** If REFUND action, subtract charge
-2. **Reverse Commission:** If `commissionReversal = true`, reverse applicable commission
-3. **Maintain Debit = Credit:** Journal entries must balance
-4. **Store Reference:** Maintain original invoice/ticket reference for audit trail
-5. **Audit Trail:** Log all penalty applications with mode and breakdown
+Consuming systems must:
+
+1. **Query Rule:** Call `getApplicableRule(companyId, ruleType, payloadType)`
+2. **Calculate Penalty:** Call `calculateTicketPenalty()` with ticket/trip/rule/baseAmount
+3. **Handle Charge:** If `mode` is RESTRICTED or NO_SHOW and `totalCharge > 0`:
+   - Deduct from refund amount
+   - Journal appropriate entries (G/L accounts per company policy)
+   - Store penalty details for audit trail
+4. **Maintain Audit Trail:** Log all penalty calculations with:
+   - Ticket reference
+   - Rule applied
+   - Mode (ALLOWED/RESTRICTED/NO_SHOW)
+   - Charge breakdown (baseCharge vs penaltyCharge)
+   - Timestamp
 
 ## Postman Collection
 
@@ -354,27 +417,53 @@ Import `/postman/ticketing-rules.postman_collection.json` for ready-to-use endpo
 ## Testing
 
 ```javascript
-// Example: Create rule and calculate penalty
-const rule = await TicketingRule.create({
+// Example 1: VOID rule on same day with sufficient time
+const voidRule = await TicketingRule.create({
   company: companyId,
-  ruleType: "REFUND",
-  ruleName: "Test Rule",
-  restrictedWindowHours: 24,
-  restrictedPenalty: { feeType: "FIXED", feeValue: 50 },
+  ruleType: "VOID",
+  ruleName: "Test Void",
+  sameDayOnly: true,
+  restrictedWindowHours: 3,
+  normalFee: { type: "NONE", value: 0 },
+  restrictedPenalty: { type: "NONE", value: 0 },
+  noShowPenalty: { type: "NONE", value: 0 },
   createdBy: userId,
   updatedBy: userId
 })
 
+// Ticket issued today, flight in 4 hours
 const penalty = await calculateTicketPenalty({
-  ticket: { status: "ISSUED", boardingStatus: "NOT_BOARDED" },
-  trip: { ETD: new Date(Date.now() + 12 * 60 * 60 * 1000) },
-  actionType: "REFUND",
-  rule,
+  ticket: { status: "ISSUED", createdAt: new Date() },
+  trip: { ETD: new Date(Date.now() + 4 * 60 * 60 * 1000) },
+  ruleType: "VOID",
+  rule: voidRule,
   baseAmount: 1000
 })
+// Result: { allowed: true, mode: "ALLOWED", charges: 0 }
 
-console.log(penalty)
-// { mode: "RESTRICTED", baseCharge: 0, penaltyCharge: 50, totalCharge: 50, ... }
+// Example 2: REFUND rule with NO_SHOW after ETD
+const refundRule = await TicketingRule.create({
+  company: companyId,
+  ruleType: "REFUND",
+  ruleName: "Test Refund",
+  startOffsetDays: 1,
+  restrictedWindowHours: 3,
+  normalFee: { type: "NONE", value: 0 },
+  restrictedPenalty: { type: "FIXED", value: 50 },
+  noShowPenalty: { type: "PERCENTAGE", value: 25 },
+  createdBy: userId,
+  updatedBy: userId
+})
+
+// Ticket issued yesterday, refund requested after ETD
+const penalty = await calculateTicketPenalty({
+  ticket: { status: "ISSUED", createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+  trip: { ETD: new Date(Date.now() - 1 * 60 * 60 * 1000) }, // 1 hour past
+  ruleType: "REFUND",
+  rule: refundRule,
+  baseAmount: 1000
+})
+// Result: { allowed: true, mode: "NO_SHOW", penaltyCharge: 250 (25% of 1000) }
 ```
 
 ## Deployment Notes

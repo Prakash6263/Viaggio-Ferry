@@ -1,5 +1,5 @@
 const createHttpError = require("http-errors")
-const { TicketingRule, RULE_TYPES, PAYLOAD_TYPES, FEE_TYPES } = require("../models/TicketingRule")
+const { TicketingRule, RULE_TYPES, PAYLOAD_TYPES, PENALTY_TYPES } = require("../models/TicketingRule")
 
 // POST /api/ticketing-rules
 const createTicketingRule = async (req, res, next) => {
@@ -12,11 +12,9 @@ const createTicketingRule = async (req, res, next) => {
       sameDayOnly = false,
       startOffsetDays = 0,
       restrictedWindowHours,
-      normalFeeType,
-      normalFeeValue,
+      normalFee,
       restrictedPenalty,
-      taxRefundable = false,
-      commissionReversal = true,
+      noShowPenalty,
     } = req.body
 
     // Validation
@@ -31,18 +29,20 @@ const createTicketingRule = async (req, res, next) => {
       throw createHttpError(400, "restrictedWindowHours is required")
     if (typeof restrictedWindowHours !== "number" || restrictedWindowHours < 0)
       throw createHttpError(400, "restrictedWindowHours must be a non-negative number")
-    if (!restrictedPenalty || !restrictedPenalty.feeType || restrictedPenalty.feeValue === undefined)
-      throw createHttpError(400, "restrictedPenalty with feeType and feeValue is required")
-    if (!FEE_TYPES.includes(restrictedPenalty.feeType))
-      throw createHttpError(400, `Invalid restrictedPenalty.feeType. Must be one of: ${FEE_TYPES.join(", ")}`)
-    if (typeof restrictedPenalty.feeValue !== "number" || restrictedPenalty.feeValue < 0)
-      throw createHttpError(400, "restrictedPenalty.feeValue must be a non-negative number")
 
-    // Validate normalFee if provided
-    if (normalFeeType && !FEE_TYPES.includes(normalFeeType))
-      throw createHttpError(400, `Invalid normalFeeType. Must be one of: ${FEE_TYPES.join(", ")}`)
-    if ((normalFeeType && normalFeeValue === undefined) || (normalFeeValue !== undefined && typeof normalFeeValue !== "number"))
-      throw createHttpError(400, "normalFeeValue must be a number when normalFeeType is provided")
+    // Helper to validate penalty config
+    const validatePenaltyConfig = (penalty, fieldName) => {
+      if (!penalty) return null
+      if (!penalty.type || !PENALTY_TYPES.includes(penalty.type))
+        throw createHttpError(400, `${fieldName}.type must be one of: ${PENALTY_TYPES.join(", ")}`)
+      if (typeof penalty.value !== "number" || penalty.value < 0)
+        throw createHttpError(400, `${fieldName}.value must be a non-negative number`)
+      return penalty
+    }
+
+    const normalFeeConfig = normalFee ? validatePenaltyConfig(normalFee, "normalFee") : { type: "NONE", value: 0 }
+    const restrictedPenaltyConfig = restrictedPenalty ? validatePenaltyConfig(restrictedPenalty, "restrictedPenalty") : { type: "NONE", value: 0 }
+    const noShowPenaltyConfig = noShowPenalty ? validatePenaltyConfig(noShowPenalty, "noShowPenalty") : { type: "NONE", value: 0 }
 
     const rule = new TicketingRule({
       company: companyId,
@@ -52,11 +52,9 @@ const createTicketingRule = async (req, res, next) => {
       sameDayOnly,
       startOffsetDays: Math.max(0, Math.floor(startOffsetDays)),
       restrictedWindowHours,
-      normalFeeType: normalFeeType || null,
-      normalFeeValue: normalFeeValue !== undefined ? normalFeeValue : null,
-      restrictedPenalty,
-      taxRefundable,
-      commissionReversal,
+      normalFee: normalFeeConfig,
+      restrictedPenalty: restrictedPenaltyConfig,
+      noShowPenalty: noShowPenaltyConfig,
       createdBy: userId,
       updatedBy: userId,
     })
@@ -155,11 +153,9 @@ const updateTicketingRule = async (req, res, next) => {
       sameDayOnly,
       startOffsetDays,
       restrictedWindowHours,
-      normalFeeType,
-      normalFeeValue,
+      normalFee,
       restrictedPenalty,
-      taxRefundable,
-      commissionReversal,
+      noShowPenalty,
     } = req.body
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
@@ -202,39 +198,26 @@ const updateTicketingRule = async (req, res, next) => {
       rule.restrictedWindowHours = restrictedWindowHours
     }
 
-    if (normalFeeType !== undefined) {
-      if (normalFeeType === null) {
-        rule.normalFeeType = null
-        rule.normalFeeValue = null
-      } else {
-        if (!FEE_TYPES.includes(normalFeeType))
-          throw createHttpError(400, `Invalid normalFeeType. Must be one of: ${FEE_TYPES.join(", ")}`)
-        rule.normalFeeType = normalFeeType
-      }
+    // Helper to validate penalty config
+    const validatePenaltyConfig = (penalty, fieldName) => {
+      if (!penalty) return null
+      if (!penalty.type || !PENALTY_TYPES.includes(penalty.type))
+        throw createHttpError(400, `${fieldName}.type must be one of: ${PENALTY_TYPES.join(", ")}`)
+      if (typeof penalty.value !== "number" || penalty.value < 0)
+        throw createHttpError(400, `${fieldName}.value must be a non-negative number`)
+      return penalty
     }
 
-    if (normalFeeValue !== undefined) {
-      if (typeof normalFeeValue !== "number" || normalFeeValue < 0)
-        throw createHttpError(400, "normalFeeValue must be a non-negative number")
-      rule.normalFeeValue = normalFeeValue
+    if (normalFee !== undefined) {
+      rule.normalFee = normalFee ? validatePenaltyConfig(normalFee, "normalFee") : { type: "NONE", value: 0 }
     }
 
     if (restrictedPenalty !== undefined) {
-      if (!restrictedPenalty.feeType || restrictedPenalty.feeValue === undefined)
-        throw createHttpError(400, "restrictedPenalty must have feeType and feeValue")
-      if (!FEE_TYPES.includes(restrictedPenalty.feeType))
-        throw createHttpError(400, `Invalid restrictedPenalty.feeType`)
-      if (typeof restrictedPenalty.feeValue !== "number" || restrictedPenalty.feeValue < 0)
-        throw createHttpError(400, "restrictedPenalty.feeValue must be non-negative")
-      rule.restrictedPenalty = restrictedPenalty
+      rule.restrictedPenalty = restrictedPenalty ? validatePenaltyConfig(restrictedPenalty, "restrictedPenalty") : { type: "NONE", value: 0 }
     }
 
-    if (taxRefundable !== undefined) {
-      rule.taxRefundable = Boolean(taxRefundable)
-    }
-
-    if (commissionReversal !== undefined) {
-      rule.commissionReversal = Boolean(commissionReversal)
+    if (noShowPenalty !== undefined) {
+      rule.noShowPenalty = noShowPenalty ? validatePenaltyConfig(noShowPenalty, "noShowPenalty") : { type: "NONE", value: 0 }
     }
 
     rule.updatedBy = userId

@@ -2,61 +2,145 @@
   "info": {
     "_postman_id": "ticketing-rules-api",
     "name": "Ticketing Rules API",
-    "description": "Production-ready API for managing ticketing rules in multi-tenant ferry ERP",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "12345678"
-  },
-  "auth": {
-    "type": "bearer",
-    "bearer": [
-      {
-        "key": "token",
-        "value": "{{token}}",
-        "type": "string"
-      }
-    ]
+    "description": "Complete API for managing ticketing rules with time eligibility and penalty configurations. Rules support VOID, REFUND, and REISSUE operations with flexible penalty structures including normalFee, restrictedPenalty, and noShowPenalty. NO_SHOW is not a ruleType but a penalty configuration within REFUND/REISSUE rules.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "Create Ticketing Rule",
+      "name": "Create Ticketing Rule - REFUND",
       "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
         "method": "POST",
         "header": [
           {
             "key": "Content-Type",
             "value": "application/json"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
           }
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"ruleType\": \"REFUND\",\n  \"ruleName\": \"Standard Refund Policy\",\n  \"payloadType\": \"PASSENGER\",\n  \"sameDayOnly\": false,\n  \"startOffsetDays\": 0,\n  \"restrictedWindowHours\": 24,\n  \"normalFeeType\": \"FIXED\",\n  \"normalFeeValue\": 50,\n  \"restrictedPenalty\": {\n    \"feeType\": \"PERCENTAGE\",\n    \"feeValue\": 10\n  },\n  \"taxRefundable\": false,\n  \"commissionReversal\": true\n}"
+          "raw": "{\n  \"ruleType\": \"REFUND\",\n  \"ruleName\": \"Refund - Next Day 3 Hours Rule\",\n  \"payloadType\": \"PASSENGER\",\n  \"sameDayOnly\": false,\n  \"startOffsetDays\": 1,\n  \"restrictedWindowHours\": 3,\n  \"normalFee\": {\n    \"type\": \"NONE\",\n    \"value\": 0\n  },\n  \"restrictedPenalty\": {\n    \"type\": \"FIXED\",\n    \"value\": 50\n  },\n  \"noShowPenalty\": {\n    \"type\": \"PERCENTAGE\",\n    \"value\": 25\n  }\n}"
         },
         "url": {
           "raw": "{{base_url}}/api/ticketing-rules",
-          "host": ["{{base_url}}"],
-          "path": ["api", "ticketing-rules"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "ticketing-rules"
+          ]
         }
       },
       "response": []
     },
     {
-      "name": "Get All Ticketing Rules",
+      "name": "Create Ticketing Rule - VOID",
       "request": {
-        "method": "GET",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
         "header": [
           {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
+            "key": "Content-Type",
+            "value": "application/json"
           }
         ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ruleType\": \"VOID\",\n  \"ruleName\": \"Void - Same Day 3 Hours Before ETD\",\n  \"payloadType\": \"PASSENGER\",\n  \"sameDayOnly\": true,\n  \"startOffsetDays\": 0,\n  \"restrictedWindowHours\": 3,\n  \"normalFee\": {\n    \"type\": \"NONE\",\n    \"value\": 0\n  },\n  \"restrictedPenalty\": {\n    \"type\": \"NONE\",\n    \"value\": 0\n  },\n  \"noShowPenalty\": {\n    \"type\": \"NONE\",\n    \"value\": 0\n  }\n}"
+        },
         "url": {
-          "raw": "{{base_url}}/api/ticketing-rules?page=1&limit=10&ruleType=REFUND&payloadType=PASSENGER&search=Standard",
-          "host": ["{{base_url}}"],
-          "path": ["api", "ticketing-rules"],
+          "raw": "{{base_url}}/api/ticketing-rules",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "ticketing-rules"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Ticketing Rule - REISSUE",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ruleType\": \"REISSUE\",\n  \"ruleName\": \"Reissue - Next Day 4 Hours Rule\",\n  \"payloadType\": \"ALL\",\n  \"sameDayOnly\": false,\n  \"startOffsetDays\": 1,\n  \"restrictedWindowHours\": 4,\n  \"normalFee\": {\n    \"type\": \"FIXED\",\n    \"value\": 25\n  },\n  \"restrictedPenalty\": {\n    \"type\": \"PERCENTAGE\",\n    \"value\": 15\n  },\n  \"noShowPenalty\": {\n    \"type\": \"PERCENTAGE\",\n    \"value\": 30\n  }\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/ticketing-rules",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "ticketing-rules"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "List Ticketing Rules",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/ticketing-rules?page=1&limit=10&ruleType=REFUND",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "ticketing-rules"
+          ],
           "query": [
             {
               "key": "page",
@@ -68,8 +152,7 @@
             },
             {
               "key": "ruleType",
-              "value": "REFUND",
-              "disabled": true
+              "value": "REFUND"
             },
             {
               "key": "payloadType",
@@ -78,7 +161,7 @@
             },
             {
               "key": "search",
-              "value": "Standard",
+              "value": "refund",
               "disabled": true
             }
           ]
@@ -87,24 +170,34 @@
       "response": []
     },
     {
-      "name": "Get Ticketing Rule By ID",
+      "name": "Get Ticketing Rule by ID",
       "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
         "method": "GET",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
-          }
-        ],
+        "header": [],
         "url": {
           "raw": "{{base_url}}/api/ticketing-rules/:id",
-          "host": ["{{base_url}}"],
-          "path": ["api", "ticketing-rules", ":id"],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "ticketing-rules",
+            ":id"
+          ],
           "variable": [
             {
               "key": "id",
-              "value": "",
-              "type": "string"
+              "value": "64f3c8f4e9b1c2d3a4b5c6d7"
             }
           ]
         }
@@ -114,30 +207,41 @@
     {
       "name": "Update Ticketing Rule",
       "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
         "method": "PUT",
         "header": [
           {
             "key": "Content-Type",
             "value": "application/json"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
           }
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"ruleName\": \"Updated Refund Policy\",\n  \"restrictedWindowHours\": 48,\n  \"normalFeeValue\": 75,\n  \"restrictedPenalty\": {\n    \"feeType\": \"PERCENTAGE\",\n    \"feeValue\": 15\n  },\n  \"commissionReversal\": true\n}"
+          "raw": "{\n  \"ruleName\": \"Refund - Updated Next Day 4 Hours Rule\",\n  \"restrictedWindowHours\": 4,\n  \"normalFee\": {\n    \"type\": \"FIXED\",\n    \"value\": 30\n  },\n  \"restrictedPenalty\": {\n    \"type\": \"PERCENTAGE\",\n    \"value\": 20\n  },\n  \"noShowPenalty\": {\n    \"type\": \"PERCENTAGE\",\n    \"value\": 35\n  }\n}"
         },
         "url": {
           "raw": "{{base_url}}/api/ticketing-rules/:id",
-          "host": ["{{base_url}}"],
-          "path": ["api", "ticketing-rules", ":id"],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "ticketing-rules",
+            ":id"
+          ],
           "variable": [
             {
               "key": "id",
-              "value": "",
-              "type": "string"
+              "value": "64f3c8f4e9b1c2d3a4b5c6d7"
             }
           ]
         }
@@ -147,58 +251,34 @@
     {
       "name": "Delete Ticketing Rule",
       "request": {
-        "method": "DELETE",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
-          }
-        ],
-        "url": {
-          "raw": "{{base_url}}/api/ticketing-rules/:id",
-          "host": ["{{base_url}}"],
-          "path": ["api", "ticketing-rules", ":id"],
-          "variable": [
+        "auth": {
+          "type": "bearer",
+          "bearer": [
             {
-              "key": "id",
-              "value": "",
+              "key": "token",
+              "value": "{{token}}",
               "type": "string"
             }
           ]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "Calculate Penalty Example (ALLOWED)",
-      "event": [
-        {
-          "listen": "prerequest",
-          "script": {
-            "exec": [
-              "// This is a reference endpoint showing how calculateTicketPenalty works",
-              "// Copy/paste this into your service layer when handling refunds/reissues",
-              ""
-            ]
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"ruleType\": \"REFUND\",\n  \"payloadType\": \"PASSENGER\",\n  \"baseAmount\": 1000,\n  \"ticketStatus\": \"ISSUED\",\n  \"boardingStatus\": \"NOT_BOARDED\",\n  \"hoursBeforeDeparture\": 72\n}\n\n/* Response (ALLOWED mode):\n{\n  \"mode\": \"ALLOWED\",\n  \"baseCharge\": 0,\n  \"penaltyCharge\": 0,\n  \"totalCharge\": 0,\n  \"hoursBeforeDeparture\": 72\n}\n*/"
         },
+        "method": "DELETE",
+        "header": [],
         "url": {
-          "raw": "{{base_url}}/api/ticketing-rules/penalty-calculator",
-          "host": ["{{base_url}}"],
-          "path": ["api", "ticketing-rules", "penalty-calculator"]
+          "raw": "{{base_url}}/api/ticketing-rules/:id",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "ticketing-rules",
+            ":id"
+          ],
+          "variable": [
+            {
+              "key": "id",
+              "value": "64f3c8f4e9b1c2d3a4b5c6d7"
+            }
+          ]
         }
       },
       "response": []
@@ -212,12 +292,7 @@
     },
     {
       "key": "token",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "company_id",
-      "value": "",
+      "value": "your-jwt-token-here",
       "type": "string"
     }
   ]
