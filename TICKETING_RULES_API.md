@@ -48,6 +48,11 @@ All penalty objects follow the structure: `{ type, value }`
 - `noShowPenalty` (Object) - Penalty when ticket requested after ETD (NO_SHOW mode)
   - `type` (enum: NONE | FIXED | PERCENTAGE, default: NONE)
   - `value` (Number, default: 0)
+- `conditions` (String, optional) - Descriptive conditions or notes for the rule
+  - Max 1000 characters
+  - Trimmed on storage
+  - Default: empty string
+  - Does NOT affect penalty calculations
 
 **System Fields:**
 - `isDeleted` (Boolean, default: false, indexed) - Soft delete
@@ -181,7 +186,8 @@ Create new ticketing rule.
   "noShowPenalty": {
     "type": "PERCENTAGE",
     "value": 25
-  }
+  },
+  "conditions": "Applies to all routes except long-haul international"
 }
 ```
 
@@ -248,7 +254,8 @@ Update rule (all fields optional).
   "noShowPenalty": {
     "type": "PERCENTAGE",
     "value": 30
-  }
+  },
+  "conditions": "Updated conditions: premium rates on holidays and peak seasons"
 }
 ```
 
@@ -363,6 +370,13 @@ Standard `createHttpError()` responses:
 - Each is optional (defaults to NONE)
 - `type`: Must be NONE | FIXED | PERCENTAGE
 - `value`: Must be non-negative number
+
+**conditions:**
+- Optional (defaults to empty string)
+- String, max 1000 characters
+- Descriptive field for rule applicability and notes
+- Does NOT affect penalty calculation logic
+- Trimmed on storage (leading/trailing whitespace removed)
 
 ## Financial Integration
 

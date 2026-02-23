@@ -15,6 +15,7 @@ const createTicketingRule = async (req, res, next) => {
       normalFee,
       restrictedPenalty,
       noShowPenalty,
+      conditions,
     } = req.body
 
     // Validation
@@ -44,6 +45,14 @@ const createTicketingRule = async (req, res, next) => {
     const restrictedPenaltyConfig = restrictedPenalty ? validatePenaltyConfig(restrictedPenalty, "restrictedPenalty") : { type: "NONE", value: 0 }
     const noShowPenaltyConfig = noShowPenalty ? validatePenaltyConfig(noShowPenalty, "noShowPenalty") : { type: "NONE", value: 0 }
 
+    // Validate conditions if provided
+    if (conditions !== undefined && conditions !== null) {
+      if (typeof conditions !== "string")
+        throw createHttpError(400, "conditions must be a string")
+      if (conditions.trim().length > 1000)
+        throw createHttpError(400, "conditions must be no more than 1000 characters")
+    }
+
     const rule = new TicketingRule({
       company: companyId,
       ruleType,
@@ -55,6 +64,7 @@ const createTicketingRule = async (req, res, next) => {
       normalFee: normalFeeConfig,
       restrictedPenalty: restrictedPenaltyConfig,
       noShowPenalty: noShowPenaltyConfig,
+      conditions: conditions ? conditions.trim() : "",
       createdBy: userId,
       updatedBy: userId,
     })
@@ -156,6 +166,7 @@ const updateTicketingRule = async (req, res, next) => {
       normalFee,
       restrictedPenalty,
       noShowPenalty,
+      conditions,
     } = req.body
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
@@ -218,6 +229,14 @@ const updateTicketingRule = async (req, res, next) => {
 
     if (noShowPenalty !== undefined) {
       rule.noShowPenalty = noShowPenalty ? validatePenaltyConfig(noShowPenalty, "noShowPenalty") : { type: "NONE", value: 0 }
+    }
+
+    if (conditions !== undefined) {
+      if (typeof conditions !== "string")
+        throw createHttpError(400, "conditions must be a string")
+      if (conditions.trim().length > 1000)
+        throw createHttpError(400, "conditions must be no more than 1000 characters")
+      rule.conditions = conditions ? conditions.trim() : ""
     }
 
     rule.updatedBy = userId

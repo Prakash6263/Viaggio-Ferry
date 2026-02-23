@@ -28,7 +28,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"ruleType\": \"REFUND\",\n  \"ruleName\": \"Refund - Next Day 3 Hours Rule\",\n  \"payloadType\": \"PASSENGER\",\n  \"sameDayOnly\": false,\n  \"startOffsetDays\": 1,\n  \"restrictedWindowHours\": 3,\n  \"normalFee\": {\n    \"type\": \"NONE\",\n    \"value\": 0\n  },\n  \"restrictedPenalty\": {\n    \"type\": \"FIXED\",\n    \"value\": 50\n  },\n  \"noShowPenalty\": {\n    \"type\": \"PERCENTAGE\",\n    \"value\": 25\n  }\n}"
+          "raw": "{\n  \"ruleType\": \"REFUND\",\n  \"ruleName\": \"Refund - Next Day 3 Hours Rule\",\n  \"payloadType\": \"PASSENGER\",\n  \"sameDayOnly\": false,\n  \"startOffsetDays\": 1,\n  \"restrictedWindowHours\": 3,\n  \"normalFee\": {\n    \"type\": \"NONE\",\n    \"value\": 0\n  },\n  \"restrictedPenalty\": {\n    \"type\": \"FIXED\",\n    \"value\": 50\n  },\n  \"noShowPenalty\": {\n    \"type\": \"PERCENTAGE\",\n    \"value\": 25\n  },\n  \"conditions\": \"Applies to all routes except long-haul international\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/api/ticketing-rules",
@@ -65,7 +65,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"ruleType\": \"VOID\",\n  \"ruleName\": \"Void - Same Day 3 Hours Before ETD\",\n  \"payloadType\": \"PASSENGER\",\n  \"sameDayOnly\": true,\n  \"startOffsetDays\": 0,\n  \"restrictedWindowHours\": 3,\n  \"normalFee\": {\n    \"type\": \"NONE\",\n    \"value\": 0\n  },\n  \"restrictedPenalty\": {\n    \"type\": \"NONE\",\n    \"value\": 0\n  },\n  \"noShowPenalty\": {\n    \"type\": \"NONE\",\n    \"value\": 0\n  }\n}"
+          "raw": "{\n  \"ruleType\": \"VOID\",\n  \"ruleName\": \"Void - Same Day 3 Hours Before ETD\",\n  \"payloadType\": \"PASSENGER\",\n  \"sameDayOnly\": true,\n  \"startOffsetDays\": 0,\n  \"restrictedWindowHours\": 3,\n  \"normalFee\": {\n    \"type\": \"NONE\",\n    \"value\": 0\n  },\n  \"restrictedPenalty\": {\n    \"type\": \"NONE\",\n    \"value\": 0\n  },\n  \"noShowPenalty\": {\n    \"type\": \"NONE\",\n    \"value\": 0\n  },\n  \"conditions\": \"Valid only for same-day void requests\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/api/ticketing-rules",
@@ -102,7 +102,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"ruleType\": \"REISSUE\",\n  \"ruleName\": \"Reissue - Next Day 4 Hours Rule\",\n  \"payloadType\": \"ALL\",\n  \"sameDayOnly\": false,\n  \"startOffsetDays\": 1,\n  \"restrictedWindowHours\": 4,\n  \"normalFee\": {\n    \"type\": \"FIXED\",\n    \"value\": 25\n  },\n  \"restrictedPenalty\": {\n    \"type\": \"PERCENTAGE\",\n    \"value\": 15\n  },\n  \"noShowPenalty\": {\n    \"type\": \"PERCENTAGE\",\n    \"value\": 30\n  }\n}"
+          "raw": "{\n  \"ruleType\": \"REISSUE\",\n  \"ruleName\": \"Reissue - Next Day 4 Hours Rule\",\n  \"payloadType\": \"ALL\",\n  \"sameDayOnly\": false,\n  \"startOffsetDays\": 1,\n  \"restrictedWindowHours\": 4,\n  \"normalFee\": {\n    \"type\": \"FIXED\",\n    \"value\": 25\n  },\n  \"restrictedPenalty\": {\n    \"type\": \"PERCENTAGE\",\n    \"value\": 15\n  },\n  \"noShowPenalty\": {\n    \"type\": \"PERCENTAGE\",\n    \"value\": 30\n  },\n  \"conditions\": \"Reissue available for all payload types after minimum 1 day\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/api/ticketing-rules",
@@ -226,7 +226,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"ruleName\": \"Refund - Updated Next Day 4 Hours Rule\",\n  \"restrictedWindowHours\": 4,\n  \"normalFee\": {\n    \"type\": \"FIXED\",\n    \"value\": 30\n  },\n  \"restrictedPenalty\": {\n    \"type\": \"PERCENTAGE\",\n    \"value\": 20\n  },\n  \"noShowPenalty\": {\n    \"type\": \"PERCENTAGE\",\n    \"value\": 35\n  }\n}"
+          "raw": "{\n  \"ruleName\": \"Refund - Updated Next Day 4 Hours Rule\",\n  \"restrictedWindowHours\": 4,\n  \"normalFee\": {\n    \"type\": \"FIXED\",\n    \"value\": 30\n  },\n  \"restrictedPenalty\": {\n    \"type\": \"PERCENTAGE\",\n    \"value\": 20\n  },\n  \"noShowPenalty\": {\n    \"type\": \"PERCENTAGE\",\n    \"value\": 35\n  },\n  \"conditions\": \"Updated conditions: premium rates on holidays and peak seasons\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/api/ticketing-rules/:id",

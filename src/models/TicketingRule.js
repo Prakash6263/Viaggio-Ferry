@@ -62,6 +62,12 @@ const TicketingRuleSchema = new mongoose.Schema(
       type: PenaltyConfigSchema,
       default: { type: "NONE", value: 0 },
     },
+    conditions: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+      default: "",
+    },
     isDeleted: {
       type: Boolean,
       default: false,
