@@ -21,6 +21,7 @@ const payloadTypeRoutes = require("./payloadTypeRoutes")
 const shipRoutes = require("./shipRoutes")
 const priceListRoutes = require("./priceListRoutes")
 const ticketingRuleRoutes = require("./ticketingRuleRoutes")
+const tripRoutes = require("./tripRoutes")
 
 module.exports = (app) => {
   app.use("/api/public", publicCountryRoutes)
@@ -28,6 +29,7 @@ module.exports = (app) => {
   app.use("/api/cabins", cabinRoutes)
   app.use("/api/payload-types", payloadTypeRoutes)
   app.use("/api/ships", shipRoutes)
+  app.use("/api/trips", tripRoutes)
   app.use("/api/exchange-rates", exchangeRateRoutes)
   app.use("/api/admin", adminRoutes)
   app.use("/api/companies", companyRoutes)

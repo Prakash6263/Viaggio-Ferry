@@ -1,0 +1,249 @@
+{
+  "info": {
+    "name": "Viaggio Ferry - Trip Management API",
+    "description": "Complete Trip Management flow for sales-bookings module",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "YOUR_JWT_TOKEN_HERE",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "TRIPS",
+      "item": [
+        {
+          "name": "Create Trip",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tripName\": \"Ferry Route Mumbai - Goa\",\n  \"tripCode\": \"MG001\",\n  \"ship\": \"{{ship_id}}\",\n  \"departurePort\": \"{{port_id_1}}\",\n  \"arrivalPort\": \"{{port_id_2}}\",\n  \"departureDateTime\": \"2025-03-15T08:00:00Z\",\n  \"arrivalDateTime\": \"2025-03-15T16:00:00Z\",\n  \"bookingOpeningDate\": \"2025-02-25T00:00:00Z\",\n  \"bookingClosingDate\": \"2025-03-14T23:59:59Z\",\n  \"checkInOpeningDate\": \"2025-03-15T06:00:00Z\",\n  \"checkInClosingDate\": \"2025-03-15T07:30:00Z\",\n  \"boardingClosingDate\": \"2025-03-15T07:45:00Z\",\n  \"status\": \"SCHEDULED\",\n  \"remarks\": \"Regular scheduled service\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips",
+              "host": ["{{base_url}}"],
+              "path": ["api", "trips"]
+            }
+          }
+        },
+        {
+          "name": "List Trips",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/trips?page=1&limit=10&search=&status=SCHEDULED&startDate=2025-03-01&endDate=2025-03-31",
+              "host": ["{{base_url}}"],
+              "path": ["api", "trips"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "status",
+                  "value": "SCHEDULED"
+                },
+                {
+                  "key": "startDate",
+                  "value": "2025-03-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-03-31"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Trip By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "trips", "{{trip_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Trip",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"OPEN\",\n  \"remarks\": \"Trip opened for bookings\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "trips", "{{trip_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Trip",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "trips", "{{trip_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Trip Availability",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availability",
+              "host": ["{{base_url}}"],
+              "path": ["api", "trips", "{{trip_id}}", "availability"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ALLOCATIONS",
+      "item": [
+        {
+          "name": "Create Allocation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"partner\": \"{{partner_id}}\",\n  \"allocations\": [\n    {\n      \"availabilityId\": \"{{availability_id_1}}\",\n      \"quantity\": 50,\n      \"soldQuantity\": 0\n    },\n    {\n      \"availabilityId\": \"{{availability_id_2}}\",\n      \"quantity\": 30,\n      \"soldQuantity\": 0\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/allocations",
+              "host": ["{{base_url}}"],
+              "path": ["api", "trips", "{{trip_id}}", "allocations"]
+            }
+          }
+        },
+        {
+          "name": "List Allocations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/allocations",
+              "host": ["{{base_url}}"],
+              "path": ["api", "trips", "{{trip_id}}", "allocations"]
+            }
+          }
+        },
+        {
+          "name": "Update Allocation",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"allocations\": [\n    {\n      \"availabilityId\": \"{{availability_id_1}}\",\n      \"quantity\": 60,\n      \"soldQuantity\": 10\n    },\n    {\n      \"availabilityId\": \"{{availability_id_2}}\",\n      \"quantity\": 40,\n      \"soldQuantity\": 5\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/allocations/{{allocation_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "trips", "{{trip_id}}", "allocations", "{{allocation_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Allocation",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/allocations/{{allocation_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "trips", "{{trip_id}}", "allocations", "{{allocation_id}}"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "trip_id",
+      "value": ""
+    },
+    {
+      "key": "ship_id",
+      "value": ""
+    },
+    {
+      "key": "port_id_1",
+      "value": ""
+    },
+    {
+      "key": "port_id_2",
+      "value": ""
+    },
+    {
+      "key": "partner_id",
+      "value": ""
+    },
+    {
+      "key": "availability_id_1",
+      "value": ""
+    },
+    {
+      "key": "availability_id_2",
+      "value": ""
+    },
+    {
+      "key": "allocation_id",
+      "value": ""
+    }
+  ]
+}
