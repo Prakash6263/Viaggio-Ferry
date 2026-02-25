@@ -1,0 +1,351 @@
+{
+  "info": {
+    "name": "Viaggio Ferry - Trip Ticketing Rules API",
+    "description": "API endpoints for managing ticketing rules assigned to trips",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Trip Ticket Rules",
+      "item": [
+        {
+          "name": "1. Assign Rule to Trip",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleType\": \"REFUND\",\n  \"ticketingRule\": \"{{ticketingRuleId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{tripId}}",
+                "ticketing-rules"
+              ]
+            },
+            "description": "Assign a ticketing rule to a trip"
+          },
+          "response": []
+        },
+        {
+          "name": "2. Get All Rules for Trip",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{tripId}}",
+                "ticketing-rules"
+              ]
+            },
+            "description": "Retrieve all ticketing rules assigned to a trip"
+          },
+          "response": []
+        },
+        {
+          "name": "3. Update Trip Rule",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules/{{ruleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{tripId}}",
+                "ticketing-rules",
+                "{{ruleId}}"
+              ]
+            },
+            "description": "Update a trip ticket rule"
+          },
+          "response": []
+        },
+        {
+          "name": "4. Delete Trip Rule",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules/{{ruleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{tripId}}",
+                "ticketing-rules",
+                "{{ruleId}}"
+              ]
+            },
+            "description": "Delete (soft delete) a trip ticket rule"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Validation Test Cases",
+      "item": [
+        {
+          "name": "TEST 1: Duplicate ruleType",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleType\": \"REFUND\",\n  \"ticketingRule\": \"{{ticketingRuleId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{tripId}}",
+                "ticketing-rules"
+              ]
+            },
+            "description": "This test assigns the same ruleType twice to the same trip. Expected: Error - 'Duplicate rule type not allowed for trip'"
+          },
+          "response": []
+        },
+        {
+          "name": "TEST 2: Rule Type Mismatch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleType\": \"VOID\",\n  \"ticketingRule\": \"{{refundRuleId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{tripId}}",
+                "ticketing-rules"
+              ]
+            },
+            "description": "This test assigns a VOID ruleType to a REFUND ticketing rule. Expected: Error - 'Rule type mismatch'"
+          },
+          "response": []
+        },
+        {
+          "name": "TEST 3: Assign Rule from Different Company",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleType\": \"REFUND\",\n  \"ticketingRule\": \"{{otherCompanyRuleId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{tripId}}",
+                "ticketing-rules"
+              ]
+            },
+            "description": "This test tries to assign a ticketing rule from a different company. Expected: Error - '404 Ticketing rule not found'"
+          },
+          "response": []
+        },
+        {
+          "name": "TEST 4: Modify After Booking Exists",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleType\": \"REISSUE\",\n  \"ticketingRule\": \"{{reissueRuleId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trips/{{tripIdWithBooking}}/ticketing-rules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{tripIdWithBooking}}",
+                "ticketing-rules"
+              ]
+            },
+            "description": "This test tries to assign a rule to a trip that already has bookings. Expected: Error - 'Cannot modify ticket rules after bookings exist'"
+          },
+          "response": []
+        },
+        {
+          "name": "TEST 5: Invalid Rule Type",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleType\": \"INVALID\",\n  \"ticketingRule\": \"{{ticketingRuleId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{tripId}}",
+                "ticketing-rules"
+              ]
+            },
+            "description": "This test assigns an invalid ruleType. Expected: Error - 'Invalid ruleType. Must be one of: VOID, REFUND, REISSUE'"
+          },
+          "response": []
+        },
+        {
+          "name": "TEST 6: Missing Required Field",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleType\": \"REFUND\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{tripId}}",
+                "ticketing-rules"
+              ]
+            },
+            "description": "This test omits the ticketingRule field. Expected: Error - 'Missing required field: ticketingRule'"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "authToken",
+      "value": ""
+    },
+    {
+      "key": "tripId",
+      "value": ""
+    },
+    {
+      "key": "ticketingRuleId",
+      "value": ""
+    },
+    {
+      "key": "ruleId",
+      "value": ""
+    },
+    {
+      "key": "refundRuleId",
+      "value": ""
+    },
+    {
+      "key": "reissueRuleId",
+      "value": ""
+    },
+    {
+      "key": "otherCompanyRuleId",
+      "value": ""
+    },
+    {
+      "key": "tripIdWithBooking",
+      "value": ""
+    }
+  ]
+}
