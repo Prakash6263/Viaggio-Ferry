@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Viaggio Ferry - Trip Management API",
-    "description": "Complete Trip Management flow for sales-bookings module",
+    "description": "Complete Trip Management and Trip Ticketing Rules flow for sales-bookings module",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -72,9 +72,80 @@
                 {
                   "key": "endDate",
                   "value": "2025-03-31"
-                }
-              ]
+        }
+      ]
+    },
+    {
+      "name": "TRIP TICKETING RULES",
+      "item": [
+        {
+          "name": "Assign Rule To Trip",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticketingRuleId\": \"{{ticketing_rule_id}}\",\n  \"priority\": 1,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/ticketing-rules",
+              "host": ["{{base_url}}"],
+              "path": ["api", "trips", "{{trip_id}}", "ticketing-rules"]
             }
+          }
+        },
+        {
+          "name": "Get Trip Rules",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/ticketing-rules",
+              "host": ["{{base_url}}"],
+              "path": ["api", "trips", "{{trip_id}}", "ticketing-rules"]
+            }
+          }
+        },
+        {
+          "name": "Update Trip Rule",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priority\": 2,\n  \"isActive\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/ticketing-rules/{{trip_rule_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "trips", "{{trip_id}}", "ticketing-rules", "{{trip_rule_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Remove Trip Rule",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/ticketing-rules/{{trip_rule_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "trips", "{{trip_id}}", "ticketing-rules", "{{trip_rule_id}}"]
+            }
+          }
+        }
+      ]
+    }
           }
         },
         {
@@ -243,6 +314,14 @@
     },
     {
       "key": "allocation_id",
+      "value": ""
+    },
+    {
+      "key": "ticketing_rule_id",
+      "value": ""
+    },
+    {
+      "key": "trip_rule_id",
       "value": ""
     }
   ]
