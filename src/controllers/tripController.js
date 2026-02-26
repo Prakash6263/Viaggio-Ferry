@@ -458,6 +458,206 @@ const getTripAvailability = async (req, res, next) => {
   }
 }
 
+/**
+ * POST /api/trips/:tripId/availability
+ * Create availability for a trip
+ */
+const createAvailability = async (req, res, next) => {
+  try {
+    const { tripId } = req.params
+    const { companyId, user } = req
+    const { availabilityType, cabinId, totalQuantity } = req.body
+
+    if (!mongoose.Types.ObjectId.isValid(tripId)) {
+      throw createHttpError(400, "Invalid trip ID format")
+    }
+
+    if (!availabilityType) {
+      throw createHttpError(400, "Missing required field: availabilityType")
+    }
+
+    if (!["PASSENGER", "CARGO", "VEHICLE"].includes(availabilityType)) {
+      throw createHttpError(400, "availabilityType must be PASSENGER, CARGO, or VEHICLE")
+    }
+
+    if (!totalQuantity || totalQuantity <= 0) {
+      throw createHttpError(400, "totalQuantity must be a positive number")
+    }
+
+    // Verify trip exists
+    const trip = await Trip.findOne({
+      _id: tripId,
+      company: companyId,
+      isDeleted: false,
+    })
+
+    if (!trip) {
+      throw createHttpError(404, "Trip not found")
+    }
+
+    // Check if trip has bookings (cannot add availability)
+    const hasBookings = await tripService.checkTripHasBookings(tripId)
+    if (hasBookings) {
+      throw createHttpError(400, "Cannot add availability to a trip with existing bookings")
+    }
+
+    // Create availability
+    const availability = new TripAvailability({
+      trip: tripId,
+      company: companyId,
+      availabilityType,
+      cabinId: cabinId || null,
+      totalQuantity,
+      allocatedQuantity: 0,
+      bookedQuantity: 0,
+      createdBy: {
+        id: user._id,
+        name: user.name,
+        type: "user",
+      },
+    })
+
+    await availability.save()
+
+    res.status(201).json({
+      success: true,
+      message: "Availability created successfully",
+      data: availability,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * PUT /api/trips/:tripId/availability/:availabilityId
+ * Update availability for a trip
+ */
+const updateAvailability = async (req, res, next) => {
+  try {
+    const { tripId, availabilityId } = req.params
+    const { companyId, user } = req
+    const { totalQuantity } = req.body
+
+    if (!mongoose.Types.ObjectId.isValid(tripId)) {
+      throw createHttpError(400, "Invalid trip ID format")
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(availabilityId)) {
+      throw createHttpError(400, "Invalid availability ID format")
+    }
+
+    if (totalQuantity && totalQuantity <= 0) {
+      throw createHttpError(400, "totalQuantity must be a positive number")
+    }
+
+    // Verify trip exists
+    const trip = await Trip.findOne({
+      _id: tripId,
+      company: companyId,
+      isDeleted: false,
+    }).lean()
+
+    if (!trip) {
+      throw createHttpError(404, "Trip not found")
+    }
+
+    // Get current availability
+    const availability = await TripAvailability.findOne({
+      _id: availabilityId,
+      trip: tripId,
+      company: companyId,
+      isDeleted: false,
+    })
+
+    if (!availability) {
+      throw createHttpError(404, "Availability not found")
+    }
+
+    // Validate new total >= allocated
+    if (totalQuantity < availability.allocatedQuantity) {
+      throw createHttpError(400, `Cannot reduce total below allocated quantity (${availability.allocatedQuantity})`)
+    }
+
+    // Update availability
+    availability.totalQuantity = totalQuantity
+    availability.updatedBy = {
+      id: user._id,
+      name: user.name,
+      type: "user",
+    }
+
+    await availability.save()
+
+    res.status(200).json({
+      success: true,
+      message: "Availability updated successfully",
+      data: availability,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * DELETE /api/trips/:tripId/availability/:availabilityId
+ * Delete availability for a trip
+ */
+const deleteAvailability = async (req, res, next) => {
+  try {
+    const { tripId, availabilityId } = req.params
+    const { companyId } = req
+
+    if (!mongoose.Types.ObjectId.isValid(tripId)) {
+      throw createHttpError(400, "Invalid trip ID format")
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(availabilityId)) {
+      throw createHttpError(400, "Invalid availability ID format")
+    }
+
+    // Verify trip exists
+    const trip = await Trip.findOne({
+      _id: tripId,
+      company: companyId,
+      isDeleted: false,
+    }).lean()
+
+    if (!trip) {
+      throw createHttpError(404, "Trip not found")
+    }
+
+    // Get availability
+    const availability = await TripAvailability.findOne({
+      _id: availabilityId,
+      trip: tripId,
+      company: companyId,
+      isDeleted: false,
+    })
+
+    if (!availability) {
+      throw createHttpError(404, "Availability not found")
+    }
+
+    // Cannot delete if allocated
+    if (availability.allocatedQuantity > 0) {
+      throw createHttpError(400, "Cannot delete availability with active allocations")
+    }
+
+    // Soft delete
+    availability.isDeleted = true
+    await availability.save()
+
+    res.status(200).json({
+      success: true,
+      message: "Availability deleted successfully",
+      data: { _id: availabilityId },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 module.exports = {
   createTrip,
   listTrips,
@@ -465,4 +665,7 @@ module.exports = {
   updateTrip,
   deleteTrip,
   getTripAvailability,
+  createAvailability,
+  updateAvailability,
+  deleteAvailability,
 }

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Viaggio Ferry - Complete Trip Management API",
-    "description": "All 14 endpoints for Trip Management, Agent Allocations, and Trip Ticketing Rules",
+    "description": "All 17 endpoints for Trip Management (6), Availability Management (4), Agent Allocations (4), and Trip Ticketing Rules (4)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -17,7 +17,7 @@
   "item": [
     {
       "name": "GROUP 1: TRIP MANAGEMENT",
-      "description": "6 endpoints for creating, reading, updating, deleting trips and managing availability",
+      "description": "9 endpoints for creating, reading, updating, deleting trips and managing availability (GET, CREATE, UPDATE, DELETE availability)",
       "item": [
         {
           "name": "1. CREATE TRIP",
@@ -178,6 +178,86 @@
             },
             "description": "Get availability breakdown (Passenger/Cargo/Vehicle with total and remaining quantities)"
           }
+        },
+        {
+          "name": "7. CREATE AVAILABILITY",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"availabilityType\": \"PASSENGER\",\n  \"cabinId\": \"{{cabin_id}}\",\n  \"totalQuantity\": 100\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availability",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availability"
+              ]
+            },
+            "description": "Create new availability entry for a trip (PASSENGER, CARGO, or VEHICLE type)"
+          }
+        },
+        {
+          "name": "8. UPDATE AVAILABILITY",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"totalQuantity\": 120\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availability/{{availability_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availability",
+                "{{availability_id}}"
+              ]
+            },
+            "description": "Update availability quantity (cannot reduce below allocated quantity)"
+          }
+        },
+        {
+          "name": "9. DELETE AVAILABILITY",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availability/{{availability_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availability",
+                "{{availability_id}}"
+              ]
+            },
+            "description": "Delete availability (only if no allocations exist)"
+          }
         }
       ]
     },
@@ -186,7 +266,7 @@
       "description": "4 endpoints for managing partner/agent seat allocations to trips",
       "item": [
         {
-          "name": "7. CREATE ALLOCATION",
+          "name": "10. CREATE ALLOCATION",
           "request": {
             "method": "POST",
             "header": [
@@ -215,7 +295,7 @@
           }
         },
         {
-          "name": "8. LIST ALLOCATIONS",
+          "name": "11. LIST ALLOCATIONS",
           "request": {
             "method": "GET",
             "header": [],
@@ -235,7 +315,7 @@
           }
         },
         {
-          "name": "9. UPDATE ALLOCATION",
+          "name": "12. UPDATE ALLOCATION",
           "request": {
             "method": "PUT",
             "header": [
@@ -265,7 +345,7 @@
           }
         },
         {
-          "name": "10. DELETE ALLOCATION",
+          "name": "13. DELETE ALLOCATION",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -292,7 +372,7 @@
       "description": "4 endpoints for assigning and managing ticketing rules on trips",
       "item": [
         {
-          "name": "11. ASSIGN RULE TO TRIP",
+          "name": "14. ASSIGN RULE TO TRIP",
           "request": {
             "method": "POST",
             "header": [
@@ -321,7 +401,7 @@
           }
         },
         {
-          "name": "12. GET TRIP RULES",
+          "name": "15. GET TRIP RULES",
           "request": {
             "method": "GET",
             "header": [],
@@ -341,7 +421,7 @@
           }
         },
         {
-          "name": "13. UPDATE TRIP RULE",
+          "name": "16. UPDATE TRIP RULE",
           "request": {
             "method": "PUT",
             "header": [
@@ -371,7 +451,7 @@
           }
         },
         {
-          "name": "14. REMOVE TRIP RULE",
+          "name": "17. REMOVE TRIP RULE",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -424,11 +504,11 @@
       "value": ""
     },
     {
-      "key": "availability_id_1",
+      "key": "availability_id",
       "value": ""
     },
     {
-      "key": "availability_id_2",
+      "key": "cabin_id",
       "value": ""
     },
     {
