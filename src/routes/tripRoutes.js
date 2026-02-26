@@ -22,6 +22,15 @@ const {
   deleteAllocation,
 } = require("../controllers/allocationController")
 
+const {
+  assignRuleToTrip,
+  updateTripRule,
+  removeTripRule,
+  getTripRules,
+} = require("../controllers/tripTicketRuleController")
+
+const tripTicketRuleValidationMiddleware = require("../middleware/tripTicketRuleValidationMiddleware")
+
 const router = express.Router()
 
 // Trip Routes
@@ -83,6 +92,37 @@ router.delete(
   "/:tripId/allocations/:allocationId",
   checkPermission("sales-bookings", "trip", "delete"),
   deleteAllocation
+)
+
+// Trip Ticket Rule Routes
+router.post(
+  "/:tripId/ticketing-rules",
+  checkPermission("sales-bookings", "trip", "write"),
+  tripTicketRuleValidationMiddleware.validatePathParams,
+  tripTicketRuleValidationMiddleware.validateCreatePayload,
+  assignRuleToTrip
+)
+
+router.get(
+  "/:tripId/ticketing-rules",
+  checkPermission("sales-bookings", "trip", "read"),
+  tripTicketRuleValidationMiddleware.validatePathParams,
+  getTripRules
+)
+
+router.put(
+  "/:tripId/ticketing-rules/:id",
+  checkPermission("sales-bookings", "trip", "edit"),
+  tripTicketRuleValidationMiddleware.validatePathParams,
+  tripTicketRuleValidationMiddleware.validateUpdatePayload,
+  updateTripRule
+)
+
+router.delete(
+  "/:tripId/ticketing-rules/:id",
+  checkPermission("sales-bookings", "trip", "delete"),
+  tripTicketRuleValidationMiddleware.validatePathParams,
+  removeTripRule
 )
 
 module.exports = router
