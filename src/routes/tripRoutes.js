@@ -13,9 +13,6 @@ const {
   updateTrip,
   deleteTrip,
   getTripAvailability,
-  createAvailability,
-  updateAvailability,
-  deleteAvailability,
 } = require("../controllers/tripController")
 
 const {
@@ -63,29 +60,11 @@ router.put(
 
 router.delete("/:id", checkPermission("sales-bookings", "trip", "delete"), deleteTrip)
 
-// Trip Availability Routes
+// Trip Availability Routes (READ ONLY - auto-generated from ship)
 router.get(
   "/:tripId/availability",
   checkPermission("sales-bookings", "trip", "read"),
   getTripAvailability
-)
-
-router.post(
-  "/:tripId/availability",
-  checkPermission("sales-bookings", "trip", "write"),
-  createAvailability
-)
-
-router.put(
-  "/:tripId/availability/:availabilityId",
-  checkPermission("sales-bookings", "trip", "edit"),
-  updateAvailability
-)
-
-router.delete(
-  "/:tripId/availability/:availabilityId",
-  checkPermission("sales-bookings", "trip", "delete"),
-  deleteAvailability
 )
 
 // Agent Allocation Routes
