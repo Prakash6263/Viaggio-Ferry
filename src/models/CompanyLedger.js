@@ -3,27 +3,17 @@ const { LEDGER_TYPES, LEDGER_TYPE_MAPPING } = require("../constants/ledgerTypes"
 
 const STATUS = ["Active", "Inactive"]
 
-/**
- * CompanyLedger Schema
- *
- * Purpose: Operational Chart of Accounts for each company tenant
- * - MUST have companyId (multi-tenant isolation)
- * - Inherits from SuperAdminLedger via baseLedger reference
- * - Can also have system-generated ledgers (Partner, Salesman, Bank)
- * - Companies can create limited expense-type ledgers if allowed
- * - All deletes are soft delete only
- *
- * Types of CompanyLedger records:
- * 1. Inherited Base Ledgers (baseLedger != null, systemAccount = true, locked = true)
- * 2. System-Generated Ledgers (baseLedger = null, systemAccount = true, locked = true, createdBy = "system")
- * 3. Company-Created Ledgers (baseLedger = null, systemAccount = false, createdBy = "company")
- */
 const CompanyLedgerSchema = new mongoose.Schema(
   {
     company: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
       required: true,
+    },
+    baseLedger: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SuperAdminLedger",
+      default: null,
       index: true,
     },
     ledgerCode: {
@@ -47,7 +37,6 @@ const CompanyLedgerSchema = new mongoose.Schema(
       type: String,
       enum: LEDGER_TYPES,
       required: true,
-      index: true,
     },
     typeSequence: {
       type: String,
@@ -58,14 +47,11 @@ const CompanyLedgerSchema = new mongoose.Schema(
       type: String,
       enum: STATUS,
       default: "Active",
-      index: true,
     },
-    // True for base ledgers and system-generated ledgers (Partner, Salesman, Bank)
     systemAccount: {
       type: Boolean,
       default: false,
     },
-    // True for base ledgers and system-generated ledgers (prevents company modification)
     locked: {
       type: Boolean,
       default: false,
@@ -75,7 +61,6 @@ const CompanyLedgerSchema = new mongoose.Schema(
       enum: ["super_admin", "company", "system"],
       default: "company",
     },
-    // For Partner and Salesman ledgers - stores reference ID
     partnerAccount: {
       type: mongoose.Schema.Types.ObjectId,
       refPath: "partnerModel",
@@ -95,7 +80,6 @@ const CompanyLedgerSchema = new mongoose.Schema(
     isDeleted: {
       type: Boolean,
       default: false,
-      index: true,
     },
   },
   {
@@ -104,11 +88,13 @@ const CompanyLedgerSchema = new mongoose.Schema(
   },
 )
 
-// Compound indexes for multi-tenant queries
+// Compound indexes for multi-tenant queries (no duplicates with inline indexes)
 CompanyLedgerSchema.index({ company: 1, ledgerCode: 1 }, { unique: true })
 CompanyLedgerSchema.index({ company: 1, ledgerType: 1 })
 CompanyLedgerSchema.index({ company: 1, status: 1 })
 CompanyLedgerSchema.index({ company: 1, systemAccount: 1 })
+CompanyLedgerSchema.index({ company: 1, baseLedger: 1 })
+CompanyLedgerSchema.index({ company: 1, isDeleted: 1 })
 CompanyLedgerSchema.index({
   company: 1,
   ledgerDescription: "text",

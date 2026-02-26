@@ -6,7 +6,6 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
       required: true,
-      index: true,
     },
     fullName: { type: String, required: true, trim: true },
     profileImage: { type: String, default: null }, // URL/path to user profile image
