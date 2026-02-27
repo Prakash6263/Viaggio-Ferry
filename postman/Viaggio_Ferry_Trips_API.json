@@ -510,6 +510,208 @@
         }
       ],
       "description": "Trip availability management for passenger, cargo, and vehicle allocations"
+    },
+    {
+      "name": "Agent Allocations",
+      "item": [
+        {
+          "name": "Get Availability Summary for Allocation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}/agent-allocations/summary",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities",
+                "{{availability_id}}",
+                "agent-allocations",
+                "summary"
+              ]
+            },
+            "description": "Get summary of agent allocations for an availability"
+          },
+          "response": []
+        },
+        {
+          "name": "List Agent Allocations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}/agent-allocations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities",
+                "{{availability_id}}",
+                "agent-allocations"
+              ]
+            },
+            "description": "List all agent allocations for an availability"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Agent Allocation by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}/agent-allocations/{{allocation_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities",
+                "{{availability_id}}",
+                "agent-allocations",
+                "{{allocation_id}}"
+              ]
+            },
+            "description": "Get specific agent allocation details"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Agent Allocation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agent\": \"{{agent_id}}\",\n  \"allocations\": [\n    {\n      \"type\": \"passenger\",\n      \"cabins\": [\n        {\n          \"cabin\": \"{{passenger_cabin_id_1}}\",\n          \"allocatedSeats\": 25\n        }\n      ]\n    },\n    {\n      \"type\": \"cargo\",\n      \"cabins\": [\n        {\n          \"cabin\": \"{{cargo_cabin_id_1}}\",\n          \"allocatedSeats\": 20\n        }\n      ]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}/agent-allocations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities",
+                "{{availability_id}}",
+                "agent-allocations"
+              ]
+            },
+            "description": "Create agent allocation record"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Agent Allocation",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"allocations\": [\n    {\n      \"type\": \"passenger\",\n      \"cabins\": [\n        {\n          \"cabin\": \"{{passenger_cabin_id_1}}\",\n          \"allocatedSeats\": 25\n        },\n        {\n          \"cabin\": \"{{passenger_cabin_id_2}}\",\n          \"allocatedSeats\": 15\n        }\n      ]\n    },\n    {\n      \"type\": \"cargo\",\n      \"cabins\": [\n        {\n          \"cabin\": \"{{cargo_cabin_id_1}}\",\n          \"allocatedSeats\": 20\n        }\n      ]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}/agent-allocations/{{allocation_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities",
+                "{{availability_id}}",
+                "agent-allocations",
+                "{{allocation_id}}"
+              ]
+            },
+            "description": "Update agent allocation quantities. Restores previous allocations and applies new ones."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Agent Allocation",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}/agent-allocations/{{allocation_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities",
+                "{{availability_id}}",
+                "agent-allocations",
+                "{{allocation_id}}"
+              ]
+            },
+            "description": "Delete agent allocation and restore seats back to availability pool."
+          },
+          "response": []
+        }
+      ],
+      "description": "Agent allocation management for distributing availability seats to travel agents"
     }
   ],
   "variable": [
@@ -587,219 +789,6 @@
       "key": "allocation_id",
       "value": "",
       "type": "string"
-    }
-  ],
-  "item": [
-    {
-      "name": "Agent Allocations",
-      "item": [
-        {
-          "name": "Get Availability Summary for Allocation",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}/agent-allocations/summary",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "trips",
-                "{{trip_id}}",
-                "availabilities",
-                "{{availability_id}}",
-                "agent-allocations",
-                "summary"
-              ]
-            },
-            "description": "Get available capacity summary for allocating to agents. Shows total availability and remaining capacity per cabin."
-          },
-          "response": []
-        },
-        {
-          "name": "List Agent Allocations",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}/agent-allocations?page=1&limit=10",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "trips",
-                "{{trip_id}}",
-                "availabilities",
-                "{{availability_id}}",
-                "agent-allocations"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                }
-              ]
-            },
-            "description": "List all agent allocations for an availability with pagination."
-          },
-          "response": []
-        },
-        {
-          "name": "Get Agent Allocation by ID",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}/agent-allocations/{{allocation_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "trips",
-                "{{trip_id}}",
-                "availabilities",
-                "{{availability_id}}",
-                "agent-allocations",
-                "{{allocation_id}}"
-              ]
-            },
-            "description": "Get specific agent allocation details."
-          },
-          "response": []
-        },
-        {
-          "name": "Create Agent Allocation",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"agent\": \"{{agent_id}}\",\n  \"allocations\": [\n    {\n      \"type\": \"passenger\",\n      \"cabins\": [\n        {\n          \"cabin\": \"{{passenger_cabin_id_1}}\",\n          \"allocatedSeats\": 20\n        },\n        {\n          \"cabin\": \"{{passenger_cabin_id_2}}\",\n          \"allocatedSeats\": 10\n        }\n      ]\n    },\n    {\n      \"type\": \"cargo\",\n      \"cabins\": [\n        {\n          \"cabin\": \"{{cargo_cabin_id_1}}\",\n          \"allocatedSeats\": 15\n        }\n      ]\n    }\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}/agent-allocations",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "trips",
-                "{{trip_id}}",
-                "availabilities",
-                "{{availability_id}}",
-                "agent-allocations"
-              ]
-            },
-            "description": "Create a new agent allocation. Allocate specific quantities of seats to an agent across different cabin types."
-          },
-          "response": []
-        },
-        {
-          "name": "Update Agent Allocation",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"allocations\": [\n    {\n      \"type\": \"passenger\",\n      \"cabins\": [\n        {\n          \"cabin\": \"{{passenger_cabin_id_1}}\",\n          \"allocatedSeats\": 25\n        },\n        {\n          \"cabin\": \"{{passenger_cabin_id_2}}\",\n          \"allocatedSeats\": 15\n        }\n      ]\n    },\n    {\n      \"type\": \"cargo\",\n      \"cabins\": [\n        {\n          \"cabin\": \"{{cargo_cabin_id_1}}\",\n          \"allocatedSeats\": 20\n        }\n      ]\n    }\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}/agent-allocations/{{allocation_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "trips",
-                "{{trip_id}}",
-                "availabilities",
-                "{{availability_id}}",
-                "agent-allocations",
-                "{{allocation_id}}"
-              ]
-            },
-            "description": "Update agent allocation quantities. Restores previous allocations and applies new ones."
-          },
-          "response": []
-        },
-        {
-          "name": "Delete Agent Allocation",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}/agent-allocations/{{allocation_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "trips",
-                "{{trip_id}}",
-                "availabilities",
-                "{{availability_id}}",
-                "agent-allocations",
-                "{{allocation_id}}"
-              ]
-            },
-            "description": "Delete agent allocation and restore seats back to availability pool."
-          },
-          "response": []
-        }
-      ]
     }
   ]
 }
