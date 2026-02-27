@@ -1,6 +1,6 @@
 const mongoose = require("mongoose")
 
-const TRIP_STATUS = ["SCHEDULED", "OPEN", "CLOSED", "COMPLETED", "CANCELLED"]
+const TRIP_STATUS = ["SCHEDULED", "ONGOING", "COMPLETED"]
 
 const CreatorSchema = new mongoose.Schema(
   {
@@ -81,6 +81,7 @@ const tripSchema = new mongoose.Schema(
       enum: TRIP_STATUS,
       default: "SCHEDULED",
       index: true,
+      required: true,
     },
     remarks: String,
     // Promotion & Notes

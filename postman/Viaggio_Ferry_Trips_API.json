@@ -53,7 +53,7 @@
                 {
                   "key": "status",
                   "value": "",
-                  "description": "Filter by status: SCHEDULED, OPEN, CLOSED, COMPLETED, CANCELLED (optional)"
+                  "description": "Filter by status: SCHEDULED, ONGOING, COMPLETED (optional)"
                 },
                 {
                   "key": "ship",
@@ -191,7 +191,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"tripName\": \"Dubai to Muscat Express - Updated\",\n  \"status\": \"OPEN\",\n  \"remarks\": \"Updated with new information\"\n}"
+              "raw": "{\n  \"tripName\": \"Dubai to Muscat Express - Updated\",\n  \"status\": \"ONGOING\",\n  \"remarks\": \"Updated with new information\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/trips/{{trip_id}}",
