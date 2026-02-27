@@ -1,9 +1,6 @@
 const mongoose = require("mongoose")
 
 const AVAILABILITY_TYPE = ["passenger", "cargo", "vehicle"]
-const PASSENGER_CATEGORIES = ["first_class", "economy", "premium"]
-const CARGO_CATEGORIES = ["pallet", "container", "general_cargo"]
-const VEHICLE_CATEGORIES = ["car", "truck", "motorcycle", "bus"]
 
 const CreatorSchema = new mongoose.Schema(
   {
@@ -42,21 +39,19 @@ const tripAvailabilitySchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    // Cabin reference (passenger, cargo, or vehicle type)
+    cabin: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Cabin",
+      required: true,
+      index: true,
+    },
     // Availability type: passenger, cargo, or vehicle
     type: {
       type: String,
       enum: AVAILABILITY_TYPE,
       required: true,
       index: true,
-    },
-    // Category based on type
-    // For passenger: first_class, economy, premium
-    // For cargo: pallet, container, general_cargo
-    // For vehicle: car, truck, motorcycle, bus
-    category: {
-      type: String,
-      required: true,
-      trim: true,
     },
     // Number of seats/spots available
     seats: {
@@ -105,12 +100,9 @@ const tripAvailabilitySchema = new mongoose.Schema(
 tripAvailabilitySchema.index({ company: 1, trip: 1 })
 tripAvailabilitySchema.index({ company: 1, trip: 1, type: 1 })
 tripAvailabilitySchema.index({ company: 1, trip: 1, isDeleted: 1 })
-tripAvailabilitySchema.index({ trip: 1, type: 1, category: 1 }, { unique: false })
+tripAvailabilitySchema.index({ trip: 1, cabin: 1 }, { unique: false })
 
 module.exports = {
   TripAvailability: mongoose.model("TripAvailability", tripAvailabilitySchema),
   AVAILABILITY_TYPE,
-  PASSENGER_CATEGORIES,
-  CARGO_CATEGORIES,
-  VEHICLE_CATEGORIES,
 }

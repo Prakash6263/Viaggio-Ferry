@@ -291,7 +291,7 @@
                 {
                   "key": "search",
                   "value": "",
-                  "description": "Search by category (optional)"
+                  "description": "Search by cabin name (optional)"
                 }
               ]
             },
@@ -383,7 +383,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"type\": \"passenger\",\n  \"category\": \"first_class\",\n  \"seats\": 30,\n  \"remarks\": \"First class cabin availability\"\n}"
+              "raw": "{\n  \"type\": \"passenger\",\n  \"cabin\": \"{{cabin_id}}\",\n  \"seats\": 30,\n  \"remarks\": \"First class cabin availability\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities",
@@ -397,7 +397,7 @@
                 "availabilities"
               ]
             },
-            "description": "Create availability allocation. Seats cannot exceed remaining seats in trip. Automatically decreases trip's remaining seats.\n\nValid types and categories:\n- passenger: first_class, economy, premium\n- cargo: pallet, container, general_cargo\n- vehicle: car, truck, motorcycle, bus"
+            "description": "Create availability allocation. Seats cannot exceed remaining seats in trip. Automatically decreases trip's remaining seats.\n\nRequest body:\n- type: passenger, cargo, or vehicle\n- cabin: Cabin ObjectId (must match type)\n- seats: Number of seats/spots to allocate\n- remarks: Optional notes"
           },
           "response": []
         },
@@ -518,6 +518,11 @@
     },
     {
       "key": "availability_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cabin_id",
       "value": "",
       "type": "string"
     }

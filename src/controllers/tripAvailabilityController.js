@@ -1,7 +1,8 @@
 const createHttpError = require("http-errors")
 const mongoose = require("mongoose")
-const { TripAvailability, AVAILABILITY_TYPE, PASSENGER_CATEGORIES, CARGO_CATEGORIES, VEHICLE_CATEGORIES } = require("../models/TripAvailability")
+const { TripAvailability, AVAILABILITY_TYPE } = require("../models/TripAvailability")
 const { Trip } = require("../models/Trip")
+const { Cabin } = require("../models/Cabin")
 
 /**
  * Helper function to build actor object based on user role
@@ -74,7 +75,26 @@ const listTripAvailabilities = async (req, res, next) => {
     }
 
     if (search) {
-      query.category = { $regex: search, $options: "i" }
+      // Search in cabin name via cabin document
+      const cabins = await Cabin.find(
+        {
+          company: companyId,
+          name: { $regex: search, $options: "i" },
+          isDeleted: false,
+        },
+        { _id: 1 }
+      ).lean()
+
+      const cabinIds = cabins.map(c => c._id)
+      if (cabinIds.length === 0) {
+        // No matching cabins, return empty results
+        return res.json({
+          success: true,
+          data: [],
+          pagination: { page: pageNum, limit: limitNum, total: 0 },
+        })
+      }
+      query.cabin = { $in: cabinIds }
     }
 
     const pageNum = Math.max(1, parseInt(page))
@@ -83,6 +103,7 @@ const listTripAvailabilities = async (req, res, next) => {
 
     const [availabilities, total] = await Promise.all([
       TripAvailability.find(query)
+        .populate("cabin", "name type")
         .populate("allocatedAgent", "name email")
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -153,11 +174,11 @@ const createTripAvailability = async (req, res, next) => {
   try {
     const { companyId, user } = req
     const { tripId } = req.params
-    const { type, category, seats, remarks } = req.body
+    const { type, cabin, seats, remarks } = req.body
 
     // Validate required fields
-    if (!type || !category || seats === undefined) {
-      throw createHttpError(400, "Missing required fields: type, category, seats")
+    if (!type || !cabin || seats === undefined) {
+      throw createHttpError(400, "Missing required fields: type, cabin, seats")
     }
 
     // Validate type
@@ -165,16 +186,22 @@ const createTripAvailability = async (req, res, next) => {
       throw createHttpError(400, `Invalid type. Must be one of: ${AVAILABILITY_TYPE.join(", ")}`)
     }
 
-    // Validate category
-    const validCategories = getCategoryOptions(type)
-    if (!validCategories.includes(category)) {
-      throw createHttpError(400, `Invalid category for type ${type}. Must be one of: ${validCategories.join(", ")}`)
-    }
-
     // Validate seats
     const seatsNum = parseInt(seats)
     if (isNaN(seatsNum) || seatsNum < 1) {
       throw createHttpError(400, "Seats must be a positive number")
+    }
+
+    // Validate cabin exists and belongs to company and matches type
+    const cabinDoc = await Cabin.findOne({
+      _id: cabin,
+      company: companyId,
+      type: type,
+      isDeleted: false,
+    })
+
+    if (!cabinDoc) {
+      throw createHttpError(404, `Cabin not found or type mismatch for type: ${type}`)
     }
 
     // Get trip and validate it exists and belongs to company
@@ -211,7 +238,7 @@ const createTripAvailability = async (req, res, next) => {
       company: companyId,
       trip: tripId,
       type,
-      category,
+      cabin,
       seats: seatsNum,
       allocatedSeats: 0,
       createdBy: buildActor(user),
