@@ -1,8 +1,8 @@
 {
   "info": {
     "_postman_id": "viaggio-ferry-trips-api",
-    "name": "Viaggio Ferry - Trips API",
-    "description": "Complete CRUD API collection for Ferry Trip Management\n\n## Features\n- List trips with pagination and filtering\n- Create new ferry trips\n- Get trip details\n- Update trip information\n- Delete trips (soft delete)\n- View trip availability (remaining cargo, vehicle, passenger seats)\n\n## Authentication\nAll endpoints require a valid JWT token in the Authorization header.\n\n## Base URL\n{{base_url}}/api\n\n## Environment Variables Required\n- base_url: Your API base URL (e.g., http://localhost:5000)\n- token: Valid JWT authentication token\n- company_id: Company ID for company-level isolation\n- ship_id: Ship ID for testing\n- port_id: Port ID for testing\n- promotion_id: Promotion ID for testing\n- trip_id: Trip ID for testing",
+    "name": "Viaggio Ferry - Trips & Availabilities API",
+    "description": "Complete CRUD API collection for Ferry Trip and Availability Management",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -26,7 +26,7 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/trips?page=1&limit=10&search=&status=&ship=&departurePort=&arrivalPort=",
+              "raw": "{{base_url}}/api/trips?page=1&limit=10",
               "host": [
                 "{{base_url}}"
               ],
@@ -37,42 +37,15 @@
               "query": [
                 {
                   "key": "page",
-                  "value": "1",
-                  "description": "Page number for pagination (default: 1)"
+                  "value": "1"
                 },
                 {
                   "key": "limit",
-                  "value": "10",
-                  "description": "Number of trips per page (default: 10, max: 100)"
-                },
-                {
-                  "key": "search",
-                  "value": "",
-                  "description": "Search by trip name, code, or remarks (optional)"
-                },
-                {
-                  "key": "status",
-                  "value": "",
-                  "description": "Filter by status: SCHEDULED, ONGOING, COMPLETED (optional)"
-                },
-                {
-                  "key": "ship",
-                  "value": "",
-                  "description": "Filter by ship ID (optional)"
-                },
-                {
-                  "key": "departurePort",
-                  "value": "",
-                  "description": "Filter by departure port ID (optional)"
-                },
-                {
-                  "key": "arrivalPort",
-                  "value": "",
-                  "description": "Filter by arrival port ID (optional)"
+                  "value": "10"
                 }
               ]
             },
-            "description": "Get a paginated list of all trips for the company with optional filtering"
+            "description": "Get list of all trips with pagination"
           },
           "response": []
         },
@@ -103,39 +76,7 @@
                 "{{trip_id}}"
               ]
             },
-            "description": "Get detailed information about a specific trip"
-          },
-          "response": []
-        },
-        {
-          "name": "Get Trip Availability",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/trips/{{trip_id}}/availability",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "trips",
-                "{{trip_id}}",
-                "availability"
-              ]
-            },
-            "description": "Get remaining capacity for passenger seats, cargo spots, and vehicle spots"
+            "description": "Get specific trip details"
           },
           "response": []
         },
@@ -157,7 +98,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"tripName\": \"Dubai to Muscat Express\",\n  \"tripCode\": \"DXB-MSC-001\",\n  \"ship\": \"{{ship_id}}\",\n  \"departurePort\": \"{{port_id}}\",\n  \"arrivalPort\": \"{{arrival_port_id}}\",\n  \"departureDateTime\": \"2024-03-15T10:00:00Z\",\n  \"arrivalDateTime\": \"2024-03-15T14:30:00Z\",\n  \"status\": \"SCHEDULED\",\n  \"bookingOpeningDate\": \"2024-02-15T00:00:00Z\",\n  \"bookingClosingDate\": \"2024-03-15T08:00:00Z\",\n  \"checkInOpeningDate\": \"2024-03-15T07:00:00Z\",\n  \"checkInClosingDate\": \"2024-03-15T09:30:00Z\",\n  \"boardingClosingDate\": \"2024-03-15T09:45:00Z\",\n  \"remainingPassengerSeats\": 100,\n  \"remainingCargoSeats\": 50,\n  \"remainingVehicleSeats\": 25,\n  \"promotion\": \"{{promotion_id}}\",\n  \"remarks\": \"Peak season trip with full capacity expected\"\n}"
+              "raw": "{\n  \"tripName\": \"Dubai to Muscat Express\",\n  \"tripCode\": \"DXB-MSC-001\",\n  \"ship\": \"{{ship_id}}\",\n  \"departurePort\": \"{{port_id}}\",\n  \"arrivalPort\": \"{{arrival_port_id}}\",\n  \"departureDateTime\": \"2024-03-15T10:00:00Z\",\n  \"arrivalDateTime\": \"2024-03-15T14:30:00Z\",\n  \"status\": \"SCHEDULED\",\n  \"bookingOpeningDate\": \"2024-02-15T00:00:00Z\",\n  \"bookingClosingDate\": \"2024-03-15T08:00:00Z\",\n  \"checkInOpeningDate\": \"2024-03-15T07:00:00Z\",\n  \"checkInClosingDate\": \"2024-03-15T09:30:00Z\",\n  \"boardingClosingDate\": \"2024-03-15T09:45:00Z\",\n  \"remainingPassengerSeats\": 100,\n  \"remainingCargoSeats\": 50,\n  \"remainingVehicleSeats\": 25\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/trips",
@@ -169,7 +110,7 @@
                 "trips"
               ]
             },
-            "description": "Create a new ferry trip with all details. All date fields can be updated individually after creation."
+            "description": "Create a new ferry trip"
           },
           "response": []
         },
@@ -191,7 +132,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"tripName\": \"Dubai to Muscat Express - Updated\",\n  \"status\": \"ONGOING\",\n  \"remainingPassengerSeats\": 85,\n  \"remainingCargoSeats\": 40,\n  \"remainingVehicleSeats\": 20,\n  \"remarks\": \"Updated capacity after bookings\"\n}"
+              "raw": "{\n  \"tripName\": \"Dubai to Muscat Express - Updated\",\n  \"status\": \"ONGOING\",\n  \"remainingPassengerSeats\": 85,\n  \"remainingCargoSeats\": 40,\n  \"remainingVehicleSeats\": 20\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/trips/{{trip_id}}",
@@ -204,7 +145,7 @@
                 "{{trip_id}}"
               ]
             },
-            "description": "Update an existing trip. Send only the fields you want to update."
+            "description": "Update trip details"
           },
           "response": []
         },
@@ -235,12 +176,12 @@
                 "{{trip_id}}"
               ]
             },
-            "description": "Soft delete a trip (marks as deleted, does not remove from database)"
+            "description": "Delete trip (soft delete)"
           },
           "response": []
         }
       ],
-      "description": "Trip CRUD operations for ferry management"
+      "description": "Trip CRUD operations"
     },
     {
       "name": "Trip Availabilities",
@@ -262,7 +203,7 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities?page=1&limit=10&type=passenger&search=",
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities?page=1&limit=10",
               "host": [
                 "{{base_url}}"
               ],
@@ -275,27 +216,15 @@
               "query": [
                 {
                   "key": "page",
-                  "value": "1",
-                  "description": "Page number for pagination"
+                  "value": "1"
                 },
                 {
                   "key": "limit",
-                  "value": "10",
-                  "description": "Records per page"
-                },
-                {
-                  "key": "type",
-                  "value": "passenger",
-                  "description": "Filter by type: passenger, cargo, vehicle (optional)"
-                },
-                {
-                  "key": "search",
-                  "value": "",
-                  "description": "Search by cabin name (optional)"
+                  "value": "10"
                 }
               ]
             },
-            "description": "List all availabilities for a specific trip"
+            "description": "List all availabilities for a trip"
           },
           "response": []
         },
@@ -328,7 +257,7 @@
                 "summary"
               ]
             },
-            "description": "Get a summary of total, allocated, and remaining capacity by type"
+            "description": "Get availability summary for trip"
           },
           "response": []
         },
@@ -361,12 +290,12 @@
                 "{{availability_id}}"
               ]
             },
-            "description": "Get details of a specific availability record"
+            "description": "Get specific availability details"
           },
           "response": []
         },
         {
-          "name": "Create Availabilities - All Types in Single Request",
+          "name": "Create Availabilities - All Types",
           "request": {
             "method": "POST",
             "header": [
@@ -383,7 +312,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"availabilities\": [\n    {\n      \"type\": \"passenger\",\n      \"cabins\": [\n        {\n          \"cabin\": \"{{passenger_cabin_id_1}}\",\n          \"seats\": 30\n        },\n        {\n          \"cabin\": \"{{passenger_cabin_id_2}}\",\n          \"seats\": 25\n        },\n        {\n          \"cabin\": \"{{passenger_cabin_id_3}}\",\n          \"seats\": 20\n        }\n      ]\n    },\n    {\n      \"type\": \"cargo\",\n      \"cabins\": [\n        {\n          \"cabin\": \"{{cargo_cabin_id_1}}\",\n          \"seats\": 50\n        },\n        {\n          \"cabin\": \"{{cargo_cabin_id_2}}\",\n          \"seats\": 30\n        }\n      ]\n    },\n    {\n      \"type\": \"vehicle\",\n      \"cabins\": [\n        {\n          \"cabin\": \"{{vehicle_cabin_id_1}}\",\n          \"seats\": 20\n        },\n        {\n          \"cabin\": \"{{vehicle_cabin_id_2}}\",\n          \"seats\": 15\n        }\n      ]\n    }\n  ]\n}"
+              "raw": "{\n  \"availabilities\": [\n    {\n      \"type\": \"passenger\",\n      \"cabins\": [\n        {\n          \"cabin\": \"{{passenger_cabin_id_1}}\",\n          \"seats\": 30\n        },\n        {\n          \"cabin\": \"{{passenger_cabin_id_2}}\",\n          \"seats\": 25\n        }\n      ]\n    },\n    {\n      \"type\": \"cargo\",\n      \"cabins\": [\n        {\n          \"cabin\": \"{{cargo_cabin_id_1}}\",\n          \"seats\": 50\n        }\n      ]\n    },\n    {\n      \"type\": \"vehicle\",\n      \"cabins\": [\n        {\n          \"cabin\": \"{{vehicle_cabin_id_1}}\",\n          \"seats\": 20\n        }\n      ]\n    }\n  ]\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities",
@@ -397,7 +326,7 @@
                 "availabilities"
               ]
             },
-            "description": "Create availabilities for all three types (passenger, cargo, vehicle) in a single request. Each type can have multiple cabins. All three availability records are created in one transaction with automatic seat tracking."
+            "description": "Create all three types of availabilities in single request"
           },
           "response": []
         },
@@ -419,7 +348,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"availabilities\": [\n    {\n      \"type\": \"passenger\",\n      \"cabins\": [\n        {\n          \"cabin\": \"{{cabin_id_1}}\",\n          \"seats\": 30\n        },\n        {\n          \"cabin\": \"{{cabin_id_2}}\",\n          \"seats\": 25\n        }\n      ]\n    }\n  ]\n}"
+              "raw": "{\n  \"availabilities\": [\n    {\n      \"type\": \"passenger\",\n      \"cabins\": [\n        {\n          \"cabin\": \"{{passenger_cabin_id_1}}\",\n          \"seats\": 30\n        }\n      ]\n    }\n  ]\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities",
@@ -433,7 +362,7 @@
                 "availabilities"
               ]
             },
-            "description": "Create passenger availability with multiple cabins. Send as array with single availability object."
+            "description": "Create passenger availability"
           },
           "response": []
         },
@@ -469,7 +398,7 @@
                 "availabilities"
               ]
             },
-            "description": "Create cargo availability with multiple cargo cabins."
+            "description": "Create cargo availability"
           },
           "response": []
         },
@@ -491,7 +420,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"availabilities\": [\n    {\n      \"type\": \"vehicle\",\n      \"cabins\": [\n        {\n          \"cabin\": \"{{vehicle_cabin_id_1}}\",\n          \"seats\": 20\n        },\n        {\n          \"cabin\": \"{{vehicle_cabin_id_2}}\",\n          \"seats\": 15\n        }\n      ]\n    }\n  ]\n}"
+              "raw": "{\n  \"availabilities\": [\n    {\n      \"type\": \"vehicle\",\n      \"cabins\": [\n        {\n          \"cabin\": \"{{vehicle_cabin_id_1}}\",\n          \"seats\": 20\n        }\n      ]\n    }\n  ]\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities",
@@ -505,10 +434,10 @@
                 "availabilities"
               ]
             },
-            "description": "Create vehicle availability with multiple vehicle cabins."
+            "description": "Create vehicle availability"
           },
           "response": []
-        }
+        },
         {
           "name": "Update Availability",
           "request": {
@@ -542,7 +471,7 @@
                 "{{availability_id}}"
               ]
             },
-            "description": "Update availability record with new cabins and seat allocations. Validates total seats against remaining. If seats increase, validates capacity; if decrease, restores capacity to trip."
+            "description": "Update availability record"
           },
           "response": []
         },
@@ -575,12 +504,12 @@
                 "{{availability_id}}"
               ]
             },
-            "description": "Delete availability record. Automatically restores seats back to trip's remaining seats."
+            "description": "Delete availability record"
           },
           "response": []
         }
       ],
-      "description": "Manage trip availabilities - allocate passengers, cargo, and vehicle capacities with automatic seat tracking. Create separate availability records for each type (passenger, cargo, vehicle), each can have multiple cabins with different seat counts."
+      "description": "Trip availability management for passenger, cargo, and vehicle allocations"
     }
   ],
   "variable": [
@@ -630,7 +559,27 @@
       "type": "string"
     },
     {
-      "key": "cabin_id",
+      "key": "passenger_cabin_id_1",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "passenger_cabin_id_2",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cargo_cabin_id_1",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "vehicle_cabin_id_1",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "agent_id",
       "value": "",
       "type": "string"
     }
