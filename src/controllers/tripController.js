@@ -338,6 +338,13 @@ const createTrip = async (req, res, next) => {
       throw createHttpError(400, "Trip code already exists for this company")
     }
 
+    // Calculate remaining seats from ship capacity
+    const shipCapacity = {
+      passenger: shipDoc.passengerCapacity.reduce((sum, cap) => sum + (cap.seats || 0), 0),
+      cargo: shipDoc.cargoCapacity.reduce((sum, cap) => sum + (cap.spots || 0), 0),
+      vehicle: shipDoc.vehicleCapacity.reduce((sum, cap) => sum + (cap.spots || 0), 0),
+    }
+
     // Build createdBy object
     const createdBy = buildActor(user)
 
@@ -352,6 +359,10 @@ const createTrip = async (req, res, next) => {
       departureDateTime: new Date(departureDateTime),
       arrivalDateTime: new Date(arrivalDateTime),
       status: status.toUpperCase(),
+      // Auto-calculate remaining seats from ship capacity
+      remainingPassengerSeats: shipCapacity.passenger,
+      remainingCargoSeats: shipCapacity.cargo,
+      remainingVehicleSeats: shipCapacity.vehicle,
       createdBy,
     }
 

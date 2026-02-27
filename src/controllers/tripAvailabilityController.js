@@ -3,6 +3,7 @@ const mongoose = require("mongoose")
 const { TripAvailability, AVAILABILITY_TYPE } = require("../models/TripAvailability")
 const { Trip } = require("../models/Trip")
 const { Cabin } = require("../models/Cabin")
+const { Ship } = require("../models/Ship")
 
 function buildActor(user) {
   if (!user) {
@@ -109,6 +110,10 @@ const createTripAvailability = async (req, res, next) => {
     const trip = await Trip.findOne({ _id: tripId, company: companyId, isDeleted: false })
     if (!trip) throw createHttpError(404, "Trip not found")
 
+    // Get the ship to validate cabin capacities
+    const ship = await Ship.findOne({ _id: trip.ship, company: companyId, isDeleted: false })
+    if (!ship) throw createHttpError(404, "Ship not found for this trip")
+
     const createdAvailabilities = []
 
     for (const availability of availabilities) {
@@ -124,6 +129,23 @@ const createTripAvailability = async (req, res, next) => {
       if (!AVAILABILITY_TYPE.includes(type)) {
         throw createHttpError(400, `Invalid type: ${type}. Must be one of: ${AVAILABILITY_TYPE.join(", ")}`)
       }
+
+      // Get ship's capacity array for this type
+      let shipCapacityArray = []
+      if (type === "passenger") {
+        shipCapacityArray = ship.passengerCapacity || []
+      } else if (type === "cargo") {
+        shipCapacityArray = ship.cargoCapacity || []
+      } else if (type === "vehicle") {
+        shipCapacityArray = ship.vehicleCapacity || []
+      }
+
+      // Create a map of cabin ID to capacity for quick lookup
+      const shipCapacityMap = {}
+      shipCapacityArray.forEach(cap => {
+        const capacityField = type === "passenger" ? "seats" : "spots"
+        shipCapacityMap[cap.cabinId.toString()] = cap[capacityField] || 0
+      })
 
       let remainingSeats = 0
       if (type === "passenger") {
@@ -156,14 +178,24 @@ const createTripAvailability = async (req, res, next) => {
           throw createHttpError(400, `Seats must be a positive number for cabin ${cabinDoc.name}`)
         }
 
+        // VALIDATION 1: Check if this cabin allocation exceeds ship's cabin capacity
+        const shipCabinCapacity = shipCapacityMap[cabin.toString()] || 0
+        if (seatsNum > shipCabinCapacity) {
+          throw createHttpError(
+            400,
+            `Cannot allocate ${seatsNum} ${type} seats to cabin "${cabinDoc.name}". Ship's ${cabinDoc.name} capacity is only ${shipCabinCapacity} ${type === "passenger" ? "seats" : "spots"}.`
+          )
+        }
+
         totalSeats += seatsNum
         processedCabins.push({ cabin, seats: seatsNum, allocatedSeats: 0 })
       }
 
+      // VALIDATION 2: Check if total allocation exceeds trip's remaining seats
       if (totalSeats > remainingSeats) {
         throw createHttpError(
           400,
-          `Cannot allocate ${totalSeats} ${type} seats. Only ${remainingSeats} remaining seats available for ${type}.`
+          `Cannot allocate ${totalSeats} ${type} seats. Only ${remainingSeats} remaining seats available for ${type} on this trip.`
         )
       }
 
@@ -226,9 +258,30 @@ const updateTripAvailability = async (req, res, next) => {
 
     if (!availability) throw createHttpError(404, "Availability not found")
 
+    // Get the ship to validate cabin capacities
+    const ship = await Ship.findOne({ _id: trip.ship, company: companyId, isDeleted: false })
+    if (!ship) throw createHttpError(404, "Ship not found for this trip")
+
     const oldTotalSeats = availability.cabins.reduce((sum, c) => sum + c.seats, 0)
 
     if (cabins !== undefined && Array.isArray(cabins) && cabins.length > 0) {
+      // Get ship's capacity array for this type
+      let shipCapacityArray = []
+      if (availability.type === "passenger") {
+        shipCapacityArray = ship.passengerCapacity || []
+      } else if (availability.type === "cargo") {
+        shipCapacityArray = ship.cargoCapacity || []
+      } else if (availability.type === "vehicle") {
+        shipCapacityArray = ship.vehicleCapacity || []
+      }
+
+      // Create a map of cabin ID to capacity for quick lookup
+      const shipCapacityMap = {}
+      shipCapacityArray.forEach(cap => {
+        const capacityField = availability.type === "passenger" ? "seats" : "spots"
+        shipCapacityMap[cap.cabinId.toString()] = cap[capacityField] || 0
+      })
+
       const processedCabins = []
       let newTotalSeats = 0
 
@@ -249,6 +302,15 @@ const updateTripAvailability = async (req, res, next) => {
         const seatsNum = parseInt(seats)
         if (isNaN(seatsNum) || seatsNum < 1) {
           throw createHttpError(400, `Seats must be a positive number for cabin ${cabinDoc.name}`)
+        }
+
+        // VALIDATION: Check if this cabin allocation exceeds ship's cabin capacity
+        const shipCabinCapacity = shipCapacityMap[cabin.toString()] || 0
+        if (seatsNum > shipCabinCapacity) {
+          throw createHttpError(
+            400,
+            `Cannot allocate ${seatsNum} ${availability.type} seats to cabin "${cabinDoc.name}". Ship's ${cabinDoc.name} capacity is only ${shipCabinCapacity} ${availability.type === "passenger" ? "seats" : "spots"}.`
+          )
         }
 
         newTotalSeats += seatsNum
