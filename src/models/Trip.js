@@ -75,7 +75,33 @@ const tripSchema = new mongoose.Schema(
     checkInOpeningDate: Date,
     checkInClosingDate: Date,
     boardingClosingDate: Date,
-    // Availability - Remaining Seats
+    // Per-Cabin Capacity Tracking
+    tripCapacityDetails: [
+      {
+        cabin: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Cabin",
+          required: true,
+        },
+        type: {
+          type: String,
+          enum: ["passenger", "cargo", "vehicle"],
+          required: true,
+        },
+        totalCapacity: {
+          type: Number,
+          required: true,
+          min: 1,
+        },
+        remainingCapacity: {
+          type: Number,
+          required: true,
+          min: 0,
+        },
+        _id: false,
+      },
+    ],
+    // Availability - Remaining Seats (aggregate totals for quick access)
     remainingPassengerSeats: {
       type: Number,
       default: 0,

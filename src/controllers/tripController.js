@@ -345,6 +345,39 @@ const createTrip = async (req, res, next) => {
       vehicle: shipDoc.vehicleCapacity.reduce((sum, cap) => sum + (cap.spots || 0), 0),
     }
 
+    // Build per-cabin capacity tracking array
+    const tripCapacityDetails = []
+    
+    // Add passenger cabins
+    shipDoc.passengerCapacity.forEach(cap => {
+      tripCapacityDetails.push({
+        cabin: cap.cabinId,
+        type: "passenger",
+        totalCapacity: cap.seats || 0,
+        remainingCapacity: cap.seats || 0,
+      })
+    })
+    
+    // Add cargo cabins
+    shipDoc.cargoCapacity.forEach(cap => {
+      tripCapacityDetails.push({
+        cabin: cap.cabinId,
+        type: "cargo",
+        totalCapacity: cap.spots || 0,
+        remainingCapacity: cap.spots || 0,
+      })
+    })
+    
+    // Add vehicle cabins
+    shipDoc.vehicleCapacity.forEach(cap => {
+      tripCapacityDetails.push({
+        cabin: cap.cabinId,
+        type: "vehicle",
+        totalCapacity: cap.spots || 0,
+        remainingCapacity: cap.spots || 0,
+      })
+    })
+
     // Build createdBy object
     const createdBy = buildActor(user)
 
@@ -363,6 +396,8 @@ const createTrip = async (req, res, next) => {
       remainingPassengerSeats: shipCapacity.passenger,
       remainingCargoSeats: shipCapacity.cargo,
       remainingVehicleSeats: shipCapacity.vehicle,
+      // Per-cabin capacity tracking
+      tripCapacityDetails,
       createdBy,
     }
 

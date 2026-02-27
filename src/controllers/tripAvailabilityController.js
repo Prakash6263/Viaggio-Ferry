@@ -210,12 +210,24 @@ const createTripAvailability = async (req, res, next) => {
       const availabilityRecord = new TripAvailability(availabilityData)
       await availabilityRecord.save()
 
+      // Update trip's remaining seats for both aggregate and per-cabin tracking
       if (type === "passenger") {
         trip.remainingPassengerSeats -= totalSeats
       } else if (type === "cargo") {
         trip.remainingCargoSeats -= totalSeats
       } else if (type === "vehicle") {
         trip.remainingVehicleSeats -= totalSeats
+      }
+
+      // Update per-cabin remaining capacity
+      for (const cabinEntry of cabins) {
+        const { cabin, seats } = cabinEntry
+        const tripCapacityDetail = trip.tripCapacityDetails.find(
+          detail => detail.cabin.toString() === cabin.toString()
+        )
+        if (tripCapacityDetail) {
+          tripCapacityDetail.remainingCapacity -= parseInt(seats)
+        }
       }
 
       createdAvailabilities.push(availabilityRecord)
@@ -343,6 +355,22 @@ const updateTripAvailability = async (req, res, next) => {
         } else if (availability.type === "vehicle") {
           trip.remainingVehicleSeats -= difference
         }
+
+        // Update per-cabin remaining capacity for new cabins
+        for (const cabinEntry of cabins) {
+          const { cabin, seats } = cabinEntry
+          const oldCabin = availability.cabins.find(c => c.cabin.toString() === cabin.toString())
+          const oldSeats = oldCabin ? oldCabin.seats : 0
+          const newSeats = parseInt(seats)
+          const seatDifference = newSeats - oldSeats
+
+          const tripCapacityDetail = trip.tripCapacityDetails.find(
+            detail => detail.cabin.toString() === cabin.toString()
+          )
+          if (tripCapacityDetail) {
+            tripCapacityDetail.remainingCapacity -= seatDifference
+          }
+        }
       } else if (newTotalSeats < oldTotalSeats) {
         const difference = oldTotalSeats - newTotalSeats
 
@@ -352,6 +380,22 @@ const updateTripAvailability = async (req, res, next) => {
           trip.remainingCargoSeats += difference
         } else if (availability.type === "vehicle") {
           trip.remainingVehicleSeats += difference
+        }
+
+        // Update per-cabin remaining capacity for reduced allocations
+        for (const cabinEntry of cabins) {
+          const { cabin, seats } = cabinEntry
+          const oldCabin = availability.cabins.find(c => c.cabin.toString() === cabin.toString())
+          const oldSeats = oldCabin ? oldCabin.seats : 0
+          const newSeats = parseInt(seats)
+          const seatDifference = oldSeats - newSeats
+
+          const tripCapacityDetail = trip.tripCapacityDetails.find(
+            detail => detail.cabin.toString() === cabin.toString()
+          )
+          if (tripCapacityDetail) {
+            tripCapacityDetail.remainingCapacity += seatDifference
+          }
         }
       }
 
@@ -407,6 +451,16 @@ const deleteTripAvailability = async (req, res, next) => {
       trip.remainingCargoSeats += totalSeats
     } else if (availability.type === "vehicle") {
       trip.remainingVehicleSeats += totalSeats
+    }
+
+    // Restore per-cabin remaining capacity
+    for (const cabin of availability.cabins) {
+      const tripCapacityDetail = trip.tripCapacityDetails.find(
+        detail => detail.cabin.toString() === cabin.cabin.toString()
+      )
+      if (tripCapacityDetail) {
+        tripCapacityDetail.remainingCapacity += cabin.seats
+      }
     }
 
     trip.updatedBy = buildActor(user)
