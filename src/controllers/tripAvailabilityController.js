@@ -29,18 +29,6 @@ function buildActor(user) {
 }
 
 /**
- * Get category options based on type
- */
-function getCategoryOptions(type) {
-  const categoryMap = {
-    passenger: PASSENGER_CATEGORIES,
-    cargo: CARGO_CATEGORIES,
-    vehicle: VEHICLE_CATEGORIES,
-  }
-  return categoryMap[type] || []
-}
-
-/**
  * List Trip Availabilities
  */
 const listTripAvailabilities = async (req, res, next) => {
@@ -91,10 +79,10 @@ const listTripAvailabilities = async (req, res, next) => {
         return res.json({
           success: true,
           data: [],
-          pagination: { page: pageNum, limit: limitNum, total: 0 },
+          pagination: { page: parseInt(page), limit: parseInt(limit), total: 0 },
         })
       }
-      query.cabin = { $in: cabinIds }
+      query["cabins.cabin"] = { $in: cabinIds }
     }
 
     const pageNum = Math.max(1, parseInt(page))
@@ -103,7 +91,7 @@ const listTripAvailabilities = async (req, res, next) => {
 
     const [availabilities, total] = await Promise.all([
       TripAvailability.find(query)
-        .populate("cabin", "name type")
+        .populate("cabins.cabin", "name type")
         .populate("allocatedAgent", "name email")
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -151,7 +139,9 @@ const getTripAvailabilityById = async (req, res, next) => {
       company: companyId,
       trip: tripId,
       isDeleted: false,
-    }).populate("allocatedAgent", "name email")
+    })
+      .populate("cabins.cabin", "name type")
+      .populate("allocatedAgent", "name email")
 
     if (!availability) {
       throw createHttpError(404, "Availability not found")
@@ -167,41 +157,26 @@ const getTripAvailabilityById = async (req, res, next) => {
 }
 
 /**
- * Create Trip Availability
- * Validates seats don't exceed remaining seats and decreases trip's remaining seats
+ * Create Trip Availability with multiple cabins
+ * Validates total seats don't exceed remaining seats and decreases trip's remaining seats
  */
 const createTripAvailability = async (req, res, next) => {
   try {
     const { companyId, user } = req
     const { tripId } = req.params
-    const { type, cabin, seats, remarks } = req.body
+    const { type, cabins, remarks } = req.body
 
     // Validate required fields
-    if (!type || !cabin || seats === undefined) {
-      throw createHttpError(400, "Missing required fields: type, cabin, seats")
+    if (!type || !cabins || !Array.isArray(cabins) || cabins.length === 0) {
+      throw createHttpError(
+        400,
+        "Missing required fields: type, cabins (array). Cabins array must contain at least one entry."
+      )
     }
 
     // Validate type
     if (!AVAILABILITY_TYPE.includes(type)) {
       throw createHttpError(400, `Invalid type. Must be one of: ${AVAILABILITY_TYPE.join(", ")}`)
-    }
-
-    // Validate seats
-    const seatsNum = parseInt(seats)
-    if (isNaN(seatsNum) || seatsNum < 1) {
-      throw createHttpError(400, "Seats must be a positive number")
-    }
-
-    // Validate cabin exists and belongs to company and matches type
-    const cabinDoc = await Cabin.findOne({
-      _id: cabin,
-      company: companyId,
-      type: type,
-      isDeleted: false,
-    })
-
-    if (!cabinDoc) {
-      throw createHttpError(404, `Cabin not found or type mismatch for type: ${type}`)
     }
 
     // Get trip and validate it exists and belongs to company
@@ -225,11 +200,44 @@ const createTripAvailability = async (req, res, next) => {
       remainingSeats = trip.remainingVehicleSeats
     }
 
-    // Validate that requested seats don't exceed remaining seats
-    if (seatsNum > remainingSeats) {
+    // Validate and process each cabin
+    const processedCabins = []
+    let totalSeats = 0
+
+    for (const cabinEntry of cabins) {
+      const { cabin, seats } = cabinEntry
+
+      // Validate cabin exists and belongs to company and matches type
+      const cabinDoc = await Cabin.findOne({
+        _id: cabin,
+        company: companyId,
+        type: type,
+        isDeleted: false,
+      })
+
+      if (!cabinDoc) {
+        throw createHttpError(404, `Cabin not found or type mismatch for type: ${type}`)
+      }
+
+      // Validate seats
+      const seatsNum = parseInt(seats)
+      if (isNaN(seatsNum) || seatsNum < 1) {
+        throw createHttpError(400, `Seats must be a positive number for cabin ${cabinDoc.name}`)
+      }
+
+      totalSeats += seatsNum
+      processedCabins.push({
+        cabin,
+        seats: seatsNum,
+        allocatedSeats: 0,
+      })
+    }
+
+    // Validate that total requested seats don't exceed remaining seats
+    if (totalSeats > remainingSeats) {
       throw createHttpError(
         400,
-        `Cannot allocate ${seatsNum} ${type} seats. Only ${remainingSeats} remaining seats available for ${type}.`
+        `Cannot allocate ${totalSeats} ${type} seats. Only ${remainingSeats} remaining seats available for ${type}.`
       )
     }
 
@@ -238,9 +246,7 @@ const createTripAvailability = async (req, res, next) => {
       company: companyId,
       trip: tripId,
       type,
-      cabin,
-      seats: seatsNum,
-      allocatedSeats: 0,
+      cabins: processedCabins,
       createdBy: buildActor(user),
     }
 
@@ -254,19 +260,20 @@ const createTripAvailability = async (req, res, next) => {
     // Decrease remaining seats in trip
     const updateData = {}
     if (type === "passenger") {
-      updateData.remainingPassengerSeats = Math.max(0, trip.remainingPassengerSeats - seatsNum)
+      updateData.remainingPassengerSeats = Math.max(0, trip.remainingPassengerSeats - totalSeats)
     } else if (type === "cargo") {
-      updateData.remainingCargoSeats = Math.max(0, trip.remainingCargoSeats - seatsNum)
+      updateData.remainingCargoSeats = Math.max(0, trip.remainingCargoSeats - totalSeats)
     } else if (type === "vehicle") {
-      updateData.remainingVehicleSeats = Math.max(0, trip.remainingVehicleSeats - seatsNum)
+      updateData.remainingVehicleSeats = Math.max(0, trip.remainingVehicleSeats - totalSeats)
     }
 
     updateData.updatedBy = buildActor(user)
-
     await Trip.findByIdAndUpdate(tripId, updateData)
 
     // Populate before responding
-    const savedAvailability = await TripAvailability.findById(availability._id).populate("allocatedAgent", "name email")
+    const savedAvailability = await TripAvailability.findById(availability._id)
+      .populate("cabins.cabin", "name type")
+      .populate("allocatedAgent", "name email")
 
     res.status(201).json({
       success: true,
@@ -280,13 +287,13 @@ const createTripAvailability = async (req, res, next) => {
 
 /**
  * Update Trip Availability
- * Handles seat updates while maintaining remaining seats constraint
+ * Handles cabin and seat updates while maintaining remaining seats constraint
  */
 const updateTripAvailability = async (req, res, next) => {
   try {
     const { companyId, user } = req
     const { tripId, availabilityId } = req.params
-    const { seats, allocatedSeats, allocatedAgent, remarks } = req.body
+    const { cabins, allocatedAgent, remarks } = req.body
 
     // Validate trip exists
     const trip = await Trip.findOne({
@@ -311,21 +318,47 @@ const updateTripAvailability = async (req, res, next) => {
       throw createHttpError(404, "Availability not found")
     }
 
-    const oldSeats = availability.seats
-    let newSeats = oldSeats
+    // Calculate old total seats
+    const oldTotalSeats = availability.cabins.reduce((sum, c) => sum + c.seats, 0)
 
-    // Handle seats update
-    if (seats !== undefined) {
-      const seatsNum = parseInt(seats)
-      if (isNaN(seatsNum) || seatsNum < 1) {
-        throw createHttpError(400, "Seats must be a positive number")
+    // Handle cabins update
+    if (cabins !== undefined && Array.isArray(cabins) && cabins.length > 0) {
+      // Validate and process new cabins
+      const processedCabins = []
+      let newTotalSeats = 0
+
+      for (const cabinEntry of cabins) {
+        const { cabin, seats } = cabinEntry
+
+        // Validate cabin exists and belongs to company and matches type
+        const cabinDoc = await Cabin.findOne({
+          _id: cabin,
+          company: companyId,
+          type: availability.type,
+          isDeleted: false,
+        })
+
+        if (!cabinDoc) {
+          throw createHttpError(404, `Cabin not found or type mismatch for type: ${availability.type}`)
+        }
+
+        // Validate seats
+        const seatsNum = parseInt(seats)
+        if (isNaN(seatsNum) || seatsNum < 1) {
+          throw createHttpError(400, `Seats must be a positive number for cabin ${cabinDoc.name}`)
+        }
+
+        newTotalSeats += seatsNum
+        processedCabins.push({
+          cabin,
+          seats: seatsNum,
+          allocatedSeats: cabinEntry.allocatedSeats || 0,
+        })
       }
 
-      newSeats = seatsNum
-
-      // If seats are being increased, validate remaining seats
-      if (seatsNum > oldSeats) {
-        const difference = seatsNum - oldSeats
+      // Handle seat differences
+      if (newTotalSeats > oldTotalSeats) {
+        const difference = newTotalSeats - oldTotalSeats
         let remainingSeats = 0
 
         if (availability.type === "passenger") {
@@ -355,9 +388,9 @@ const updateTripAvailability = async (req, res, next) => {
 
         updateData.updatedBy = buildActor(user)
         await Trip.findByIdAndUpdate(tripId, updateData)
-      } else if (seatsNum < oldSeats) {
+      } else if (newTotalSeats < oldTotalSeats) {
         // If seats are being decreased, restore remaining seats in trip
-        const difference = oldSeats - seatsNum
+        const difference = oldTotalSeats - newTotalSeats
         const updateData = {}
 
         if (availability.type === "passenger") {
@@ -372,21 +405,7 @@ const updateTripAvailability = async (req, res, next) => {
         await Trip.findByIdAndUpdate(tripId, updateData)
       }
 
-      availability.seats = newSeats
-    }
-
-    // Handle allocated seats update
-    if (allocatedSeats !== undefined) {
-      const allocatedNum = parseInt(allocatedSeats)
-      if (isNaN(allocatedNum) || allocatedNum < 0) {
-        throw createHttpError(400, "Allocated seats must be a non-negative number")
-      }
-
-      if (allocatedNum > newSeats) {
-        throw createHttpError(400, `Allocated seats (${allocatedNum}) cannot exceed total seats (${newSeats})`)
-      }
-
-      availability.allocatedSeats = allocatedNum
+      availability.cabins = processedCabins
     }
 
     // Handle agent allocation
@@ -407,7 +426,9 @@ const updateTripAvailability = async (req, res, next) => {
     await availability.save()
 
     // Populate and respond
-    const updatedAvailability = await TripAvailability.findById(availabilityId).populate("allocatedAgent", "name email")
+    const updatedAvailability = await TripAvailability.findById(availabilityId)
+      .populate("cabins.cabin", "name type")
+      .populate("allocatedAgent", "name email")
 
     res.json({
       success: true,
@@ -451,6 +472,9 @@ const deleteTripAvailability = async (req, res, next) => {
       throw createHttpError(404, "Availability not found")
     }
 
+    // Calculate total seats to restore
+    const totalSeats = availability.cabins.reduce((sum, c) => sum + c.seats, 0)
+
     // Soft delete and restore seats
     availability.isDeleted = true
     availability.updatedBy = buildActor(user)
@@ -459,11 +483,11 @@ const deleteTripAvailability = async (req, res, next) => {
     // Restore remaining seats in trip
     const updateData = {}
     if (availability.type === "passenger") {
-      updateData.remainingPassengerSeats = trip.remainingPassengerSeats + availability.seats
+      updateData.remainingPassengerSeats = trip.remainingPassengerSeats + totalSeats
     } else if (availability.type === "cargo") {
-      updateData.remainingCargoSeats = trip.remainingCargoSeats + availability.seats
+      updateData.remainingCargoSeats = trip.remainingCargoSeats + totalSeats
     } else if (availability.type === "vehicle") {
-      updateData.remainingVehicleSeats = trip.remainingVehicleSeats + availability.seats
+      updateData.remainingVehicleSeats = trip.remainingVehicleSeats + totalSeats
     }
 
     updateData.updatedBy = buildActor(user)
@@ -502,7 +526,9 @@ const getTripAvailabilitySummary = async (req, res, next) => {
       company: companyId,
       trip: tripId,
       isDeleted: false,
-    }).lean()
+    })
+      .populate("cabins.cabin", "name type")
+      .lean()
 
     // Summarize by type
     const summary = {
@@ -524,8 +550,10 @@ const getTripAvailabilitySummary = async (req, res, next) => {
     }
 
     availabilities.forEach((av) => {
-      summary[av.type].total += av.seats
-      summary[av.type].allocated += av.allocatedSeats
+      av.cabins.forEach((cabin) => {
+        summary[av.type].total += cabin.seats
+        summary[av.type].allocated += cabin.allocatedSeats
+      })
     })
 
     res.json({

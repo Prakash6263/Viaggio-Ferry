@@ -383,7 +383,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"type\": \"passenger\",\n  \"cabin\": \"{{cabin_id}}\",\n  \"seats\": 30,\n  \"remarks\": \"First class cabin availability\"\n}"
+              "raw": "{\n  \"type\": \"passenger\",\n  \"cabins\": [\n    {\n      \"cabin\": \"{{cabin_id_1}}\",\n      \"seats\": 30\n    },\n    {\n      \"cabin\": \"{{cabin_id_2}}\",\n      \"seats\": 20\n    },\n    {\n      \"cabin\": \"{{cabin_id_3}}\",\n      \"seats\": 15\n    }\n  ],\n  \"remarks\": \"Multiple cabin availability allocation\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities",
@@ -397,7 +397,7 @@
                 "availabilities"
               ]
             },
-            "description": "Create availability allocation. Seats cannot exceed remaining seats in trip. Automatically decreases trip's remaining seats.\n\nRequest body:\n- type: passenger, cargo, or vehicle\n- cabin: Cabin ObjectId (must match type)\n- seats: Number of seats/spots to allocate\n- remarks: Optional notes"
+            "description": "Create availability allocation with multiple cabins. Total seats cannot exceed remaining seats in trip. Automatically decreases trip's remaining seats.\n\nRequest body:\n- type: passenger, cargo, or vehicle (required)\n- cabins: Array of cabin objects, each with: { cabin: cabinId, seats: number } (required, min 1 entry)\n- remarks: Optional notes"
           },
           "response": []
         },
@@ -419,7 +419,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"seats\": 25,\n  \"allocatedSeats\": 10,\n  \"remarks\": \"Updated first class allocation\"\n}"
+              "raw": "{\n  \"cabins\": [\n    {\n      \"cabin\": \"{{cabin_id_1}}\",\n      \"seats\": 25,\n      \"allocatedSeats\": 10\n    },\n    {\n      \"cabin\": \"{{cabin_id_2}}\",\n      \"seats\": 18,\n      \"allocatedSeats\": 5\n    }\n  ],\n  \"allocatedAgent\": \"{{agent_id}}\",\n  \"remarks\": \"Updated cabin allocation\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}",
@@ -434,7 +434,7 @@
                 "{{availability_id}}"
               ]
             },
-            "description": "Update availability record. If seats are increased, validates against remaining seats. If decreased, restores seats to trip."
+            "description": "Update availability record with new cabins and seat allocations. Validates total seats against remaining. If seats increase, validates capacity; if decrease, restores capacity to trip."
           },
           "response": []
         },

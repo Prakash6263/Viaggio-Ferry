@@ -39,13 +39,6 @@ const tripAvailabilitySchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    // Cabin reference (passenger, cargo, or vehicle type)
-    cabin: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Cabin",
-      required: true,
-      index: true,
-    },
     // Availability type: passenger, cargo, or vehicle
     type: {
       type: String,
@@ -53,18 +46,27 @@ const tripAvailabilitySchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    // Number of seats/spots available
-    seats: {
-      type: Number,
-      required: true,
-      min: 1,
-    },
-    // Allocated seats (booked/reserved)
-    allocatedSeats: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
+    // Array of cabin allocations with their seat counts
+    cabins: [
+      {
+        cabin: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Cabin",
+          required: true,
+        },
+        seats: {
+          type: Number,
+          required: true,
+          min: 1,
+        },
+        allocatedSeats: {
+          type: Number,
+          default: 0,
+          min: 0,
+        },
+        _id: false,
+      },
+    ],
     // Agent allocation reference
     allocatedAgent: {
       type: mongoose.Schema.Types.ObjectId,
@@ -100,7 +102,6 @@ const tripAvailabilitySchema = new mongoose.Schema(
 tripAvailabilitySchema.index({ company: 1, trip: 1 })
 tripAvailabilitySchema.index({ company: 1, trip: 1, type: 1 })
 tripAvailabilitySchema.index({ company: 1, trip: 1, isDeleted: 1 })
-tripAvailabilitySchema.index({ trip: 1, cabin: 1 }, { unique: false })
 
 module.exports = {
   TripAvailability: mongoose.model("TripAvailability", tripAvailabilitySchema),
