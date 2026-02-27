@@ -227,6 +227,44 @@ async function updateRemainingCapacity(availabilityId) {
   const remaining = await calculateRemainingCapacity(availability)
   availability.remainingCapacity = remaining
   await availability.save()
+
+  // Update Trip model remaining seats based on availability type
+  const trip = await Trip.findById(availability.trip)
+  if (trip) {
+    const totalRemaining = await calculateTotalRemainingByType(availability.trip, availability.availabilityType)
+    
+    if (availability.availabilityType === "PASSENGER") {
+      trip.remainingPassengerSeats = totalRemaining
+    } else if (availability.availabilityType === "CARGO") {
+      trip.remainingCargoCapacity = totalRemaining
+    } else if (availability.availabilityType === "VEHICLE") {
+      trip.remainingVehicleCapacity = totalRemaining
+    }
+    
+    await trip.save()
+  }
+}
+
+/**
+ * Calculate total remaining capacity by availability type for a trip
+ * @param {ObjectId} tripId - Trip ID
+ * @param {String} availabilityType - Type of availability (PASSENGER, CARGO, VEHICLE)
+ * @returns {Number} Total remaining capacity
+ */
+async function calculateTotalRemainingByType(tripId, availabilityType) {
+  const availabilities = await TripAvailability.find({
+    trip: tripId,
+    availabilityType,
+    isDeleted: false,
+  }).lean()
+
+  let totalRemaining = 0
+  for (const availability of availabilities) {
+    const remaining = await calculateRemainingCapacity(availability)
+    totalRemaining += remaining
+  }
+  
+  return totalRemaining
 }
 
 /**
@@ -283,6 +321,7 @@ module.exports = {
   autoGenerateTripAvailability,
   getTotalAllocatedQuantity,
   calculateRemainingCapacity,
+  calculateTotalRemainingByType,
   updateRemainingCapacity,
   validateCanDeleteTrip,
   validateTripEdit,

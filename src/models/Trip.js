@@ -75,6 +75,37 @@ const tripSchema = new mongoose.Schema(
     checkInOpeningDate: Date,
     checkInClosingDate: Date,
     boardingClosingDate: Date,
+    // Capacity Tracking
+    totalPassengerSeats: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    remainingPassengerSeats: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    totalCargoCapacity: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    remainingCargoCapacity: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    totalVehicleCapacity: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    remainingVehicleCapacity: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     // Status
     status: {
       type: String,

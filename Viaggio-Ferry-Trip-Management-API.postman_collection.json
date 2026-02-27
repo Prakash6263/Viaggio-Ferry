@@ -1,0 +1,626 @@
+{
+  "info": {
+    "_postman_id": "cc053429-3492-4a4f-b89d-413163cd86d3",
+    "name": "Viaggio Ferry - Trip Management API",
+    "description": "Complete Trip Management flow for sales-bookings module",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "46536919"
+  },
+  "item": [
+    {
+      "name": "TRIPS",
+      "item": [
+        {
+          "name": "Create Trip",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tripName\": \"Ferry Route Mumbai - Goa\",\n  \"tripCode\": \"MG001\",\n  \"ship\": \"{{ship_id}}\",\n  \"departurePort\": \"{{port_id_1}}\",\n  \"arrivalPort\": \"{{port_id_2}}\",\n  \"departureDateTime\": \"2025-03-15T08:00:00Z\",\n  \"arrivalDateTime\": \"2025-03-15T16:00:00Z\",\n  \"bookingOpeningDate\": \"2025-02-25T00:00:00Z\",\n  \"bookingClosingDate\": \"2025-03-14T23:59:59Z\",\n  \"checkInOpeningDate\": \"2025-03-15T06:00:00Z\",\n  \"checkInClosingDate\": \"2025-03-15T07:30:00Z\",\n  \"boardingClosingDate\": \"2025-03-15T07:45:00Z\",\n  \"totalPassengerSeats\": 100,\n  \"remainingPassengerSeats\": 100,\n  \"totalCargoCapacity\": 50,\n  \"remainingCargoCapacity\": 50,\n  \"totalVehicleCapacity\": 20,\n  \"remainingVehicleCapacity\": 20,\n  \"status\": \"SCHEDULED\",\n  \"remarks\": \"Regular scheduled service\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Trips",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/trips?page=1&limit=10&search=&status=SCHEDULED&startDate=2025-03-01&endDate=2025-03-31",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "status",
+                  "value": "SCHEDULED"
+                },
+                {
+                  "key": "startDate",
+                  "value": "2025-03-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-03-31"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Trip By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Trip",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"OPEN\",\n  \"remarks\": \"Trip opened for bookings\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Trip",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Trip Availability",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availability",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availability"
+              ]
+            },
+            "description": "Get availability breakdown (Passenger/Cargo/Vehicle remaining quantities). Availability is auto-generated and decreases when allocations are made."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "ALLOCATIONS",
+      "item": [
+        {
+          "name": "7. Create Allocation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"partner\": \"{{partner_id}}\",\n  \"allocations\": [\n    {\n      \"availabilityId\": \"{{availability_id_1}}\",\n      \"quantity\": 50,\n      \"soldQuantity\": 0\n    },\n    {\n      \"availabilityId\": \"{{availability_id_2}}\",\n      \"quantity\": 30,\n      \"soldQuantity\": 0\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/allocations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "allocations"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "8. List Allocations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/allocations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "allocations"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "9. Update Allocation",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"allocations\": [\n    {\n      \"availabilityId\": \"{{availability_id_1}}\",\n      \"quantity\": 60,\n      \"soldQuantity\": 10\n    },\n    {\n      \"availabilityId\": \"{{availability_id_2}}\",\n      \"quantity\": 40,\n      \"soldQuantity\": 5\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/allocations/{{allocation_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "allocations",
+                "{{allocation_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10. Delete Allocation",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/allocations/{{allocation_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "allocations",
+                "{{allocation_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "trip ticket rule",
+      "item": [
+        {
+          "name": "Trip Ticket Rules",
+          "item": [
+            {
+              "name": "1. Assign Rule to Trip",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"ruleType\": \"REFUND\",\n  \"ticketingRule\": \"{{ticketingRuleId}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trips",
+                    "{{tripId}}",
+                    "ticketing-rules"
+                  ]
+                },
+                "description": "Assign a ticketing rule to a trip"
+              },
+              "response": []
+            },
+            {
+              "name": "2. Get All Rules for Trip",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trips",
+                    "{{tripId}}",
+                    "ticketing-rules"
+                  ]
+                },
+                "description": "Retrieve all ticketing rules assigned to a trip"
+              },
+              "response": []
+            },
+            {
+              "name": "3. Update Trip Rule",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"isActive\": false\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules/{{ruleId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trips",
+                    "{{tripId}}",
+                    "ticketing-rules",
+                    "{{ruleId}}"
+                  ]
+                },
+                "description": "Update a trip ticket rule"
+              },
+              "response": []
+            },
+            {
+              "name": "4. Delete Trip Rule",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules/{{ruleId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trips",
+                    "{{tripId}}",
+                    "ticketing-rules",
+                    "{{ruleId}}"
+                  ]
+                },
+                "description": "Delete (soft delete) a trip ticket rule"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Validation Test Cases",
+          "item": [
+            {
+              "name": "TEST 1: Duplicate ruleType",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"ruleType\": \"REFUND\",\n  \"ticketingRule\": \"{{ticketingRuleId}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trips",
+                    "{{tripId}}",
+                    "ticketing-rules"
+                  ]
+                },
+                "description": "This test assigns the same ruleType twice to the same trip. Expected: Error - 'Duplicate rule type not allowed for trip'"
+              },
+              "response": []
+            },
+            {
+              "name": "TEST 2: Rule Type Mismatch",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"ruleType\": \"VOID\",\n  \"ticketingRule\": \"{{refundRuleId}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trips",
+                    "{{tripId}}",
+                    "ticketing-rules"
+                  ]
+                },
+                "description": "This test assigns a VOID ruleType to a REFUND ticketing rule. Expected: Error - 'Rule type mismatch'"
+              },
+              "response": []
+            },
+            {
+              "name": "TEST 3: Assign Rule from Different Company",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"ruleType\": \"REFUND\",\n  \"ticketingRule\": \"{{otherCompanyRuleId}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trips",
+                    "{{tripId}}",
+                    "ticketing-rules"
+                  ]
+                },
+                "description": "This test tries to assign a ticketing rule from a different company. Expected: Error - '404 Ticketing rule not found'"
+              },
+              "response": []
+            },
+            {
+              "name": "TEST 4: Modify After Booking Exists",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"ruleType\": \"REISSUE\",\n  \"ticketingRule\": \"{{reissueRuleId}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/trips/{{tripIdWithBooking}}/ticketing-rules",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trips",
+                    "{{tripIdWithBooking}}",
+                    "ticketing-rules"
+                  ]
+                },
+                "description": "This test tries to assign a rule to a trip that already has bookings. Expected: Error - 'Cannot modify ticket rules after bookings exist'"
+              },
+              "response": []
+            },
+            {
+              "name": "TEST 5: Invalid Rule Type",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"ruleType\": \"INVALID\",\n  \"ticketingRule\": \"{{ticketingRuleId}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trips",
+                    "{{tripId}}",
+                    "ticketing-rules"
+                  ]
+                },
+                "description": "This test assigns an invalid ruleType. Expected: Error - 'Invalid ruleType. Must be one of: VOID, REFUND, REISSUE'"
+              },
+              "response": []
+            },
+            {
+              "name": "TEST 6: Missing Required Field",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"ruleType\": \"REFUND\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trips",
+                    "{{tripId}}",
+                    "ticketing-rules"
+                  ]
+                },
+                "description": "This test omits the ticketingRule field. Expected: Error - 'Missing required field: ticketingRule'"
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "YOUR_JWT_TOKEN_HERE",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "trip_id",
+      "value": ""
+    },
+    {
+      "key": "ship_id",
+      "value": ""
+    },
+    {
+      "key": "port_id_1",
+      "value": ""
+    },
+    {
+      "key": "port_id_2",
+      "value": ""
+    },
+    {
+      "key": "partner_id",
+      "value": ""
+    },
+    {
+      "key": "availability_id_1",
+      "value": ""
+    },
+    {
+      "key": "availability_id_2",
+      "value": ""
+    },
+    {
+      "key": "allocation_id",
+      "value": ""
+    }
+  ]
+}
