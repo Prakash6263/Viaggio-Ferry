@@ -100,7 +100,8 @@ exports.getAgentAllocationById = async (req, res) => {
 exports.createAgentAllocation = async (req, res) => {
   try {
     const { companyId, user } = req
-    const { tripId, availabilityId, agent, allocations } = req.body
+    const { tripId, availabilityId } = req.params
+    const { agent, allocations } = req.body
 
     // Validate input
     if (!agent || !allocations || !Array.isArray(allocations) || allocations.length === 0) {
