@@ -19,6 +19,7 @@ const portRoutes = require("./portRoutes")
 const cabinRoutes = require("./cabinRoutes")
 const payloadTypeRoutes = require("./payloadTypeRoutes")
 const shipRoutes = require("./shipRoutes")
+const tripRoutes = require("./tripRoutes")
 const priceListRoutes = require("./priceListRoutes")
 
 
@@ -28,6 +29,7 @@ module.exports = (app) => {
   app.use("/api/cabins", cabinRoutes)
   app.use("/api/payload-types", payloadTypeRoutes)
   app.use("/api/ships", shipRoutes)
+  app.use("/api/trips", tripRoutes)
   app.use("/api/exchange-rates", exchangeRateRoutes)
   app.use("/api/admin", adminRoutes)
   app.use("/api/companies", companyRoutes)
