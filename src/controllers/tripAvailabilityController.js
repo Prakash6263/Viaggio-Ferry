@@ -222,11 +222,27 @@ const createTripAvailability = async (req, res, next) => {
       // Update per-cabin remaining capacity
       for (const cabinEntry of cabins) {
         const { cabin, seats } = cabinEntry
-        const tripCapacityDetail = trip.tripCapacityDetails.find(
-          detail => detail.cabin.toString() === cabin.toString()
-        )
+        const cabinIdStr = cabin.toString()
+        const seatsNum = parseInt(seats)
+
+        // Find the cabin in the grouped structure
+        let tripCapacityDetail = null
+        if (type === "passenger") {
+          tripCapacityDetail = trip.tripCapacityDetails.passenger.find(
+            detail => detail.cabinId.toString() === cabinIdStr
+          )
+        } else if (type === "cargo") {
+          tripCapacityDetail = trip.tripCapacityDetails.cargo.find(
+            detail => detail.cabinId.toString() === cabinIdStr
+          )
+        } else if (type === "vehicle") {
+          tripCapacityDetail = trip.tripCapacityDetails.vehicle.find(
+            detail => detail.cabinId.toString() === cabinIdStr
+          )
+        }
+
         if (tripCapacityDetail) {
-          tripCapacityDetail.remainingCapacity -= parseInt(seats)
+          tripCapacityDetail.remainingSeat -= seatsNum
         }
       }
 
@@ -363,12 +379,25 @@ const updateTripAvailability = async (req, res, next) => {
           const oldSeats = oldCabin ? oldCabin.seats : 0
           const newSeats = parseInt(seats)
           const seatDifference = newSeats - oldSeats
+          const cabinIdStr = cabin.toString()
 
-          const tripCapacityDetail = trip.tripCapacityDetails.find(
-            detail => detail.cabin.toString() === cabin.toString()
-          )
+          let tripCapacityDetail = null
+          if (availability.type === "passenger") {
+            tripCapacityDetail = trip.tripCapacityDetails.passenger.find(
+              detail => detail.cabinId.toString() === cabinIdStr
+            )
+          } else if (availability.type === "cargo") {
+            tripCapacityDetail = trip.tripCapacityDetails.cargo.find(
+              detail => detail.cabinId.toString() === cabinIdStr
+            )
+          } else if (availability.type === "vehicle") {
+            tripCapacityDetail = trip.tripCapacityDetails.vehicle.find(
+              detail => detail.cabinId.toString() === cabinIdStr
+            )
+          }
+
           if (tripCapacityDetail) {
-            tripCapacityDetail.remainingCapacity -= seatDifference
+            tripCapacityDetail.remainingSeat -= seatDifference
           }
         }
       } else if (newTotalSeats < oldTotalSeats) {
@@ -389,12 +418,25 @@ const updateTripAvailability = async (req, res, next) => {
           const oldSeats = oldCabin ? oldCabin.seats : 0
           const newSeats = parseInt(seats)
           const seatDifference = oldSeats - newSeats
+          const cabinIdStr = cabin.toString()
 
-          const tripCapacityDetail = trip.tripCapacityDetails.find(
-            detail => detail.cabin.toString() === cabin.toString()
-          )
+          let tripCapacityDetail = null
+          if (availability.type === "passenger") {
+            tripCapacityDetail = trip.tripCapacityDetails.passenger.find(
+              detail => detail.cabinId.toString() === cabinIdStr
+            )
+          } else if (availability.type === "cargo") {
+            tripCapacityDetail = trip.tripCapacityDetails.cargo.find(
+              detail => detail.cabinId.toString() === cabinIdStr
+            )
+          } else if (availability.type === "vehicle") {
+            tripCapacityDetail = trip.tripCapacityDetails.vehicle.find(
+              detail => detail.cabinId.toString() === cabinIdStr
+            )
+          }
+
           if (tripCapacityDetail) {
-            tripCapacityDetail.remainingCapacity += seatDifference
+            tripCapacityDetail.remainingSeat += seatDifference
           }
         }
       }
@@ -455,11 +497,25 @@ const deleteTripAvailability = async (req, res, next) => {
 
     // Restore per-cabin remaining capacity
     for (const cabin of availability.cabins) {
-      const tripCapacityDetail = trip.tripCapacityDetails.find(
-        detail => detail.cabin.toString() === cabin.cabin.toString()
-      )
+      const cabinIdStr = cabin.cabin.toString()
+      let tripCapacityDetail = null
+
+      if (availability.type === "passenger") {
+        tripCapacityDetail = trip.tripCapacityDetails.passenger.find(
+          detail => detail.cabinId.toString() === cabinIdStr
+        )
+      } else if (availability.type === "cargo") {
+        tripCapacityDetail = trip.tripCapacityDetails.cargo.find(
+          detail => detail.cabinId.toString() === cabinIdStr
+        )
+      } else if (availability.type === "vehicle") {
+        tripCapacityDetail = trip.tripCapacityDetails.vehicle.find(
+          detail => detail.cabinId.toString() === cabinIdStr
+        )
+      }
+
       if (tripCapacityDetail) {
-        tripCapacityDetail.remainingCapacity += cabin.seats
+        tripCapacityDetail.remainingSeat += cabin.seats
       }
     }
 

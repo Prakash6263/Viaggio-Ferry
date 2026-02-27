@@ -345,36 +345,56 @@ const createTrip = async (req, res, next) => {
       vehicle: shipDoc.vehicleCapacity.reduce((sum, cap) => sum + (cap.spots || 0), 0),
     }
 
-    // Build per-cabin capacity tracking array
-    const tripCapacityDetails = []
-    
+    // Build per-cabin capacity tracking object grouped by type
+    const tripCapacityDetails = {
+      passenger: [],
+      cargo: [],
+      vehicle: [],
+    }
+
+    // Get cabin names for each capacity entry
+    const passengerCabinIds = shipDoc.passengerCapacity.map(cap => cap.cabinId)
+    const cargoCabinIds = shipDoc.cargoCapacity.map(cap => cap.cabinId)
+    const vehicleCabinIds = shipDoc.vehicleCapacity.map(cap => cap.cabinId)
+
+    const allCabinIds = [...passengerCabinIds, ...cargoCabinIds, ...vehicleCabinIds]
+    const cabinMap = {}
+
+    // Fetch all cabins to get their names
+    if (allCabinIds.length > 0) {
+      const cabins = await Cabin.find({ _id: { $in: allCabinIds } }).select("_id name")
+      cabins.forEach(cabin => {
+        cabinMap[cabin._id.toString()] = cabin.name
+      })
+    }
+
     // Add passenger cabins
     shipDoc.passengerCapacity.forEach(cap => {
-      tripCapacityDetails.push({
-        cabin: cap.cabinId,
-        type: "passenger",
-        totalCapacity: cap.seats || 0,
-        remainingCapacity: cap.seats || 0,
+      tripCapacityDetails.passenger.push({
+        cabinId: cap.cabinId,
+        cabinName: cabinMap[cap.cabinId.toString()] || "Unknown",
+        totalSeat: cap.seats || 0,
+        remainingSeat: cap.seats || 0,
       })
     })
-    
+
     // Add cargo cabins
     shipDoc.cargoCapacity.forEach(cap => {
-      tripCapacityDetails.push({
-        cabin: cap.cabinId,
-        type: "cargo",
-        totalCapacity: cap.spots || 0,
-        remainingCapacity: cap.spots || 0,
+      tripCapacityDetails.cargo.push({
+        cabinId: cap.cabinId,
+        cabinName: cabinMap[cap.cabinId.toString()] || "Unknown",
+        totalSeat: cap.spots || 0,
+        remainingSeat: cap.spots || 0,
       })
     })
-    
+
     // Add vehicle cabins
     shipDoc.vehicleCapacity.forEach(cap => {
-      tripCapacityDetails.push({
-        cabin: cap.cabinId,
-        type: "vehicle",
-        totalCapacity: cap.spots || 0,
-        remainingCapacity: cap.spots || 0,
+      tripCapacityDetails.vehicle.push({
+        cabinId: cap.cabinId,
+        cabinName: cabinMap[cap.cabinId.toString()] || "Unknown",
+        totalSeat: cap.spots || 0,
+        remainingSeat: cap.spots || 0,
       })
     })
 

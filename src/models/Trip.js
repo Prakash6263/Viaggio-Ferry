@@ -75,32 +75,82 @@ const tripSchema = new mongoose.Schema(
     checkInOpeningDate: Date,
     checkInClosingDate: Date,
     boardingClosingDate: Date,
-    // Per-Cabin Capacity Tracking
-    tripCapacityDetails: [
-      {
-        cabin: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Cabin",
-          required: true,
+    // Per-Cabin Capacity Tracking (grouped by type)
+    tripCapacityDetails: {
+      passenger: [
+        {
+          cabinId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Cabin",
+            required: true,
+          },
+          cabinName: {
+            type: String,
+            required: true,
+          },
+          totalSeat: {
+            type: Number,
+            required: true,
+            min: 1,
+          },
+          remainingSeat: {
+            type: Number,
+            required: true,
+            min: 0,
+          },
+          _id: false,
         },
-        type: {
-          type: String,
-          enum: ["passenger", "cargo", "vehicle"],
-          required: true,
+      ],
+      cargo: [
+        {
+          cabinId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Cabin",
+            required: true,
+          },
+          cabinName: {
+            type: String,
+            required: true,
+          },
+          totalSeat: {
+            type: Number,
+            required: true,
+            min: 1,
+          },
+          remainingSeat: {
+            type: Number,
+            required: true,
+            min: 0,
+          },
+          _id: false,
         },
-        totalCapacity: {
-          type: Number,
-          required: true,
-          min: 1,
+      ],
+      vehicle: [
+        {
+          cabinId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Cabin",
+            required: true,
+          },
+          cabinName: {
+            type: String,
+            required: true,
+          },
+          totalSeat: {
+            type: Number,
+            required: true,
+            min: 1,
+          },
+          remainingSeat: {
+            type: Number,
+            required: true,
+            min: 0,
+          },
+          _id: false,
         },
-        remainingCapacity: {
-          type: Number,
-          required: true,
-          min: 0,
-        },
-        _id: false,
-      },
-    ],
+      ],
+      _id: false,
+    },
     // Availability - Remaining Seats (aggregate totals for quick access)
     remainingPassengerSeats: {
       type: Number,
