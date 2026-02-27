@@ -3,7 +3,7 @@ const mongoose = require("mongoose")
 const AvailabilityAgentAllocation = require("../models/AvailabilityAgentAllocation")
 const { Trip } = require("../models/Trip")
 const { TripAvailability } = require("../models/TripAvailability")
-const Agent = require("../models/Agent")
+const Partner = require("../models/Partner")
 const { Cabin } = require("../models/Cabin")
 
 const buildActor = (user) => ({
@@ -124,7 +124,7 @@ exports.createAgentAllocation = async (req, res) => {
     if (!availability) throw createHttpError(404, "Availability not found")
 
     // Verify agent exists and belongs to company
-    const agentDoc = await Agent.findOne({
+    const agentDoc = await Partner.findOne({
       _id: agent,
       company: companyId,
       status: "Active",

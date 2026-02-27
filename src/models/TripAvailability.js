@@ -67,10 +67,10 @@ const tripAvailabilitySchema = new mongoose.Schema(
         _id: false,
       },
     ],
-    // Agent allocation reference
+    // Partner allocation reference
     allocatedAgent: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Agent",
+      ref: "Partner",
       default: null,
     },
     // Audit

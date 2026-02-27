@@ -40,12 +40,12 @@ const internalPaymentReceiptSchema = new mongoose.Schema(
     // Payor Information (who is paying)
     payorType: {
       type: String,
-      enum: ["Partner", "Agent", "Company", "External"],
+      enum: ["Partner", "Company", "External"],
       required: true,
     },
     payorId: {
       type: mongoose.Schema.Types.ObjectId,
-      // Can reference Partner, Agent, or Company based on payorType
+      // Can reference Partner or Company based on payorType
       required: true,
       index: true,
     },
@@ -66,12 +66,12 @@ const internalPaymentReceiptSchema = new mongoose.Schema(
     // Payee Information (who is receiving payment)
     payeeType: {
       type: String,
-      enum: ["Partner", "Agent", "Company", "Internal"],
+      enum: ["Partner", "Company", "Internal"],
       required: true,
     },
     payeeId: {
       type: mongoose.Schema.Types.ObjectId,
-      // Can reference Partner, Agent, or Company based on payeeType
+      // Can reference Partner or Company based on payeeType
       required: true,
       index: true,
     },

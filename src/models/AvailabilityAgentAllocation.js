@@ -45,7 +45,7 @@ const agentAllocationSchema = new mongoose.Schema(
     },
     agent: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Agent",
+      ref: "Partner",
       required: true,
       index: true,
     },

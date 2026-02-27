@@ -170,7 +170,7 @@ const cargoBookingSchema = new mongoose.Schema(
     // Booking Agent/Source
     bookingAgent: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Agent",
+      ref: "Partner",
       default: null,
     },
     bookingSource: {
