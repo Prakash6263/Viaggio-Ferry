@@ -1,5 +1,4 @@
 const express = require("express")
-const { verifyToken, extractCompanyId, extractUserId } = require("../middleware/authMiddleware")
 const { checkPermission } = require("../middleware/permissionMiddleware")
 const {
   listTripAvailabilities,
@@ -11,11 +10,6 @@ const {
 } = require("../controllers/tripAvailabilityController")
 
 const router = express.Router({ mergeParams: true })
-
-// Apply auth middleware
-router.use(verifyToken)
-router.use(extractCompanyId)
-router.use(extractUserId)
 
 // GET /api/trips/:tripId/availabilities - List all availabilities for a trip
 router.get("/", checkPermission("ship-trips", "trips", "read"), listTripAvailabilities)
