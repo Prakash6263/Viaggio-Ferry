@@ -45,7 +45,7 @@
                 }
               ]
             },
-            "description": "Get list of all trips with pagination"
+            "description": "Get list of all trips with pagination. Response includes fully populated ship details (name, IMO number, flag state, capacity arrays, etc.)."
           },
           "response": []
         },
@@ -98,7 +98,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"tripName\": \"Dubai to Muscat Express\",\n  \"tripCode\": \"DXB-MSC-001\",\n  \"ship\": \"{{ship_id}}\",\n  \"departurePort\": \"{{port_id}}\",\n  \"arrivalPort\": \"{{arrival_port_id}}\",\n  \"departureDateTime\": \"2024-03-15T10:00:00Z\",\n  \"arrivalDateTime\": \"2024-03-15T14:30:00Z\",\n  \"status\": \"SCHEDULED\",\n  \"bookingOpeningDate\": \"2024-02-15T00:00:00Z\",\n  \"bookingClosingDate\": \"2024-03-15T08:00:00Z\",\n  \"checkInOpeningDate\": \"2024-03-15T07:00:00Z\",\n  \"checkInClosingDate\": \"2024-03-15T09:30:00Z\",\n  \"boardingClosingDate\": \"2024-03-15T09:45:00Z\",\n  \"remainingPassengerSeats\": 100,\n  \"remainingCargoSeats\": 50,\n  \"remainingVehicleSeats\": 25\n}"
+              "raw": "{\n  \"tripName\": \"Dubai to Muscat Express\",\n  \"tripCode\": \"DXB-MSC-001\",\n  \"ship\": \"{{ship_id}}\",\n  \"departurePort\": \"{{port_id}}\",\n  \"arrivalPort\": \"{{arrival_port_id}}\",\n  \"departureDateTime\": \"2024-03-15T10:00:00Z\",\n  \"arrivalDateTime\": \"2024-03-15T14:30:00Z\",\n  \"status\": \"SCHEDULED\",\n  \"bookingOpeningDate\": \"2024-02-15T00:00:00Z\",\n  \"bookingClosingDate\": \"2024-03-15T08:00:00Z\",\n  \"checkInOpeningDate\": \"2024-03-15T07:00:00Z\",\n  \"checkInClosingDate\": \"2024-03-15T09:30:00Z\",\n  \"boardingClosingDate\": \"2024-03-15T09:45:00Z\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/trips",
@@ -110,7 +110,7 @@
                 "trips"
               ]
             },
-            "description": "Create a new ferry trip"
+            "description": "Create a new ferry trip. Remaining seats are auto-calculated from the ship's cabin capacities. Do not include remainingPassengerSeats, remainingCargoSeats, or remainingVehicleSeats in the request."
           },
           "response": []
         },
@@ -132,7 +132,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"tripName\": \"Dubai to Muscat Express - Updated\",\n  \"status\": \"ONGOING\",\n  \"remainingPassengerSeats\": 85,\n  \"remainingCargoSeats\": 40,\n  \"remainingVehicleSeats\": 20\n}"
+              "raw": "{\n  \"tripName\": \"Dubai to Muscat Express - Updated\",\n  \"status\": \"ONGOING\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/trips/{{trip_id}}",
@@ -145,7 +145,7 @@
                 "{{trip_id}}"
               ]
             },
-            "description": "Update trip details"
+            "description": "Update trip details. Remaining seats cannot be manually updated - they are managed automatically via availability creation/deletion."
           },
           "response": []
         },
@@ -326,7 +326,7 @@
                 "availabilities"
               ]
             },
-            "description": "Create all three types of availabilities in single request"
+            "description": "Create all three types of availabilities in single request. Validates: (1) Each cabin allocation ≤ ship's cabin capacity, (2) Total allocation ≤ trip's remaining seats. Automatically deducts seats from trip's remaining."
           },
           "response": []
         },
@@ -362,7 +362,7 @@
                 "availabilities"
               ]
             },
-            "description": "Create passenger availability"
+            "description": "Create passenger availability. Validates against ship's passenger cabin capacity and trip's remaining passenger seats. Example values must not exceed ship capacity."
           },
           "response": []
         },
@@ -398,7 +398,7 @@
                 "availabilities"
               ]
             },
-            "description": "Create cargo availability"
+            "description": "Create cargo availability. Validates against ship's cargo cabin capacity and trip's remaining cargo seats."
           },
           "response": []
         },
@@ -434,7 +434,7 @@
                 "availabilities"
               ]
             },
-            "description": "Create vehicle availability"
+            "description": "Create vehicle availability. Validates against ship's vehicle cabin capacity and trip's remaining vehicle seats."
           },
           "response": []
         },
