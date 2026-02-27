@@ -151,6 +151,11 @@ const MODULE_SUBMODULES = {
       allowedPermissions: ["read", "write", "edit", "delete"],
     },
     {
+      code: "trip",
+      label: "Trip Management",
+      allowedPermissions: ["read", "write", "edit", "delete"],
+    },
+    {
       code: "ticketing-rules",
       label: "Ticketing Rules",
       allowedPermissions: ["read", "write", "edit", "delete"],

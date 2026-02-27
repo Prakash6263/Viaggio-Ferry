@@ -1,5 +1,30 @@
 const mongoose = require("mongoose")
 
+const TRIP_STATUS = ["SCHEDULED", "OPEN", "CLOSED", "COMPLETED", "CANCELLED"]
+
+const CreatorSchema = new mongoose.Schema(
+  {
+    id: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    name: {
+      type: String,
+      default: "Unknown",
+    },
+    type: {
+      type: String,
+      enum: ["company", "user", "system"],
+      default: "system",
+    },
+    layer: {
+      type: String,
+      default: undefined,
+    },
+  },
+  { _id: false }
+)
+
 const tripSchema = new mongoose.Schema(
   {
     company: {
@@ -20,7 +45,7 @@ const tripSchema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
-    vessel: {
+    ship: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Ship",
       required: true,
@@ -35,6 +60,7 @@ const tripSchema = new mongoose.Schema(
       ref: "Port",
       required: true,
     },
+    // Trip Dates
     departureDateTime: {
       type: Date,
       required: true,
@@ -43,83 +69,27 @@ const tripSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
-    status: {
-      type: String,
-      enum: ["Scheduled", "In Progress", "Completed", "Cancelled"],
-      default: "Scheduled",
-    },
-
     // Booking Windows
     bookingOpeningDate: Date,
     bookingClosingDate: Date,
     checkInOpeningDate: Date,
     checkInClosingDate: Date,
     boardingClosingDate: Date,
-
+    // Status
+    status: {
+      type: String,
+      enum: TRIP_STATUS,
+      default: "SCHEDULED",
+      index: true,
+    },
+    remarks: String,
     // Promotion & Notes
     promotion: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Promotion",
       default: null,
     },
-    remarks: String,
-
-    // Availability Management
-    availability: [
-      {
-        _id: mongoose.Schema.Types.ObjectId,
-        type: {
-          type: String,
-          enum: ["Passenger", "Cargo", "Vehicle"],
-          required: true,
-        },
-        category: String,
-        totalQuantity: {
-          type: Number,
-          required: true,
-          min: 0,
-        },
-        allocations: [
-          {
-            _id: mongoose.Schema.Types.ObjectId,
-            agent: {
-              type: mongoose.Schema.Types.ObjectId,
-              ref: "Agent",
-              required: true,
-            },
-            allocatedQuantity: {
-              type: Number,
-              required: true,
-              min: 0,
-            },
-            bookedQuantity: {
-              type: Number,
-              default: 0,
-              min: 0,
-            },
-            createdAt: {
-              type: Date,
-              default: Date.now,
-            },
-          },
-        ],
-      },
-    ],
-
-    // Trip Ticketing Rules
-    ticketingRules: [
-      {
-        _id: mongoose.Schema.Types.ObjectId,
-        ruleType: String,
-        ruleValue: String,
-        createdAt: {
-          type: Date,
-          default: Date.now,
-        },
-      },
-    ],
-
-    // Trip Reporting and Completion Tracking
+    // Reporting Status
     reportingStatus: {
       type: String,
       enum: ["NotStarted", "InProgress", "Verified", "Completed"],
@@ -130,20 +100,37 @@ const tripSchema = new mongoose.Schema(
       ref: "TripReport",
       default: null,
     },
-
+    // Audit
+    createdBy: {
+      type: CreatorSchema,
+      default: () => ({
+        id: null,
+        name: "Unknown",
+        type: "system",
+        layer: undefined,
+      }),
+    },
+    updatedBy: {
+      type: CreatorSchema,
+      default: null,
+    },
     isDeleted: {
       type: Boolean,
       default: false,
+      index: true,
     },
   },
   { timestamps: true },
 )
 
 tripSchema.index({ company: 1, tripCode: 1 }, { unique: true })
-tripSchema.index({ company: 1, vessel: 1 })
-tripSchema.index({ company: 1, departurePort: 1, arrivalPort: 1 })
 tripSchema.index({ company: 1, departureDateTime: 1 })
+tripSchema.index({ company: 1, ship: 1 })
+tripSchema.index({ company: 1, departurePort: 1, arrivalPort: 1 })
 tripSchema.index({ company: 1, status: 1 })
 tripSchema.index({ company: 1, isDeleted: 1 })
 
-module.exports = mongoose.model("Trip", tripSchema)
+module.exports = {
+  Trip: mongoose.model("Trip", tripSchema),
+  TRIP_STATUS,
+}

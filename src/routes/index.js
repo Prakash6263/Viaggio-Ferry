@@ -20,7 +20,7 @@ const cabinRoutes = require("./cabinRoutes")
 const payloadTypeRoutes = require("./payloadTypeRoutes")
 const shipRoutes = require("./shipRoutes")
 const priceListRoutes = require("./priceListRoutes")
-const ticketingRuleRoutes = require("./ticketingRuleRoutes")
+
 
 module.exports = (app) => {
   app.use("/api/public", publicCountryRoutes)
@@ -45,5 +45,4 @@ module.exports = (app) => {
   app.use("/api/sidebar", sidebarRoutes)
   app.use("/api/protected-example", protectedExampleRoutes)
   app.use("/api/price-lists", priceListRoutes)
-  app.use("/api/ticketing-rules", ticketingRuleRoutes)
 }
