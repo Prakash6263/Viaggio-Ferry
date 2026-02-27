@@ -4,6 +4,7 @@ const { Trip, TRIP_STATUS } = require("../models/Trip")
 const { Ship } = require("../models/Ship")
 const { Port } = require("../models/Port")
 const { Promotion } = require("../models/Promotion")
+const { Cabin } = require("../models/Cabin")
 
 /**
  * Helper function to build actor object based on user role
