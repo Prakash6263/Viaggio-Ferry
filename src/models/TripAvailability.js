@@ -73,8 +73,6 @@ const tripAvailabilitySchema = new mongoose.Schema(
       ref: "Agent",
       default: null,
     },
-    // Notes/remarks
-    remarks: String,
     // Audit
     createdBy: {
       type: CreatorSchema,

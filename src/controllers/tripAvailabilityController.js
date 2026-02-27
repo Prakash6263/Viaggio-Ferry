@@ -164,7 +164,7 @@ const createTripAvailability = async (req, res, next) => {
   try {
     const { companyId, user } = req
     const { tripId } = req.params
-    const { type, cabins, remarks } = req.body
+    const { type, cabins } = req.body
 
     // Validate required fields
     if (!type || !cabins || !Array.isArray(cabins) || cabins.length === 0) {
@@ -250,10 +250,6 @@ const createTripAvailability = async (req, res, next) => {
       createdBy: buildActor(user),
     }
 
-    if (remarks) {
-      availabilityData.remarks = remarks.trim()
-    }
-
     const availability = new TripAvailability(availabilityData)
     await availability.save()
 
@@ -293,7 +289,7 @@ const updateTripAvailability = async (req, res, next) => {
   try {
     const { companyId, user } = req
     const { tripId, availabilityId } = req.params
-    const { cabins, allocatedAgent, remarks } = req.body
+    const { cabins, allocatedAgent } = req.body
 
     // Validate trip exists
     const trip = await Trip.findOne({
@@ -415,11 +411,6 @@ const updateTripAvailability = async (req, res, next) => {
       } else {
         availability.allocatedAgent = allocatedAgent
       }
-    }
-
-    // Handle remarks
-    if (remarks !== undefined) {
-      availability.remarks = remarks ? remarks.trim() : null
     }
 
     availability.updatedBy = buildActor(user)

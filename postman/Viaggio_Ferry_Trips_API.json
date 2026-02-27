@@ -383,7 +383,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"type\": \"passenger\",\n  \"cabins\": [\n    {\n      \"cabin\": \"{{cabin_id_1}}\",\n      \"seats\": 30\n    },\n    {\n      \"cabin\": \"{{cabin_id_2}}\",\n      \"seats\": 20\n    },\n    {\n      \"cabin\": \"{{cabin_id_3}}\",\n      \"seats\": 15\n    }\n  ],\n  \"remarks\": \"Multiple cabin availability allocation\"\n}"
+              "raw": "{\n  \"type\": \"passenger\",\n  \"cabins\": [\n    {\n      \"cabin\": \"{{cabin_id_1}}\",\n      \"seats\": 30\n    },\n    {\n      \"cabin\": \"{{cabin_id_2}}\",\n      \"seats\": 20\n    },\n    {\n      \"cabin\": \"{{cabin_id_3}}\",\n      \"seats\": 15\n    }\n  ]\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities",
@@ -397,7 +397,7 @@
                 "availabilities"
               ]
             },
-            "description": "Create availability allocation with multiple cabins. Total seats cannot exceed remaining seats in trip. Automatically decreases trip's remaining seats.\n\nRequest body:\n- type: passenger, cargo, or vehicle (required)\n- cabins: Array of cabin objects, each with: { cabin: cabinId, seats: number } (required, min 1 entry)\n- remarks: Optional notes"
+            "description": "Create availability allocation with multiple cabins per type. Total seats cannot exceed remaining seats in trip. Automatically decreases trip's remaining seats.\n\nRequest body:\n- type: passenger, cargo, or vehicle (required, one type per request)\n- cabins: Array of cabin objects, each with: { cabin: cabinId, seats: number } (required, min 1 entry)"
           },
           "response": []
         },
@@ -419,7 +419,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"cabins\": [\n    {\n      \"cabin\": \"{{cabin_id_1}}\",\n      \"seats\": 25,\n      \"allocatedSeats\": 10\n    },\n    {\n      \"cabin\": \"{{cabin_id_2}}\",\n      \"seats\": 18,\n      \"allocatedSeats\": 5\n    }\n  ],\n  \"allocatedAgent\": \"{{agent_id}}\",\n  \"remarks\": \"Updated cabin allocation\"\n}"
+              "raw": "{\n  \"cabins\": [\n    {\n      \"cabin\": \"{{cabin_id_1}}\",\n      \"seats\": 25,\n      \"allocatedSeats\": 10\n    },\n    {\n      \"cabin\": \"{{cabin_id_2}}\",\n      \"seats\": 18,\n      \"allocatedSeats\": 5\n    }\n  ],\n  \"allocatedAgent\": \"{{agent_id}}\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}",
@@ -472,7 +472,7 @@
           "response": []
         }
       ],
-      "description": "Manage trip availabilities - allocate passengers, cargo, and vehicle capacities with automatic seat tracking"
+      "description": "Manage trip availabilities - allocate passengers, cargo, and vehicle capacities with automatic seat tracking. Create separate availability records for each type (passenger, cargo, vehicle), each can have multiple cabins with different seat counts."
     }
   ],
   "variable": [
