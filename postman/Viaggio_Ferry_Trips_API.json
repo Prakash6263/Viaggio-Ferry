@@ -588,9 +588,8 @@
       "value": "",
       "type": "string"
     }
-        ]
-      }
-    },
+  ],
+  "item": [
     {
       "name": "Agent Allocations",
       "item": [
@@ -802,3 +801,5 @@
         }
       ]
     }
+  ]
+}
