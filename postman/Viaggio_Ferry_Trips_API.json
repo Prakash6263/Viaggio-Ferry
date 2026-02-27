@@ -366,7 +366,7 @@
           "response": []
         },
         {
-          "name": "Create Availability",
+          "name": "Create Availability - Passenger",
           "request": {
             "method": "POST",
             "header": [
@@ -397,7 +397,79 @@
                 "availabilities"
               ]
             },
-            "description": "Create availability allocation with multiple cabins per type. Total seats cannot exceed remaining seats in trip. Automatically decreases trip's remaining seats.\n\nRequest body:\n- type: passenger, cargo, or vehicle (required, one type per request)\n- cabins: Array of cabin objects, each with: { cabin: cabinId, seats: number } (required, min 1 entry)"
+            "description": "Create passenger availability allocation with multiple cabins. Total seats cannot exceed remaining passenger seats in trip."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Availability - Cargo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"cargo\",\n  \"cabins\": [\n    {\n      \"cabin\": \"{{cargo_cabin_id_1}}\",\n      \"seats\": 50\n    },\n    {\n      \"cabin\": \"{{cargo_cabin_id_2}}\",\n      \"seats\": 30\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities"
+              ]
+            },
+            "description": "Create cargo availability allocation with multiple cargo cabins. Total seats cannot exceed remaining cargo seats in trip."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Availability - Vehicle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"vehicle\",\n  \"cabins\": [\n    {\n      \"cabin\": \"{{vehicle_cabin_id_1}}\",\n      \"seats\": 20\n    },\n    {\n      \"cabin\": \"{{vehicle_cabin_id_2}}\",\n      \"seats\": 15\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities"
+              ]
+            },
+            "description": "Create vehicle availability allocation with multiple vehicle cabins. Total seats cannot exceed remaining vehicle seats in trip."
           },
           "response": []
         },
