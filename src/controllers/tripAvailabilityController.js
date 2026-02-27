@@ -51,7 +51,6 @@ const listTripAvailabilities = async (req, res, next) => {
     const [availabilities, total] = await Promise.all([
       TripAvailability.find(query)
         .populate("cabins.cabin", "name type")
-        .populate("allocatedAgent", "name email")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limitNum)
@@ -84,7 +83,6 @@ const getTripAvailabilityById = async (req, res, next) => {
       isDeleted: false,
     })
       .populate("cabins.cabin", "name type")
-      .populate("allocatedAgent", "name email")
 
     if (!availability) throw createHttpError(404, "Availability not found")
 
@@ -225,35 +223,26 @@ const createTripAvailability = async (req, res, next) => {
         const cabinIdStr = cabin.toString()
         const seatsNum = parseInt(seats)
 
-        console.log(`[v0] Looking for cabin: ${cabinIdStr}, seats to deduct: ${seatsNum}`)
-
         // Find the cabin in the grouped structure
         let tripCapacityDetail = null
         if (type === "passenger") {
           tripCapacityDetail = trip.tripCapacityDetails.passenger.find(
             detail => detail.cabinId.toString() === cabinIdStr
           )
-          console.log(`[v0] Passenger cabin found:`, tripCapacityDetail)
         } else if (type === "cargo") {
           tripCapacityDetail = trip.tripCapacityDetails.cargo.find(
             detail => detail.cabinId.toString() === cabinIdStr
           )
-          console.log(`[v0] Cargo cabin found:`, tripCapacityDetail)
         } else if (type === "vehicle") {
           tripCapacityDetail = trip.tripCapacityDetails.vehicle.find(
             detail => detail.cabinId.toString() === cabinIdStr
           )
-          console.log(`[v0] Vehicle cabin found:`, tripCapacityDetail)
         }
 
         if (tripCapacityDetail) {
-          console.log(`[v0] Before deduction: remainingSeat = ${tripCapacityDetail.remainingSeat}`)
           tripCapacityDetail.remainingSeat -= seatsNum
-          console.log(`[v0] After deduction: remainingSeat = ${tripCapacityDetail.remainingSeat}`)
         }
       }
-
-      console.log(`[v0] Final tripCapacityDetails:`, JSON.stringify(trip.tripCapacityDetails, null, 2))
 
       createdAvailabilities.push(availabilityRecord)
     }
