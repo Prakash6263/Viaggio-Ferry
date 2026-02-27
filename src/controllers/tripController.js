@@ -375,11 +375,6 @@ const createTrip = async (req, res, next) => {
     if (promotion) tripData.promotion = promotion
     if (remarks) tripData.remarks = remarks.trim()
     
-    // Add remaining seats
-    tripData.remainingPassengerSeats = Math.max(0, parseInt(remainingPassengerSeats) || 0)
-    tripData.remainingCargoSeats = Math.max(0, parseInt(remainingCargoSeats) || 0)
-    tripData.remainingVehicleSeats = Math.max(0, parseInt(remainingVehicleSeats) || 0)
-
     const newTrip = new Trip(tripData)
     await newTrip.save()
 
