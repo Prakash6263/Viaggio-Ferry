@@ -121,7 +121,7 @@ exports.createAgentAllocation = async (req, res) => {
       company: companyId,
       trip: tripId,
       isDeleted: false,
-    })
+    }).populate("cabins.cabin", "name type")
     if (!availability) throw createHttpError(404, "Availability not found")
 
     // Verify agent exists and belongs to company
@@ -182,11 +182,20 @@ exports.createAgentAllocation = async (req, res) => {
         }
 
         // Validate against availability cabins
-        console.log("[v0] Looking for cabin ID:", cabin)
-        console.log("[v0] Available cabins in availability:", availability.cabins.map(c => ({ id: c.cabin.toString(), name: c.name || 'N/A' })))
-        const availabilityCabin = availability.cabins.find(c => c.cabin.toString() === cabin.toString())
+        console.log("[v0] Looking for cabin ID:", cabin, "Type:", typeof cabin)
+        console.log("[v0] Cabin Document found:", { id: cabinDoc._id, name: cabinDoc.name, type: cabinDoc.type })
+        console.log("[v0] Available cabins in availability:", availability.cabins.map(c => ({ 
+          id: c.cabin._id?.toString() || c.cabin.toString(), 
+          name: c.cabin.name || 'N/A',
+          seats: c.seats,
+          allocatedSeats: c.allocatedSeats
+        })))
+        const availabilityCabin = availability.cabins.find(c => {
+          const cabinId = c.cabin._id ? c.cabin._id.toString() : c.cabin.toString()
+          return cabinId === cabin.toString()
+        })
         if (!availabilityCabin) {
-          console.log("[v0] Cabin not found in availability. Requested:", cabin, "Available:", availability.cabins.map(c => c.cabin.toString()))
+          console.log("[v0] Cabin not found in availability. Requested:", cabin.toString(), "Available:", availability.cabins.map(c => c.cabin._id ? c.cabin._id.toString() : c.cabin.toString()))
           throw createHttpError(
             400,
             `Cabin ${cabinDoc.name} is not available in this availability for allocation`
