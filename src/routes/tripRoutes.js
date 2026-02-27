@@ -1,6 +1,7 @@
 const express = require("express")
 const router = express.Router()
 const tripController = require("../controllers/tripController")
+const tripAvailabilityRoutes = require("./tripAvailabilityRoutes")
 const { verifyToken, extractCompanyId, extractUserId } = require("../middleware/authMiddleware")
 const { checkPermission } = require("../middleware/permissionMiddleware")
 
@@ -47,5 +48,9 @@ router.put("/:id", checkPermission("ship-trips", "trips", "edit"), tripControlle
  * Delete a trip (soft delete) - requires delete permission on trips
  */
 router.delete("/:id", checkPermission("ship-trips", "trips", "delete"), tripController.deleteTrip)
+
+// ==================== TRIP AVAILABILITY ROUTES ====================
+// Mount availability routes at /api/trips/:tripId/availabilities
+router.use("/:tripId/availabilities", tripAvailabilityRoutes)
 
 module.exports = router

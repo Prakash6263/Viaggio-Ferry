@@ -241,6 +241,238 @@
         }
       ],
       "description": "Trip CRUD operations for ferry management"
+    },
+    {
+      "name": "Trip Availabilities",
+      "item": [
+        {
+          "name": "List Availabilities",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities?page=1&limit=10&type=passenger&search=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number for pagination"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Records per page"
+                },
+                {
+                  "key": "type",
+                  "value": "passenger",
+                  "description": "Filter by type: passenger, cargo, vehicle (optional)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search by category (optional)"
+                }
+              ]
+            },
+            "description": "List all availabilities for a specific trip"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Availability Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/summary",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities",
+                "summary"
+              ]
+            },
+            "description": "Get a summary of total, allocated, and remaining capacity by type"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Availability by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities",
+                "{{availability_id}}"
+              ]
+            },
+            "description": "Get details of a specific availability record"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Availability",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"passenger\",\n  \"category\": \"first_class\",\n  \"seats\": 30,\n  \"remarks\": \"First class cabin availability\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities"
+              ]
+            },
+            "description": "Create availability allocation. Seats cannot exceed remaining seats in trip. Automatically decreases trip's remaining seats.\n\nValid types and categories:\n- passenger: first_class, economy, premium\n- cargo: pallet, container, general_cargo\n- vehicle: car, truck, motorcycle, bus"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Availability",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"seats\": 25,\n  \"allocatedSeats\": 10,\n  \"remarks\": \"Updated first class allocation\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities",
+                "{{availability_id}}"
+              ]
+            },
+            "description": "Update availability record. If seats are increased, validates against remaining seats. If decreased, restores seats to trip."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Availability",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities",
+                "{{availability_id}}"
+              ]
+            },
+            "description": "Delete availability record. Automatically restores seats back to trip's remaining seats."
+          },
+          "response": []
+        }
+      ],
+      "description": "Manage trip availabilities - allocate passengers, cargo, and vehicle capacities with automatic seat tracking"
     }
   ],
   "variable": [
@@ -281,6 +513,11 @@
     },
     {
       "key": "trip_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "availability_id",
       "value": "",
       "type": "string"
     }
