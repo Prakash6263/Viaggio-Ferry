@@ -182,20 +182,11 @@ exports.createAgentAllocation = async (req, res) => {
         }
 
         // Validate against availability cabins
-        console.log("[v0] Looking for cabin ID:", cabin, "Type:", typeof cabin)
-        console.log("[v0] Cabin Document found:", { id: cabinDoc._id, name: cabinDoc.name, type: cabinDoc.type })
-        console.log("[v0] Available cabins in availability:", availability.cabins.map(c => ({ 
-          id: c.cabin._id?.toString() || c.cabin.toString(), 
-          name: c.cabin.name || 'N/A',
-          seats: c.seats,
-          allocatedSeats: c.allocatedSeats
-        })))
         const availabilityCabin = availability.cabins.find(c => {
           const cabinId = c.cabin._id ? c.cabin._id.toString() : c.cabin.toString()
           return cabinId === cabin.toString()
         })
         if (!availabilityCabin) {
-          console.log("[v0] Cabin not found in availability. Requested:", cabin.toString(), "Available:", availability.cabins.map(c => c.cabin._id ? c.cabin._id.toString() : c.cabin.toString()))
           throw createHttpError(
             400,
             `Cabin ${cabinDoc.name} is not available in this availability for allocation`
@@ -272,7 +263,6 @@ exports.createAgentAllocation = async (req, res) => {
 
         if (tripCapacityDetail) {
           tripCapacityDetail.remainingSeat -= seatsNum
-          console.log(`[v0] Deducted ${seatsNum} seats from cabin ${tripCapacityDetail.cabinName}. Remaining: ${tripCapacityDetail.remainingSeat}`)
         }
       }
     }
@@ -282,13 +272,27 @@ exports.createAgentAllocation = async (req, res) => {
     const populatedAllocation = await AvailabilityAgentAllocation.findById(newAllocation._id)
       .populate("agent", "name code type")
       .populate("availability", "type cabins")
+      .populate("allocations.cabins.cabin", "name type")
+
+    // Build availability summary with remaining seats
+    const availabilitySummary = availability.cabins.map(cabin => ({
+      cabin: cabin.cabin,
+      cabinName: cabin.cabin.name,
+      cabinType: cabin.cabin.type,
+      totalSeats: cabin.seats,
+      allocatedSeats: cabin.allocatedSeats,
+      remainingSeats: cabin.seats - cabin.allocatedSeats,
+    }))
 
     res.status(201).json({
       success: true,
       message: "Agent allocation created successfully",
       data: {
         allocation: populatedAllocation,
-        updatedAvailability: availability,
+        availabilitySummary: {
+          type: availability.type,
+          cabins: availabilitySummary,
+        },
         updatedTrip: {
           tripCapacityDetails: trip.tripCapacityDetails,
         },
@@ -484,11 +488,31 @@ exports.updateAgentAllocation = async (req, res) => {
     const updated = await AvailabilityAgentAllocation.findById(allocationId)
       .populate("agent", "name code type")
       .populate("availability", "type cabins")
+      .populate("allocations.cabins.cabin", "name type")
+
+    // Build availability summary with remaining seats
+    const availabilitySummary = availability.cabins.map(cabin => ({
+      cabin: cabin.cabin,
+      cabinName: cabin.cabin.name,
+      cabinType: cabin.cabin.type,
+      totalSeats: cabin.seats,
+      allocatedSeats: cabin.allocatedSeats,
+      remainingSeats: cabin.seats - cabin.allocatedSeats,
+    }))
 
     res.status(200).json({
       success: true,
       message: "Agent allocation updated successfully",
-      data: updated,
+      data: {
+        allocation: updated,
+        availabilitySummary: {
+          type: availability.type,
+          cabins: availabilitySummary,
+        },
+        updatedTrip: {
+          tripCapacityDetails: trip.tripCapacityDetails,
+        },
+      },
     })
   } catch (error) {
     console.error("[v0] Error in updateAgentAllocation:", error)
@@ -559,9 +583,28 @@ exports.deleteAgentAllocation = async (req, res) => {
     allocation.updatedBy = buildActor(user)
     await allocation.save()
 
+    // Build availability summary with restored seats
+    const availabilitySummary = availability.cabins.map(cabin => ({
+      cabin: cabin.cabin,
+      cabinName: cabin.cabin.name || 'N/A',
+      cabinType: cabin.cabin.type || 'N/A',
+      totalSeats: cabin.seats,
+      allocatedSeats: cabin.allocatedSeats,
+      remainingSeats: cabin.seats - cabin.allocatedSeats,
+    }))
+
     res.status(200).json({
       success: true,
       message: "Agent allocation deleted successfully",
+      data: {
+        availabilitySummary: {
+          type: availability.type,
+          cabins: availabilitySummary,
+        },
+        updatedTrip: {
+          tripCapacityDetails: trip.tripCapacityDetails,
+        },
+      },
     })
   } catch (error) {
     console.error("[v0] Error in deleteAgentAllocation:", error)
