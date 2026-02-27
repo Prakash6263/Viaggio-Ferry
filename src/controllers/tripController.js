@@ -130,7 +130,7 @@ const listTrips = async (req, res, next) => {
     // Fetch trips and total count
     const [trips, total] = await Promise.all([
       Trip.find(query)
-        .populate("ship")
+        .populate("ship", "_id name")
         .populate("departurePort", "name code")
         .populate("arrivalPort", "name code")
         .populate("promotion", "name")

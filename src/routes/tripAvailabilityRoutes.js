@@ -20,11 +20,11 @@ router.use(extractUserId)
 // GET /api/trips/:tripId/availabilities - List all availabilities for a trip
 router.get("/", checkPermission("ship-trips", "trips", "read"), listTripAvailabilities)
 
-// GET /api/trips/:tripId/availabilities/summary - Get availability summary for a trip
-router.get("/summary", checkPermission("ship-trips", "trips", "read"), getTripAvailabilitySummary)
-
 // GET /api/trips/:tripId/availabilities/:availabilityId - Get specific availability
 router.get("/:availabilityId", checkPermission("ship-trips", "trips", "read"), getTripAvailabilityById)
+
+// GET /api/trips/:tripId/availabilities/summary - Get availability summary for a trip
+router.get("/summary", checkPermission("ship-trips", "trips", "read"), getTripAvailabilitySummary)
 
 // POST /api/trips/:tripId/availabilities - Create new availability
 router.post("/", checkPermission("ship-trips", "trips", "write"), createTripAvailability)
