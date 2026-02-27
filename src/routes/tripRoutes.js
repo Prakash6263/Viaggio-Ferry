@@ -49,8 +49,6 @@ router.put("/:id", checkPermission("ship-trips", "trips", "edit"), tripControlle
  */
 router.delete("/:id", checkPermission("ship-trips", "trips", "delete"), tripController.deleteTrip)
 
-// ==================== TRIP AVAILABILITY ROUTES ====================
-// Mount availability routes at /api/trips/:tripId/availabilities
 router.use("/:tripId/availabilities", tripAvailabilityRoutes)
 
 module.exports = router
