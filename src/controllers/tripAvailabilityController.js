@@ -256,7 +256,6 @@ const createTripAvailability = async (req, res, next) => {
       _id: { $in: createdAvailabilities.map(a => a._id) },
     })
       .populate("cabins.cabin", "name type")
-      .populate("allocatedAgent", "name email")
 
     res.status(201).json({
       success: true,
@@ -272,7 +271,7 @@ const updateTripAvailability = async (req, res, next) => {
   try {
     const { companyId, user } = req
     const { tripId, availabilityId } = req.params
-    const { cabins, allocatedAgent } = req.body
+    const { cabins } = req.body
 
     const trip = await Trip.findOne({ _id: tripId, company: companyId, isDeleted: false })
     if (!trip) throw createHttpError(404, "Trip not found")
