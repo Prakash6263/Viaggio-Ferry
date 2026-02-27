@@ -75,6 +75,25 @@ const tripSchema = new mongoose.Schema(
     checkInOpeningDate: Date,
     checkInClosingDate: Date,
     boardingClosingDate: Date,
+    // Availability - Remaining Seats
+    remainingPassengerSeats: {
+      type: Number,
+      default: 0,
+      min: 0,
+      required: true,
+    },
+    remainingCargoSeats: {
+      type: Number,
+      default: 0,
+      min: 0,
+      required: true,
+    },
+    remainingVehicleSeats: {
+      type: Number,
+      default: 0,
+      min: 0,
+      required: true,
+    },
     // Status
     status: {
       type: String,

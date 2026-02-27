@@ -157,7 +157,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"tripName\": \"Dubai to Muscat Express\",\n  \"tripCode\": \"DXB-MSC-001\",\n  \"ship\": \"{{ship_id}}\",\n  \"departurePort\": \"{{port_id}}\",\n  \"arrivalPort\": \"{{arrival_port_id}}\",\n  \"departureDateTime\": \"2024-03-15T10:00:00Z\",\n  \"arrivalDateTime\": \"2024-03-15T14:30:00Z\",\n  \"status\": \"SCHEDULED\",\n  \"bookingOpeningDate\": \"2024-02-15T00:00:00Z\",\n  \"bookingClosingDate\": \"2024-03-15T08:00:00Z\",\n  \"checkInOpeningDate\": \"2024-03-15T07:00:00Z\",\n  \"checkInClosingDate\": \"2024-03-15T09:30:00Z\",\n  \"boardingClosingDate\": \"2024-03-15T09:45:00Z\",\n  \"promotion\": \"{{promotion_id}}\",\n  \"remarks\": \"Peak season trip with full capacity expected\"\n}"
+              "raw": "{\n  \"tripName\": \"Dubai to Muscat Express\",\n  \"tripCode\": \"DXB-MSC-001\",\n  \"ship\": \"{{ship_id}}\",\n  \"departurePort\": \"{{port_id}}\",\n  \"arrivalPort\": \"{{arrival_port_id}}\",\n  \"departureDateTime\": \"2024-03-15T10:00:00Z\",\n  \"arrivalDateTime\": \"2024-03-15T14:30:00Z\",\n  \"status\": \"SCHEDULED\",\n  \"bookingOpeningDate\": \"2024-02-15T00:00:00Z\",\n  \"bookingClosingDate\": \"2024-03-15T08:00:00Z\",\n  \"checkInOpeningDate\": \"2024-03-15T07:00:00Z\",\n  \"checkInClosingDate\": \"2024-03-15T09:30:00Z\",\n  \"boardingClosingDate\": \"2024-03-15T09:45:00Z\",\n  \"remainingPassengerSeats\": 100,\n  \"remainingCargoSeats\": 50,\n  \"remainingVehicleSeats\": 25,\n  \"promotion\": \"{{promotion_id}}\",\n  \"remarks\": \"Peak season trip with full capacity expected\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/trips",
@@ -191,7 +191,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"tripName\": \"Dubai to Muscat Express - Updated\",\n  \"status\": \"ONGOING\",\n  \"remarks\": \"Updated with new information\"\n}"
+              "raw": "{\n  \"tripName\": \"Dubai to Muscat Express - Updated\",\n  \"status\": \"ONGOING\",\n  \"remainingPassengerSeats\": 85,\n  \"remainingCargoSeats\": 40,\n  \"remainingVehicleSeats\": 20,\n  \"remarks\": \"Updated capacity after bookings\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/trips/{{trip_id}}",

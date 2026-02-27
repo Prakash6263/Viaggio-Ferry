@@ -220,6 +220,9 @@ const createTrip = async (req, res, next) => {
       boardingClosingDate,
       promotion,
       remarks,
+      remainingPassengerSeats = 0,
+      remainingCargoSeats = 0,
+      remainingVehicleSeats = 0,
     } = req.body
 
     if (!companyId) {
@@ -360,6 +363,11 @@ const createTrip = async (req, res, next) => {
     if (boardingClosingDate) tripData.boardingClosingDate = new Date(boardingClosingDate)
     if (promotion) tripData.promotion = promotion
     if (remarks) tripData.remarks = remarks.trim()
+    
+    // Add remaining seats
+    tripData.remainingPassengerSeats = Math.max(0, parseInt(remainingPassengerSeats) || 0)
+    tripData.remainingCargoSeats = Math.max(0, parseInt(remainingCargoSeats) || 0)
+    tripData.remainingVehicleSeats = Math.max(0, parseInt(remainingVehicleSeats) || 0)
 
     const newTrip = new Trip(tripData)
     await newTrip.save()
@@ -405,6 +413,9 @@ const updateTrip = async (req, res, next) => {
       boardingClosingDate,
       promotion,
       remarks,
+      remainingPassengerSeats,
+      remainingCargoSeats,
+      remainingVehicleSeats,
     } = req.body
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -571,6 +582,19 @@ const updateTrip = async (req, res, next) => {
 
     if (remarks !== undefined) {
       tripDoc.remarks = remarks ? remarks.trim() : null
+    }
+
+    // Update remaining seats if provided
+    if (remainingPassengerSeats !== undefined) {
+      tripDoc.remainingPassengerSeats = Math.max(0, parseInt(remainingPassengerSeats) || 0)
+    }
+
+    if (remainingCargoSeats !== undefined) {
+      tripDoc.remainingCargoSeats = Math.max(0, parseInt(remainingCargoSeats) || 0)
+    }
+
+    if (remainingVehicleSeats !== undefined) {
+      tripDoc.remainingVehicleSeats = Math.max(0, parseInt(remainingVehicleSeats) || 0)
     }
 
     // Validate dates
