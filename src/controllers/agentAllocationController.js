@@ -182,8 +182,11 @@ exports.createAgentAllocation = async (req, res) => {
         }
 
         // Validate against availability cabins
+        console.log("[v0] Looking for cabin ID:", cabin)
+        console.log("[v0] Available cabins in availability:", availability.cabins.map(c => ({ id: c.cabin.toString(), name: c.name || 'N/A' })))
         const availabilityCabin = availability.cabins.find(c => c.cabin.toString() === cabin.toString())
         if (!availabilityCabin) {
+          console.log("[v0] Cabin not found in availability. Requested:", cabin, "Available:", availability.cabins.map(c => c.cabin.toString()))
           throw createHttpError(
             400,
             `Cabin ${cabinDoc.name} is not available in this availability for allocation`
