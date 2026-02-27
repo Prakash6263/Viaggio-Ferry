@@ -8,8 +8,12 @@ const {
   deleteTripAvailability,
   getTripAvailabilitySummary,
 } = require("../controllers/tripAvailabilityController")
+const agentAllocationRoutes = require("./agentAllocationRoutes")
 
 const router = express.Router({ mergeParams: true })
+
+// Mount agent allocation routes
+router.use("/", agentAllocationRoutes)
 
 // GET /api/trips/:tripId/availabilities - List all availabilities for a trip
 router.get("/", checkPermission("ship-trips", "trips", "read"), listTripAvailabilities)
