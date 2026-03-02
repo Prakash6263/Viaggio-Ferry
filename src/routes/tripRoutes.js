@@ -3,6 +3,7 @@ const router = express.Router()
 const tripController = require("../controllers/tripController")
 const agentAllocationRoutes = require("./agentAllocationRoutes")
 const tripAvailabilityRoutes = require("./tripAvailabilityRoutes")
+const tripTicketingRuleRoutes = require("./tripTicketingRuleRoutes")
 
 const { verifyToken, extractCompanyId, extractUserId } = require("../middleware/authMiddleware")
 const { checkPermission } = require("../middleware/permissionMiddleware")
@@ -51,6 +52,7 @@ router.put("/:id", checkPermission("ship-trips", "trips", "edit"), tripControlle
  */
 router.delete("/:id", checkPermission("ship-trips", "trips", "delete"), tripController.deleteTrip)
 
+router.use("/:tripId/ticketing-rules", tripTicketingRuleRoutes)
 router.use("/:tripId/availabilities", tripAvailabilityRoutes)
 router.use("/", agentAllocationRoutes)
 
