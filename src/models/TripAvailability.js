@@ -25,6 +25,39 @@ const CreatorSchema = new mongoose.Schema(
   { _id: false }
 )
 
+const CabinSchema = new mongoose.Schema(
+  {
+    cabin: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Cabin",
+      required: true,
+    },
+    seats: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
+    allocatedSeats: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+  },
+  { _id: false }
+)
+
+const AvailabilityTypeSchema = new mongoose.Schema(
+  {
+    type: {
+      type: String,
+      enum: AVAILABILITY_TYPE,
+      required: true,
+    },
+    cabins: [CabinSchema],
+  },
+  { _id: false }
+)
+
 const tripAvailabilitySchema = new mongoose.Schema(
   {
     company: {
@@ -37,42 +70,21 @@ const tripAvailabilitySchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Trip",
       required: true,
+      unique: true,
       index: true,
     },
-    // Availability type: passenger, cargo, or vehicle
-    type: {
-      type: String,
-      enum: AVAILABILITY_TYPE,
+    // One document per trip containing multiple availability types
+    availabilityTypes: {
+      type: [AvailabilityTypeSchema],
       required: true,
-      index: true,
+      validate: {
+        validator: function(v) {
+          return v && v.length > 0
+        },
+        message: "availabilityTypes must contain at least one availability type"
+      }
     },
-    // Array of cabin allocations with their seat counts
-    cabins: [
-      {
-        cabin: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Cabin",
-          required: true,
-        },
-        seats: {
-          type: Number,
-          required: true,
-          min: 1,
-        },
-        allocatedSeats: {
-          type: Number,
-          default: 0,
-          min: 0,
-        },
-        _id: false,
-      },
-    ],
-    // Partner allocation reference
-    allocatedAgent: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Partner",
-      default: null,
-    },
+    
     // Audit
     createdBy: {
       type: CreatorSchema,
@@ -98,8 +110,12 @@ const tripAvailabilitySchema = new mongoose.Schema(
 
 // Indexes for common queries
 tripAvailabilitySchema.index({ company: 1, trip: 1 })
-tripAvailabilitySchema.index({ company: 1, trip: 1, type: 1 })
 tripAvailabilitySchema.index({ company: 1, trip: 1, isDeleted: 1 })
+
+// Delete old model from cache if it exists and re-register
+if (mongoose.models.TripAvailability) {
+  delete mongoose.models.TripAvailability
+}
 
 module.exports = {
   TripAvailability: mongoose.model("TripAvailability", tripAvailabilitySchema),

@@ -15,54 +15,72 @@ function buildActor(user) {
   return { id: user.id, name: user.email, type: "user", layer: user.layer }
 }
 
+// NEW FLOW: One availability document per trip with availabilityTypes array
 const listTripAvailabilities = async (req, res, next) => {
   try {
     const { companyId } = req
     const { tripId } = req.params
-    const { type, page = 1, limit = 10, search = "" } = req.query
+    const { type, search = "" } = req.query
 
     const trip = await Trip.findOne({ _id: tripId, company: companyId, isDeleted: false })
     if (!trip) throw createHttpError(404, "Trip not found")
 
-    const query = { company: companyId, trip: tripId, isDeleted: false }
+    // Find the SINGLE availability document for this trip
+    const availability = await TripAvailability.findOne({
+      company: companyId,
+      trip: tripId,
+      isDeleted: false,
+    }).populate("availabilityTypes.cabins.cabin", "name type")
+
+    if (!availability) {
+      // No availability created yet for this trip
+      return res.json({
+        success: true,
+        data: null,
+        message: "No availability configured for this trip yet",
+      })
+    }
+
+    let result = availability.toObject()
+
+    // If type filter requested, return only that availability type
     if (type) {
       if (!AVAILABILITY_TYPE.includes(type)) {
         throw createHttpError(400, `Invalid type. Must be one of: ${AVAILABILITY_TYPE.join(", ")}`)
       }
-      query.type = type
+      const availType = availability.availabilityTypes.find(at => at.type === type)
+      if (!availType) {
+        return res.json({
+          success: true,
+          data: null,
+          message: `Availability type '${type}' not configured for this trip`,
+        })
+      }
+      result.availabilityTypes = [availType]
     }
 
+    // If search requested, filter cabins by name
     if (search) {
       const cabins = await Cabin.find(
         { company: companyId, name: { $regex: search, $options: "i" }, isDeleted: false },
         { _id: 1 }
       ).lean()
       const cabinIds = cabins.map(c => c._id)
-      if (cabinIds.length === 0) {
-        return res.json({ success: true, data: [], pagination: { page: parseInt(page), limit: parseInt(limit), total: 0 } })
+
+      if (cabinIds.length > 0) {
+        result.availabilityTypes = result.availabilityTypes.map(at => ({
+          ...at,
+          cabins: at.cabins.filter(c => cabinIds.some(id => id.equals(c.cabin._id || c.cabin))),
+        }))
+      } else {
+        result.availabilityTypes = result.availabilityTypes.map(at => ({
+          ...at,
+          cabins: [],
+        }))
       }
-      query["cabins.cabin"] = { $in: cabinIds }
     }
 
-    const pageNum = Math.max(1, parseInt(page))
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit)))
-    const skip = (pageNum - 1) * limitNum
-
-    const [availabilities, total] = await Promise.all([
-      TripAvailability.find(query)
-        .populate("cabins.cabin", "name type")
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limitNum)
-        .lean(),
-      TripAvailability.countDocuments(query),
-    ])
-
-    res.json({
-      success: true,
-      data: availabilities,
-      pagination: { page: pageNum, limit: limitNum, total, pages: Math.ceil(total / limitNum) },
-    })
+    res.json({ success: true, data: result })
   } catch (error) {
     next(error)
   }
@@ -81,8 +99,7 @@ const getTripAvailabilityById = async (req, res, next) => {
       company: companyId,
       trip: tripId,
       isDeleted: false,
-    })
-      .populate("cabins.cabin", "name type")
+    }).populate("availabilityTypes.cabins.cabin", "name type")
 
     if (!availability) throw createHttpError(404, "Availability not found")
 
@@ -96,31 +113,42 @@ const createTripAvailability = async (req, res, next) => {
   try {
     const { companyId, user } = req
     const { tripId } = req.params
-    const { availabilities } = req.body
+    const { availabilityTypes } = req.body
 
-    if (!availabilities || !Array.isArray(availabilities) || availabilities.length === 0) {
+    if (!availabilityTypes || !Array.isArray(availabilityTypes) || availabilityTypes.length === 0) {
       throw createHttpError(
         400,
-        "Missing required field: availabilities (array). Must contain at least one availability object with { type, cabins } structure."
+        "Missing required field: availabilityTypes (array). Must contain at least one object with { type, cabins } structure."
       )
     }
 
     const trip = await Trip.findOne({ _id: tripId, company: companyId, isDeleted: false })
     if (!trip) throw createHttpError(404, "Trip not found")
 
+    // Check if availability ALREADY EXISTS for this trip (unique constraint)
+    const existingAvailability = await TripAvailability.findOne({
+      trip: tripId,
+      company: companyId,
+      isDeleted: false,
+    })
+    if (existingAvailability) {
+      throw createHttpError(400, "Availability already exists for this trip. Use update endpoint to modify.")
+    }
+
     // Get the ship to validate cabin capacities
     const ship = await Ship.findOne({ _id: trip.ship, company: companyId, isDeleted: false })
     if (!ship) throw createHttpError(404, "Ship not found for this trip")
 
-    const createdAvailabilities = []
+    const processedAvailabilityTypes = []
 
-    for (const availability of availabilities) {
-      const { type, cabins } = availability
+    // Validate and process each availability type
+    for (const availType of availabilityTypes) {
+      const { type, cabins } = availType
 
       if (!type || !cabins || !Array.isArray(cabins) || cabins.length === 0) {
         throw createHttpError(
           400,
-          `Invalid availability object. Each must have { type, cabins } with cabins as non-empty array.`
+          `Invalid availability type object. Each must have { type, cabins } with cabins as non-empty array.`
         )
       }
 
@@ -197,18 +225,9 @@ const createTripAvailability = async (req, res, next) => {
         )
       }
 
-      const availabilityData = {
-        company: companyId,
-        trip: tripId,
-        type,
-        cabins: processedCabins,
-        createdBy: buildActor(user),
-      }
+      processedAvailabilityTypes.push({ type, cabins: processedCabins })
 
-      const availabilityRecord = new TripAvailability(availabilityData)
-      await availabilityRecord.save()
-
-      // Update trip's remaining seats for both aggregate and per-cabin tracking
+      // Update trip's remaining seats for this type
       if (type === "passenger") {
         trip.remainingPassengerSeats -= totalSeats
       } else if (type === "cargo") {
@@ -243,22 +262,31 @@ const createTripAvailability = async (req, res, next) => {
           tripCapacityDetail.remainingSeat -= seatsNum
         }
       }
-
-      createdAvailabilities.push(availabilityRecord)
     }
 
-    trip.updatedBy = buildActor(user)
+    // Create SINGLE availability document for this trip
+    const availabilityData = {
+      company: companyId,
+      trip: tripId,
+      availabilityTypes: processedAvailabilityTypes,
+      createdBy: buildActor(user),
+    }
+
+    const availabilityRecord = new TripAvailability(availabilityData)
+    await availabilityRecord.save()
+
+    // Save updated trip
     await trip.save()
 
-    const populatedAvailabilities = await TripAvailability.find({
-      _id: { $in: createdAvailabilities.map(a => a._id) },
-    })
-      .populate("cabins.cabin", "name type")
+    const result = await TripAvailability.findById(availabilityRecord._id).populate(
+      "availabilityTypes.cabins.cabin",
+      "name type"
+    )
 
-    res.status(201).json({
+    res.json({
       success: true,
-      message: `Successfully created ${createdAvailabilities.length} availability record(s)`,
-      data: populatedAvailabilities,
+      data: result,
+      message: "Availability created successfully",
     })
   } catch (error) {
     next(error)
@@ -269,7 +297,7 @@ const updateTripAvailability = async (req, res, next) => {
   try {
     const { companyId, user } = req
     const { tripId, availabilityId } = req.params
-    const { cabins } = req.body
+    const { availabilityTypes } = req.body
 
     const trip = await Trip.findOne({ _id: tripId, company: companyId, isDeleted: false })
     if (!trip) throw createHttpError(404, "Trip not found")
@@ -287,175 +315,180 @@ const updateTripAvailability = async (req, res, next) => {
     const ship = await Ship.findOne({ _id: trip.ship, company: companyId, isDeleted: false })
     if (!ship) throw createHttpError(404, "Ship not found for this trip")
 
-    const oldTotalSeats = availability.cabins.reduce((sum, c) => sum + c.seats, 0)
+    // Store original seats per type for difference calculation
+    const originalSeatsMap = {}
+    availability.availabilityTypes.forEach(at => {
+      originalSeatsMap[at.type] = at.cabins.reduce((sum, c) => sum + c.seats, 0)
+    })
 
-    if (cabins !== undefined && Array.isArray(cabins) && cabins.length > 0) {
-      // Get ship's capacity array for this type
-      let shipCapacityArray = []
-      if (availability.type === "passenger") {
-        shipCapacityArray = ship.passengerCapacity || []
-      } else if (availability.type === "cargo") {
-        shipCapacityArray = ship.cargoCapacity || []
-      } else if (availability.type === "vehicle") {
-        shipCapacityArray = ship.vehicleCapacity || []
-      }
+    const processedAvailabilityTypes = []
 
-      // Create a map of cabin ID to capacity for quick lookup
-      const shipCapacityMap = {}
-      shipCapacityArray.forEach(cap => {
-        const capacityField = availability.type === "passenger" ? "seats" : "spots"
-        shipCapacityMap[cap.cabinId.toString()] = cap[capacityField] || 0
-      })
+    if (availabilityTypes && Array.isArray(availabilityTypes) && availabilityTypes.length > 0) {
+      // Validate and process each availability type
+      for (const availType of availabilityTypes) {
+        const { type, cabins } = availType
 
-      const processedCabins = []
-      let newTotalSeats = 0
+        if (!type || !cabins || !Array.isArray(cabins) || cabins.length === 0) {
+          throw createHttpError(
+            400,
+            `Invalid availability type object. Each must have { type, cabins } with cabins as non-empty array.`
+          )
+        }
 
-      for (const cabinEntry of cabins) {
-        const { cabin, seats } = cabinEntry
+        if (!AVAILABILITY_TYPE.includes(type)) {
+          throw createHttpError(400, `Invalid type: ${type}. Must be one of: ${AVAILABILITY_TYPE.join(", ")}`)
+        }
 
-        const cabinDoc = await Cabin.findOne({
-          _id: cabin,
-          company: companyId,
-          type: availability.type,
-          isDeleted: false,
+        // Get ship's capacity array for this type
+        let shipCapacityArray = []
+        if (type === "passenger") {
+          shipCapacityArray = ship.passengerCapacity || []
+        } else if (type === "cargo") {
+          shipCapacityArray = ship.cargoCapacity || []
+        } else if (type === "vehicle") {
+          shipCapacityArray = ship.vehicleCapacity || []
+        }
+
+        // Create a map of cabin ID to capacity for quick lookup
+        const shipCapacityMap = {}
+        shipCapacityArray.forEach(cap => {
+          const capacityField = type === "passenger" ? "seats" : "spots"
+          shipCapacityMap[cap.cabinId.toString()] = cap[capacityField] || 0
         })
 
-        if (!cabinDoc) {
-          throw createHttpError(404, `Cabin not found or type mismatch for type: ${availability.type}`)
-        }
+        const processedCabins = []
+        let newTotalSeats = 0
 
-        const seatsNum = parseInt(seats)
-        if (isNaN(seatsNum) || seatsNum < 1) {
-          throw createHttpError(400, `Seats must be a positive number for cabin ${cabinDoc.name}`)
-        }
-
-        // VALIDATION: Check if this cabin allocation exceeds ship's cabin capacity
-        const shipCabinCapacity = shipCapacityMap[cabin.toString()] || 0
-        if (seatsNum > shipCabinCapacity) {
-          throw createHttpError(
-            400,
-            `Cannot allocate ${seatsNum} ${availability.type} seats to cabin "${cabinDoc.name}". Ship's ${cabinDoc.name} capacity is only ${shipCabinCapacity} ${availability.type === "passenger" ? "seats" : "spots"}.`
-          )
-        }
-
-        newTotalSeats += seatsNum
-        processedCabins.push({ cabin, seats: seatsNum, allocatedSeats: cabinEntry.allocatedSeats || 0 })
-      }
-
-      if (newTotalSeats > oldTotalSeats) {
-        const difference = newTotalSeats - oldTotalSeats
-        let remainingSeats = 0
-
-        if (availability.type === "passenger") {
-          remainingSeats = trip.remainingPassengerSeats
-        } else if (availability.type === "cargo") {
-          remainingSeats = trip.remainingCargoSeats
-        } else if (availability.type === "vehicle") {
-          remainingSeats = trip.remainingVehicleSeats
-        }
-
-        if (difference > remainingSeats) {
-          throw createHttpError(
-            400,
-            `Cannot increase seats by ${difference}. Only ${remainingSeats} remaining seats available.`
-          )
-        }
-
-        if (availability.type === "passenger") {
-          trip.remainingPassengerSeats -= difference
-        } else if (availability.type === "cargo") {
-          trip.remainingCargoSeats -= difference
-        } else if (availability.type === "vehicle") {
-          trip.remainingVehicleSeats -= difference
-        }
-
-        // Update per-cabin remaining capacity for new cabins
         for (const cabinEntry of cabins) {
           const { cabin, seats } = cabinEntry
-          const oldCabin = availability.cabins.find(c => c.cabin.toString() === cabin.toString())
-          const oldSeats = oldCabin ? oldCabin.seats : 0
-          const newSeats = parseInt(seats)
-          const seatDifference = newSeats - oldSeats
-          const cabinIdStr = cabin.toString()
 
+          const cabinDoc = await Cabin.findOne({
+            _id: cabin,
+            company: companyId,
+            type: type,
+            isDeleted: false,
+          })
+
+          if (!cabinDoc) {
+            throw createHttpError(404, `Cabin not found or type mismatch for type: ${type}`)
+          }
+
+          const seatsNum = parseInt(seats)
+          if (isNaN(seatsNum) || seatsNum < 1) {
+            throw createHttpError(400, `Seats must be a positive number for cabin ${cabinDoc.name}`)
+          }
+
+          // VALIDATION: Check if this cabin allocation exceeds ship's cabin capacity
+          const shipCabinCapacity = shipCapacityMap[cabin.toString()] || 0
+          if (seatsNum > shipCabinCapacity) {
+            throw createHttpError(
+              400,
+              `Cannot allocate ${seatsNum} ${type} seats to cabin "${cabinDoc.name}". Ship's ${cabinDoc.name} capacity is only ${shipCabinCapacity} ${type === "passenger" ? "seats" : "spots"}.`
+            )
+          }
+
+          newTotalSeats += seatsNum
+          processedCabins.push({ cabin, seats: seatsNum, allocatedSeats: cabinEntry.allocatedSeats || 0 })
+        }
+
+        const oldTotal = originalSeatsMap[type] || 0
+
+        if (newTotalSeats > oldTotal) {
+          const difference = newTotalSeats - oldTotal
+          let remainingSeats = 0
+
+          if (type === "passenger") {
+            remainingSeats = trip.remainingPassengerSeats
+          } else if (type === "cargo") {
+            remainingSeats = trip.remainingCargoSeats
+          } else if (type === "vehicle") {
+            remainingSeats = trip.remainingVehicleSeats
+          }
+
+          if (difference > remainingSeats) {
+            throw createHttpError(
+              400,
+              `Cannot increase seats by ${difference}. Only ${remainingSeats} remaining seats available.`
+            )
+          }
+
+          if (type === "passenger") {
+            trip.remainingPassengerSeats -= difference
+          } else if (type === "cargo") {
+            trip.remainingCargoSeats -= difference
+          } else if (type === "vehicle") {
+            trip.remainingVehicleSeats -= difference
+          }
+        } else if (newTotalSeats < oldTotal) {
+          const difference = oldTotal - newTotalSeats
+
+          if (type === "passenger") {
+            trip.remainingPassengerSeats += difference
+          } else if (type === "cargo") {
+            trip.remainingCargoSeats += difference
+          } else if (type === "vehicle") {
+            trip.remainingVehicleSeats += difference
+          }
+        }
+
+        // Update per-cabin remaining capacity
+        for (const cabinEntry of cabins) {
+          const { cabin, seats } = cabinEntry
+          const cabinIdStr = cabin.toString()
+          const seatsNum = parseInt(seats)
+
+          // Find the cabin in the grouped structure
           let tripCapacityDetail = null
-          if (availability.type === "passenger") {
+          if (type === "passenger") {
             tripCapacityDetail = trip.tripCapacityDetails.passenger.find(
               detail => detail.cabinId.toString() === cabinIdStr
             )
-          } else if (availability.type === "cargo") {
+          } else if (type === "cargo") {
             tripCapacityDetail = trip.tripCapacityDetails.cargo.find(
               detail => detail.cabinId.toString() === cabinIdStr
             )
-          } else if (availability.type === "vehicle") {
+          } else if (type === "vehicle") {
             tripCapacityDetail = trip.tripCapacityDetails.vehicle.find(
               detail => detail.cabinId.toString() === cabinIdStr
             )
           }
 
           if (tripCapacityDetail) {
-            tripCapacityDetail.remainingSeat -= seatDifference
+            // Find old cabin entry
+            const oldCabinEntry = availability.availabilityTypes
+              .find(at => at.type === type)
+              ?.cabins.find(c => c.cabin.toString() === cabinIdStr)
+
+            const oldSeats = oldCabinEntry?.seats || 0
+            const difference = seatsNum - oldSeats
+
+            if (difference !== 0) {
+              tripCapacityDetail.remainingSeat -= difference
+            }
           }
         }
-      } else if (newTotalSeats < oldTotalSeats) {
-        const difference = oldTotalSeats - newTotalSeats
 
-        if (availability.type === "passenger") {
-          trip.remainingPassengerSeats += difference
-        } else if (availability.type === "cargo") {
-          trip.remainingCargoSeats += difference
-        } else if (availability.type === "vehicle") {
-          trip.remainingVehicleSeats += difference
-        }
-
-        // Update per-cabin remaining capacity for reduced allocations
-        for (const cabinEntry of cabins) {
-          const { cabin, seats } = cabinEntry
-          const oldCabin = availability.cabins.find(c => c.cabin.toString() === cabin.toString())
-          const oldSeats = oldCabin ? oldCabin.seats : 0
-          const newSeats = parseInt(seats)
-          const seatDifference = oldSeats - newSeats
-          const cabinIdStr = cabin.toString()
-
-          let tripCapacityDetail = null
-          if (availability.type === "passenger") {
-            tripCapacityDetail = trip.tripCapacityDetails.passenger.find(
-              detail => detail.cabinId.toString() === cabinIdStr
-            )
-          } else if (availability.type === "cargo") {
-            tripCapacityDetail = trip.tripCapacityDetails.cargo.find(
-              detail => detail.cabinId.toString() === cabinIdStr
-            )
-          } else if (availability.type === "vehicle") {
-            tripCapacityDetail = trip.tripCapacityDetails.vehicle.find(
-              detail => detail.cabinId.toString() === cabinIdStr
-            )
-          }
-
-          if (tripCapacityDetail) {
-            tripCapacityDetail.remainingSeat += seatDifference
-          }
-        }
+        processedAvailabilityTypes.push({ type, cabins: processedCabins })
       }
-
-      availability.cabins = processedCabins
     }
 
-    if (allocatedAgent !== undefined) {
-      availability.allocatedAgent = allocatedAgent === null ? null : allocatedAgent
-    }
-
+    // Update availability document
+    availability.availabilityTypes = processedAvailabilityTypes
     availability.updatedBy = buildActor(user)
-    await availability.save()
 
-    trip.updatedBy = buildActor(user)
+    await availability.save()
     await trip.save()
 
-    const updatedAvailability = await TripAvailability.findById(availabilityId)
-      .populate("cabins.cabin", "name type")
-      .populate("allocatedAgent", "name email")
+    const result = await TripAvailability.findById(availabilityId).populate(
+      "availabilityTypes.cabins.cabin",
+      "name type"
+    )
 
-    res.json({ success: true, message: "Availability updated successfully", data: updatedAvailability })
+    res.json({
+      success: true,
+      data: result,
+      message: "Availability updated successfully",
+    })
   } catch (error) {
     next(error)
   }
@@ -478,48 +511,55 @@ const deleteTripAvailability = async (req, res, next) => {
 
     if (!availability) throw createHttpError(404, "Availability not found")
 
-    const totalSeats = availability.cabins.reduce((sum, c) => sum + c.seats, 0)
+    // Restore all seats to trip
+    availability.availabilityTypes.forEach(at => {
+      const totalSeats = at.cabins.reduce((sum, c) => sum + c.seats, 0)
 
+      if (at.type === "passenger") {
+        trip.remainingPassengerSeats += totalSeats
+      } else if (at.type === "cargo") {
+        trip.remainingCargoSeats += totalSeats
+      } else if (at.type === "vehicle") {
+        trip.remainingVehicleSeats += totalSeats
+      }
+
+      // Restore per-cabin remaining capacity
+      at.cabins.forEach(cabin => {
+        const cabinIdStr = cabin.cabin.toString()
+        const seatsNum = cabin.seats
+
+        let tripCapacityDetail = null
+        if (at.type === "passenger") {
+          tripCapacityDetail = trip.tripCapacityDetails.passenger.find(
+            detail => detail.cabinId.toString() === cabinIdStr
+          )
+        } else if (at.type === "cargo") {
+          tripCapacityDetail = trip.tripCapacityDetails.cargo.find(
+            detail => detail.cabinId.toString() === cabinIdStr
+          )
+        } else if (at.type === "vehicle") {
+          tripCapacityDetail = trip.tripCapacityDetails.vehicle.find(
+            detail => detail.cabinId.toString() === cabinIdStr
+          )
+        }
+
+        if (tripCapacityDetail) {
+          tripCapacityDetail.remainingSeat += seatsNum
+        }
+      })
+    })
+
+    // Soft delete
     availability.isDeleted = true
     availability.updatedBy = buildActor(user)
+
     await availability.save()
-
-    if (availability.type === "passenger") {
-      trip.remainingPassengerSeats += totalSeats
-    } else if (availability.type === "cargo") {
-      trip.remainingCargoSeats += totalSeats
-    } else if (availability.type === "vehicle") {
-      trip.remainingVehicleSeats += totalSeats
-    }
-
-    // Restore per-cabin remaining capacity
-    for (const cabin of availability.cabins) {
-      const cabinIdStr = cabin.cabin.toString()
-      let tripCapacityDetail = null
-
-      if (availability.type === "passenger") {
-        tripCapacityDetail = trip.tripCapacityDetails.passenger.find(
-          detail => detail.cabinId.toString() === cabinIdStr
-        )
-      } else if (availability.type === "cargo") {
-        tripCapacityDetail = trip.tripCapacityDetails.cargo.find(
-          detail => detail.cabinId.toString() === cabinIdStr
-        )
-      } else if (availability.type === "vehicle") {
-        tripCapacityDetail = trip.tripCapacityDetails.vehicle.find(
-          detail => detail.cabinId.toString() === cabinIdStr
-        )
-      }
-
-      if (tripCapacityDetail) {
-        tripCapacityDetail.remainingSeat += cabin.seats
-      }
-    }
-
-    trip.updatedBy = buildActor(user)
     await trip.save()
 
-    res.json({ success: true, message: "Availability deleted successfully" })
+    res.json({
+      success: true,
+      message: "Availability deleted successfully",
+    })
   } catch (error) {
     next(error)
   }
@@ -533,28 +573,47 @@ const getTripAvailabilitySummary = async (req, res, next) => {
     const trip = await Trip.findOne({ _id: tripId, company: companyId, isDeleted: false })
     if (!trip) throw createHttpError(404, "Trip not found")
 
-    const availabilities = await TripAvailability.find({
+    const availability = await TripAvailability.findOne({
       company: companyId,
       trip: tripId,
       isDeleted: false,
-    })
-      .populate("cabins.cabin", "name type")
-      .lean()
+    }).populate("availabilityTypes.cabins.cabin", "name type")
 
-    const summary = {
-      passenger: { total: 0, allocated: 0, remaining: trip.remainingPassengerSeats },
-      cargo: { total: 0, allocated: 0, remaining: trip.remainingCargoSeats },
-      vehicle: { total: 0, allocated: 0, remaining: trip.remainingVehicleSeats },
+    if (!availability) {
+      return res.json({
+        success: true,
+        data: {
+          tripId,
+          summary: {},
+          message: "No availability configured for this trip",
+        },
+      })
     }
 
-    availabilities.forEach((av) => {
-      av.cabins.forEach((cabin) => {
-        summary[av.type].total += cabin.seats
-        summary[av.type].allocated += cabin.allocatedSeats
-      })
+    const summary = {}
+
+    availability.availabilityTypes.forEach(at => {
+      summary[at.type] = {
+        totalSeats: at.cabins.reduce((sum, c) => sum + c.seats, 0),
+        allocatedSeats: at.cabins.reduce((sum, c) => sum + c.allocatedSeats, 0),
+        availableSeats: at.cabins.reduce((sum, c) => sum + (c.seats - c.allocatedSeats), 0),
+        cabins: at.cabins.map(c => ({
+          cabinName: c.cabin.name,
+          cabinType: c.cabin.type,
+          totalSeats: c.seats,
+          allocatedSeats: c.allocatedSeats,
+          availableSeats: c.seats - c.allocatedSeats,
+        })),
+      }
     })
 
-    res.json({ success: true, data: { tripId, summary, availabilities } })
+    res.json({
+      success: true,
+      data: {
+        tripId,
+        summary,
+      },
+    })
   } catch (error) {
     next(error)
   }

@@ -96,8 +96,11 @@ exports.getAgentAllocationById = async (req, res) => {
   }
 }
 
-// POST - Create agent allocation
+// POST - Create agent allocation with transaction support
 exports.createAgentAllocation = async (req, res) => {
+  const session = await mongoose.startSession()
+  session.startTransaction()
+  
   try {
     const { companyId, user } = req
     const { tripId, availabilityId } = req.params
@@ -108,12 +111,12 @@ exports.createAgentAllocation = async (req, res) => {
       throw createHttpError(400, "Agent ID and allocations array are required")
     }
 
-    // Verify trip and availability exist
+    // Verify trip and availability exist (with transaction session)
     const trip = await Trip.findOne({
       _id: tripId,
       company: companyId,
       isDeleted: false,
-    })
+    }).session(session)
     if (!trip) throw createHttpError(404, "Trip not found")
 
     // Verify agent exists and belongs to company
@@ -122,8 +125,19 @@ exports.createAgentAllocation = async (req, res) => {
       company: companyId,
       status: "Active",
       isDeleted: false,
-    })
+    }).session(session)
     if (!agentDoc) throw createHttpError(404, "Agent not found or inactive")
+
+    // Fetch the availability document ONCE for this trip (single doc with availabilityTypes array)
+    const availability = await TripAvailability.findOne({
+      trip: tripId,
+      company: companyId,
+      isDeleted: false,
+    }).session(session).populate("availabilityTypes.cabins.cabin", "name type")
+    
+    if (!availability) {
+      throw createHttpError(404, `No availability found for this trip`)
+    }
 
     // Validate allocations
     const processedAllocations = []
@@ -135,35 +149,10 @@ exports.createAgentAllocation = async (req, res) => {
         throw createHttpError(400, `Invalid allocation format. Each must have type and cabins array`)
       }
 
-      // Fetch the correct availability for this allocation type
-      const availability = await TripAvailability.findOne({
-        trip: tripId,
-        company: companyId,
-        type: type, // Fetch availability matching the allocation type
-        isDeleted: false,
-      }).populate("cabins.cabin", "name type")
-      
-      if (!availability) {
-        throw createHttpError(
-          404,
-          `No ${type} availability found for this trip`
-        )
-      }
-
-      // Get available seats for this type in the trip's capacity details
-      let availableInTrip = 0
-      if (type === "passenger") {
-        availableInTrip = trip.tripCapacityDetails.passenger.reduce(
-          (sum, cap) => sum + cap.remainingSeat,
-          0
-        )
-      } else if (type === "cargo") {
-        availableInTrip = trip.tripCapacityDetails.cargo.reduce((sum, cap) => sum + cap.remainingSeat, 0)
-      } else if (type === "vehicle") {
-        availableInTrip = trip.tripCapacityDetails.vehicle.reduce(
-          (sum, cap) => sum + cap.remainingSeat,
-          0
-        )
+      // Find the specific availability type within the document
+      const availType = availability.availabilityTypes.find(at => at.type === type)
+      if (!availType) {
+        throw createHttpError(404, `No ${type} availability found for this trip`)
       }
 
       const processedCabins = []
@@ -178,7 +167,7 @@ exports.createAgentAllocation = async (req, res) => {
           company: companyId,
           type,
           isDeleted: false,
-        })
+        }).session(session)
         if (!cabinDoc) {
           throw createHttpError(404, `Cabin not found or type mismatch for cabin ID: ${cabin}`)
         }
@@ -188,24 +177,20 @@ exports.createAgentAllocation = async (req, res) => {
           throw createHttpError(400, `Allocated seats must be a non-negative number for cabin ${cabinDoc.name}`)
         }
 
-        // Validate against availability cabins
-        const availabilityCabin = availability.cabins.find(c => {
+        // Validate against availability type cabins
+        const availabilityCabin = availType.cabins.find(c => {
           const cabinId = c.cabin && c.cabin._id ? c.cabin._id.toString() : (c.cabin ? c.cabin.toString() : null)
           const requestCabinId = cabin.toString()
           return cabinId === requestCabinId
         })
         if (!availabilityCabin) {
-          console.log("[v0] Cabin lookup failed. Available cabins:", availability.cabins.map(c => ({
-            cabinId: c.cabin._id ? c.cabin._id.toString() : c.cabin.toString(),
-            cabinName: c.cabin.name
-          })))
-          console.log("[v0] Requested cabin:", cabin.toString())
           throw createHttpError(
             400,
-            `Cabin ${cabinDoc.name} is not available in this availability for allocation`
+            `Cabin ${cabinDoc.name} is not available in this availability type for allocation`
           )
         }
 
+        // Validate against availability: can only allocate what's not already allocated
         if (seatsNum > availabilityCabin.seats - availabilityCabin.allocatedSeats) {
           throw createHttpError(
             400,
@@ -220,114 +205,123 @@ exports.createAgentAllocation = async (req, res) => {
         })
       }
 
-      if (totalAllocatedSeats > availableInTrip) {
-        throw createHttpError(
-          400,
-          `Cannot allocate ${totalAllocatedSeats} total ${type} seats to agent. Only ${availableInTrip} seats available in trip.`
-        )
-      }
-
       processedAllocations.push({
         type,
         cabins: processedCabins,
         totalAllocatedSeats,
+        availTypeIndex: availability.availabilityTypes.findIndex(at => at.type === type),
       })
     }
 
-    // Create separate agent allocations for each availability type
-    const createdAllocations = []
-    
-    // Group allocations by availability ID to get the right availability for updates
-    const allocationsByAvailability = {}
-    
-    for (const allocation of processedAllocations) {
-      // Fetch availability again for updates (we need the fresh reference for each type)
-      const availability = await TripAvailability.findOne({
-        trip: tripId,
-        company: companyId,
-        type: allocation.type,
-        isDeleted: false,
-      }).populate("cabins.cabin", "name type")
-      
-      if (!availability) continue // Already validated above
-      
-      // Create agent allocation for this type
-      const allocationData = {
-        company: companyId,
-        trip: tripId,
-        availability: availability._id,
-        agent,
-        allocations: [allocation], // Single allocation object for this type
-        createdBy: buildActor(user),
-      }
-
-      const newAllocation = new AvailabilityAgentAllocation(allocationData)
-      await newAllocation.save()
-      createdAllocations.push(newAllocation)
-
-      // Update availability cabins with allocated seats
-      // Agent allocations reduce public available seats but DO NOT reduce trip operational capacity
-      for (const cabin of allocation.cabins) {
-        const availabilityCabin = availability.cabins.find(c => c.cabin.toString() === cabin.cabin.toString())
-        if (availabilityCabin) {
-          availabilityCabin.allocatedSeats += cabin.allocatedSeats
-        }
-      }
-      
-      // Save the updated availability for this type
-      await availability.save()
+    // Create SINGLE agent allocation document with ALL types in allocations array
+    const allocationData = {
+      company: companyId,
+      trip: tripId,
+      availability: availability._id,
+      agent,
+      allocations: processedAllocations.map(p => ({
+        type: p.type,
+        cabins: p.cabins,
+        totalAllocatedSeats: p.totalAllocatedSeats,
+      })),
+      createdBy: buildActor(user),
     }
 
-    // Populate created allocations with details
-    const populatedAllocations = await Promise.all(
-      createdAllocations.map(allocation =>
-        AvailabilityAgentAllocation.findById(allocation._id)
-          .populate("agent", "name code type")
-          .populate("availability", "type cabins")
-          .populate("allocations.cabins.cabin", "name type")
-      )
-    )
+    const newAllocation = new AvailabilityAgentAllocation(allocationData)
+    await newAllocation.save({ session })
 
-    // Build response with all created allocations
-    const responseData = populatedAllocations.map(allocation => {
-      const availability = allocation.availability
-      const availabilitySummary = availability.cabins.map(cabin => ({
+    // Update availability for all types within transaction
+    for (const allocation of processedAllocations) {
+      const availTypeIndex = availability.availabilityTypes.findIndex(at => at.type === allocation.type)
+      
+      // Agent allocations reduce public available seats but DO NOT reduce trip operational capacity
+      for (const cabin of allocation.cabins) {
+        const cabinIndex = availability.availabilityTypes[availTypeIndex].cabins.findIndex(c => {
+          const cabinId = c.cabin && c.cabin._id ? c.cabin._id.toString() : (c.cabin ? c.cabin.toString() : null)
+          const requestCabinId = cabin.cabin.toString()
+          return cabinId === requestCabinId
+        })
+        
+        if (cabinIndex >= 0) {
+          await TripAvailability.updateOne(
+            { _id: availability._id },
+            {
+              $inc: {
+                [`availabilityTypes.${availTypeIndex}.cabins.${cabinIndex}.allocatedSeats`]: cabin.allocatedSeats
+              }
+            },
+            { session }
+          )
+        }
+      }
+    }
+
+    // Commit transaction
+    await session.commitTransaction()
+
+    // Populate created allocation with details (after transaction)
+    const populatedAllocation = await AvailabilityAgentAllocation.findById(newAllocation._id)
+      .populate("agent", "name code type")
+      .populate("availability")
+      .populate("allocations.cabins.cabin", "name type")
+
+    // Fetch latest availability to get current allocatedSeats
+    const updatedAvailability = await TripAvailability.findById(availability._id)
+
+    // Build availability summary for all types
+    const availabilitySummary = updatedAvailability.availabilityTypes.map(availType => ({
+      type: availType.type,
+      cabins: availType.cabins.map(cabin => ({
         cabin: cabin.cabin,
-        cabinName: cabin.cabin.name,
-        cabinType: cabin.cabin.type,
+        cabinName: cabin.cabin ? cabin.cabin.name : 'N/A',
+        cabinType: cabin.cabin ? cabin.cabin.type : 'N/A',
         totalSeats: cabin.seats,
         allocatedSeats: cabin.allocatedSeats,
         remainingSeats: cabin.seats - cabin.allocatedSeats,
       }))
-
-      return {
-        allocation,
-        availabilitySummary: {
-          type: availability.type,
-          cabins: availabilitySummary,
-        },
-      }
-    })
+    }))
 
     res.status(201).json({
       success: true,
-      message: "Agent allocations created successfully",
+      message: "Agent allocation created successfully",
       data: {
-        allocations: responseData,
+        _id: populatedAllocation._id,
+        company: populatedAllocation.company,
+        trip: populatedAllocation.trip,
+        availability: populatedAllocation.availability._id,
+        agent: {
+          _id: populatedAllocation.agent._id,
+          name: populatedAllocation.agent.name,
+          code: populatedAllocation.agent.code,
+          type: populatedAllocation.agent.type,
+        },
+        allocations: populatedAllocation.allocations,
+        availabilitySummary,
+        createdAt: populatedAllocation.createdAt,
+        updatedAt: populatedAllocation.updatedAt,
       },
     })
   } catch (error) {
+    // Abort transaction on error
+    await session.abortTransaction()
+    
     console.error("[v0] Error in createAgentAllocation:", error)
     res.status(error.status || 500).json({
       success: false,
       message: error.message,
       stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
     })
+  } finally {
+    // End session
+    await session.endSession()
   }
 }
 
-// PUT - Update agent allocation
+// PUT - Update agent allocation with transaction support
 exports.updateAgentAllocation = async (req, res) => {
+  const session = await mongoose.startSession()
+  session.startTransaction()
+  
   try {
     const { companyId, user } = req
     const { tripId, allocationId } = req.params
@@ -342,21 +336,44 @@ exports.updateAgentAllocation = async (req, res) => {
       company: companyId,
       trip: tripId,
       isDeleted: false,
-    })
+    }).session(session)
     if (!allocation) throw createHttpError(404, "Agent allocation not found")
 
-    const availability = await TripAvailability.findById(allocation.availability)
+    const availability = await TripAvailability.findById(allocation.availability).session(session)
     if (!availability) throw createHttpError(404, "Availability not found")
 
-    const trip = await Trip.findById(tripId)
+    const trip = await Trip.findById(tripId).session(session)
     if (!trip) throw createHttpError(404, "Trip not found")
 
-    // Restore previous allocations from availability (agent allocations only affect availability, not trip capacity)
+    // Get the allocation type and availability type index
+    const prevAllocationData = allocation.allocations[0]
+    const availTypeIndex = availability.availabilityTypes.findIndex(at => at.type === prevAllocationData.type)
+    
+    if (availTypeIndex < 0) {
+      throw createHttpError(400, "Availability type not found")
+    }
+
+    // Restore previous allocations from availability
     for (const prevAllocation of allocation.allocations) {
+      const prevAvailTypeIndex = availability.availabilityTypes.findIndex(at => at.type === prevAllocation.type)
+      
       for (const cabin of prevAllocation.cabins) {
-        const availabilityCabin = availability.cabins.find(c => c.cabin.toString() === cabin.cabin.toString())
-        if (availabilityCabin) {
-          availabilityCabin.allocatedSeats -= cabin.allocatedSeats
+        const cabinIndex = availability.availabilityTypes[prevAvailTypeIndex].cabins.findIndex(c => {
+          const cabinId = c.cabin && c.cabin._id ? c.cabin._id.toString() : (c.cabin ? c.cabin.toString() : null)
+          const requestCabinId = cabin.cabin.toString()
+          return cabinId === requestCabinId
+        })
+        
+        if (cabinIndex >= 0) {
+          await TripAvailability.updateOne(
+            { _id: allocation.availability },
+            {
+              $inc: {
+                [`availabilityTypes.${prevAvailTypeIndex}.cabins.${cabinIndex}.allocatedSeats`]: -cabin.allocatedSeats
+              }
+            },
+            { session }
+          )
         }
       }
     }
@@ -382,7 +399,7 @@ exports.updateAgentAllocation = async (req, res) => {
           company: companyId,
           type,
           isDeleted: false,
-        })
+        }).session(session)
         if (!cabinDoc) {
           throw createHttpError(404, `Cabin not found for ID: ${cabin}`)
         }
@@ -392,7 +409,16 @@ exports.updateAgentAllocation = async (req, res) => {
           throw createHttpError(400, `Allocated seats must be non-negative`)
         }
 
-        const availabilityCabin = availability.cabins.find(c => c.cabin.toString() === cabin.toString())
+        // Find the availability type
+        const availType = availability.availabilityTypes.find(at => at.type === type)
+        if (!availType) {
+          throw createHttpError(400, `Availability type '${type}' not found`)
+        }
+
+        const availabilityCabin = availType.cabins.find(c => {
+          const cabinId = c.cabin && c.cabin._id ? c.cabin._id.toString() : (c.cabin ? c.cabin.toString() : null)
+          return cabinId === cabin.toString()
+        })
         if (!availabilityCabin) {
           throw createHttpError(400, `Cabin not available in this availability`)
         }
@@ -421,57 +447,94 @@ exports.updateAgentAllocation = async (req, res) => {
     // Update with new allocations
     allocation.allocations = processedAllocations
     allocation.updatedBy = buildActor(user)
-    await allocation.save()
+    await allocation.save({ session })
 
     // Apply new allocations to availability (agent allocations only affect availability, not trip capacity)
     for (const newAllocation of processedAllocations) {
+      const newAvailTypeIndex = availability.availabilityTypes.findIndex(at => at.type === newAllocation.type)
+      
       for (const cabin of newAllocation.cabins) {
-        const availabilityCabin = availability.cabins.find(c => c.cabin.toString() === cabin.cabin.toString())
-        if (availabilityCabin) {
-          availabilityCabin.allocatedSeats += cabin.allocatedSeats
+        const cabinIndex = availability.availabilityTypes[newAvailTypeIndex].cabins.findIndex(c => {
+          const cabinId = c.cabin && c.cabin._id ? c.cabin._id.toString() : (c.cabin ? c.cabin.toString() : null)
+          const requestCabinId = cabin.cabin.toString()
+          return cabinId === requestCabinId
+        })
+        
+        if (cabinIndex >= 0) {
+          await TripAvailability.updateOne(
+            { _id: allocation.availability },
+            {
+              $inc: {
+                [`availabilityTypes.${newAvailTypeIndex}.cabins.${cabinIndex}.allocatedSeats`]: cabin.allocatedSeats
+              }
+            },
+            { session }
+          )
         }
       }
     }
-    await availability.save()
+
+    // Commit transaction
+    await session.commitTransaction()
 
     const updated = await AvailabilityAgentAllocation.findById(allocationId)
       .populate("agent", "name code type")
-      .populate("availability", "type cabins")
+      .populate("availability")
       .populate("allocations.cabins.cabin", "name type")
 
-    // Build availability summary with remaining seats
-    const availabilitySummary = availability.cabins.map(cabin => ({
-      cabin: cabin.cabin,
-      cabinName: cabin.cabin.name,
-      cabinType: cabin.cabin.type,
-      totalSeats: cabin.seats,
-      allocatedSeats: cabin.allocatedSeats,
-      remainingSeats: cabin.seats - cabin.allocatedSeats,
+    // Build availability summary for all types
+    const updatedAvailability = await TripAvailability.findById(allocation.availability)
+    const availabilitySummary = updatedAvailability.availabilityTypes.map(availType => ({
+      type: availType.type,
+      cabins: availType.cabins.map(cabin => ({
+        cabin: cabin.cabin,
+        cabinName: cabin.cabin ? cabin.cabin.name : 'N/A',
+        cabinType: cabin.cabin ? cabin.cabin.type : 'N/A',
+        totalSeats: cabin.seats,
+        allocatedSeats: cabin.allocatedSeats,
+        remainingSeats: cabin.seats - cabin.allocatedSeats,
+      }))
     }))
 
     res.status(200).json({
       success: true,
       message: "Agent allocation updated successfully",
       data: {
-        allocation: updated,
-        availabilitySummary: {
-          type: availability.type,
-          cabins: availabilitySummary,
+        _id: updated._id,
+        company: updated.company,
+        trip: updated.trip,
+        availability: updated.availability._id,
+        agent: {
+          _id: updated.agent._id,
+          name: updated.agent.name,
+          code: updated.agent.code,
+          type: updated.agent.type,
         },
+        allocations: updated.allocations,
+        availabilitySummary,
+        createdAt: updated.createdAt,
+        updatedAt: updated.updatedAt,
       },
     })
   } catch (error) {
+    await session.abortTransaction()
+    
     console.error("[v0] Error in updateAgentAllocation:", error)
     res.status(error.status || 500).json({
       success: false,
       message: error.message,
       stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
     })
+  } finally {
+    await session.endSession()
   }
 }
 
-// DELETE - Delete agent allocation
+// DELETE - Delete agent allocation with transaction support
 exports.deleteAgentAllocation = async (req, res) => {
+  const session = await mongoose.startSession()
+  session.startTransaction()
+  
   try {
     const { companyId, user } = req
     const { tripId, allocationId } = req.params
@@ -481,58 +544,82 @@ exports.deleteAgentAllocation = async (req, res) => {
       company: companyId,
       trip: tripId,
       isDeleted: false,
-    })
+    }).session(session)
     if (!allocation) throw createHttpError(404, "Agent allocation not found")
 
-    const availability = await TripAvailability.findById(allocation.availability)
+    const availability = await TripAvailability.findById(allocation.availability).session(session)
     if (!availability) throw createHttpError(404, "Availability not found")
 
-    const trip = await Trip.findById(tripId)
+    const trip = await Trip.findById(tripId).session(session)
     if (!trip) throw createHttpError(404, "Trip not found")
 
     // Restore allocation seats back to availability
     // Agent allocations do NOT affect trip operational capacity, only restore available seats
     for (const allocationEntry of allocation.allocations) {
+      const availTypeIndex = availability.availabilityTypes.findIndex(at => at.type === allocationEntry.type)
+      
       for (const cabin of allocationEntry.cabins) {
-        const availabilityCabin = availability.cabins.find(c => c.cabin.toString() === cabin.cabin.toString())
-        if (availabilityCabin) {
-          availabilityCabin.allocatedSeats -= cabin.allocatedSeats
+        const cabinIndex = availability.availabilityTypes[availTypeIndex].cabins.findIndex(c => {
+          const cabinId = c.cabin && c.cabin._id ? c.cabin._id.toString() : (c.cabin ? c.cabin.toString() : null)
+          const requestCabinId = cabin.cabin.toString()
+          return cabinId === requestCabinId
+        })
+        
+        if (cabinIndex >= 0) {
+          await TripAvailability.updateOne(
+            { _id: allocation.availability },
+            {
+              $inc: {
+                [`availabilityTypes.${availTypeIndex}.cabins.${cabinIndex}.allocatedSeats`]: -cabin.allocatedSeats
+              }
+            },
+            { session }
+          )
         }
       }
     }
-    await availability.save()
 
     allocation.isDeleted = true
     allocation.updatedBy = buildActor(user)
-    await allocation.save()
+    await allocation.save({ session })
 
-    // Build availability summary with restored seats
-    const availabilitySummary = availability.cabins.map(cabin => ({
-      cabin: cabin.cabin,
-      cabinName: cabin.cabin.name || 'N/A',
-      cabinType: cabin.cabin.type || 'N/A',
-      totalSeats: cabin.seats,
-      allocatedSeats: cabin.allocatedSeats,
-      remainingSeats: cabin.seats - cabin.allocatedSeats,
+    // Commit transaction
+    await session.commitTransaction()
+
+    // Build availability summary for all types after deletion
+    const updatedAvailability = await TripAvailability.findById(allocation.availability)
+
+    const availabilitySummary = updatedAvailability.availabilityTypes.map(availType => ({
+      type: availType.type,
+      cabins: availType.cabins.map(cabin => ({
+        cabin: cabin.cabin,
+        cabinName: cabin.cabin ? cabin.cabin.name : 'N/A',
+        cabinType: cabin.cabin ? cabin.cabin.type : 'N/A',
+        totalSeats: cabin.seats,
+        allocatedSeats: cabin.allocatedSeats,
+        remainingSeats: cabin.seats - cabin.allocatedSeats,
+      }))
     }))
 
     res.status(200).json({
       success: true,
       message: "Agent allocation deleted successfully",
       data: {
-        availabilitySummary: {
-          type: availability.type,
-          cabins: availabilitySummary,
-        },
+        allocationId: allocation._id,
+        availabilitySummary,
       },
     })
   } catch (error) {
+    await session.abortTransaction()
+    
     console.error("[v0] Error in deleteAgentAllocation:", error)
     res.status(error.status || 500).json({
       success: false,
       message: error.message,
       stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
     })
+  } finally {
+    await session.endSession()
   }
 }
 
