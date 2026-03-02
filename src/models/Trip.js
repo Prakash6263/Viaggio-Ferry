@@ -1,6 +1,6 @@
 const mongoose = require("mongoose")
 
-const TRIP_STATUS = ["SCHEDULED", "OPEN", "CLOSED", "COMPLETED", "CANCELLED"]
+const TRIP_STATUS = ["SCHEDULED", "ONGOING", "COMPLETED"]
 
 const CreatorSchema = new mongoose.Schema(
   {
@@ -75,12 +75,108 @@ const tripSchema = new mongoose.Schema(
     checkInOpeningDate: Date,
     checkInClosingDate: Date,
     boardingClosingDate: Date,
+    // Per-Cabin Capacity Tracking (grouped by type)
+    tripCapacityDetails: {
+      passenger: [
+        {
+          cabinId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Cabin",
+            required: true,
+          },
+          cabinName: {
+            type: String,
+            required: true,
+          },
+          totalSeat: {
+            type: Number,
+            required: true,
+            min: 1,
+          },
+          remainingSeat: {
+            type: Number,
+            required: true,
+            min: 0,
+          },
+          _id: false,
+        },
+      ],
+      cargo: [
+        {
+          cabinId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Cabin",
+            required: true,
+          },
+          cabinName: {
+            type: String,
+            required: true,
+          },
+          totalSeat: {
+            type: Number,
+            required: true,
+            min: 1,
+          },
+          remainingSeat: {
+            type: Number,
+            required: true,
+            min: 0,
+          },
+          _id: false,
+        },
+      ],
+      vehicle: [
+        {
+          cabinId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Cabin",
+            required: true,
+          },
+          cabinName: {
+            type: String,
+            required: true,
+          },
+          totalSeat: {
+            type: Number,
+            required: true,
+            min: 1,
+          },
+          remainingSeat: {
+            type: Number,
+            required: true,
+            min: 0,
+          },
+          _id: false,
+        },
+      ],
+      _id: false,
+    },
+    // Availability - Remaining Seats (aggregate totals for quick access)
+    remainingPassengerSeats: {
+      type: Number,
+      default: 0,
+      min: 0,
+      required: true,
+    },
+    remainingCargoSeats: {
+      type: Number,
+      default: 0,
+      min: 0,
+      required: true,
+    },
+    remainingVehicleSeats: {
+      type: Number,
+      default: 0,
+      min: 0,
+      required: true,
+    },
     // Status
     status: {
       type: String,
       enum: TRIP_STATUS,
       default: "SCHEDULED",
       index: true,
+      required: true,
     },
     remarks: String,
     // Promotion & Notes

@@ -13,12 +13,12 @@ const taxRoutes = require("./taxRoutes")
 const accessGroupRoutes = require("./accessGroupRoutes")
 const userRoutes = require("./userRoutes")
 const sidebarRoutes = require("./sidebarRoutes")
-const protectedExampleRoutes = require("./protectedExampleRoutes")
 const publicCountryRoutes = require("./publicCountryRoutes")
 const portRoutes = require("./portRoutes")
 const cabinRoutes = require("./cabinRoutes")
 const payloadTypeRoutes = require("./payloadTypeRoutes")
 const shipRoutes = require("./shipRoutes")
+const tripRoutes = require("./tripRoutes")
 const priceListRoutes = require("./priceListRoutes")
 
 
@@ -28,6 +28,7 @@ module.exports = (app) => {
   app.use("/api/cabins", cabinRoutes)
   app.use("/api/payload-types", payloadTypeRoutes)
   app.use("/api/ships", shipRoutes)
+  app.use("/api/trips", tripRoutes)
   app.use("/api/exchange-rates", exchangeRateRoutes)
   app.use("/api/admin", adminRoutes)
   app.use("/api/companies", companyRoutes)
@@ -43,6 +44,5 @@ module.exports = (app) => {
   app.use("/api/access-groups", accessGroupRoutes)
   app.use("/api/users", userRoutes)
   app.use("/api/sidebar", sidebarRoutes)
-  app.use("/api/protected-example", protectedExampleRoutes)
   app.use("/api/price-lists", priceListRoutes)
 }
