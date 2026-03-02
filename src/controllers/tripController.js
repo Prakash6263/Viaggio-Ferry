@@ -5,6 +5,7 @@ const { Ship } = require("../models/Ship")
 const { Port } = require("../models/Port")
 const { Promotion } = require("../models/Promotion")
 const { Cabin } = require("../models/Cabin")
+const { TicketingRule } = require("../models/TicketingRule")
 
 /**
  * Helper function to build actor object based on user role
@@ -810,6 +811,150 @@ const getTripAvailability = async (req, res, next) => {
   }
 }
 
+/**
+ * PUT /api/trips/:tripId/ticketing-rules
+ * Assign ticketing rules to a trip
+ */
+const assignTicketingRules = async (req, res, next) => {
+  try {
+    const { tripId } = req.params
+    const { companyId } = req
+    const { ticketingRules } = req.body
+
+    // Validate trip ID format
+    if (!mongoose.Types.ObjectId.isValid(tripId)) {
+      throw createHttpError(400, "Invalid trip ID format")
+    }
+
+    // Validate ticketingRules is provided and is an array
+    if (!Array.isArray(ticketingRules)) {
+      throw createHttpError(400, "ticketingRules must be an array")
+    }
+
+    // Validate each rule entry
+    const seenRuleTypes = new Set()
+    for (const entry of ticketingRules) {
+      // Validate ruleType
+      if (!entry.ruleType || !["VOID", "REFUND", "REISSUE"].includes(entry.ruleType)) {
+        throw createHttpError(400, "Invalid ruleType. Must be one of: VOID, REFUND, REISSUE")
+      }
+
+      // Check for duplicate ruleType in the same request
+      if (seenRuleTypes.has(entry.ruleType)) {
+        throw createHttpError(400, `Duplicate ruleType not allowed: ${entry.ruleType}`)
+      }
+      seenRuleTypes.add(entry.ruleType)
+
+      // Validate rule ID format
+      if (!entry.rule || !mongoose.Types.ObjectId.isValid(entry.rule)) {
+        throw createHttpError(400, "Each rule must have a valid rule ID")
+      }
+    }
+
+    // Fetch trip and verify it exists and belongs to company
+    const trip = await Trip.findOne({
+      _id: tripId,
+      company: companyId,
+      isDeleted: false,
+    })
+
+    if (!trip) {
+      throw createHttpError(404, "Trip not found")
+    }
+
+    // Validate and fetch all ticketing rules
+    const ruleIds = ticketingRules.map(r => r.rule)
+    const rules = await TicketingRule.find({
+      _id: { $in: ruleIds },
+      company: companyId,
+      isDeleted: false,
+    })
+
+    // Check if all rules were found
+    if (rules.length !== ticketingRules.length) {
+      throw createHttpError(404, "One or more ticketing rules not found or do not belong to this company")
+    }
+
+    // Create a map of rule IDs to their types for quick lookup
+    const ruleMap = {}
+    rules.forEach(rule => {
+      ruleMap[rule._id.toString()] = rule.ruleType
+    })
+
+    // Validate that each rule type matches the provided ruleType
+    for (const entry of ticketingRules) {
+      const actualRuleType = ruleMap[entry.rule.toString()]
+      if (actualRuleType !== entry.ruleType) {
+        throw createHttpError(400, `Rule type mismatch for rule ${entry.rule}. Expected ${entry.ruleType}, but rule has type ${actualRuleType}`)
+      }
+    }
+
+    // Update trip with ticketing rules
+    trip.ticketingRules = ticketingRules
+    await trip.save()
+
+    // Populate the ticketing rules with full details
+    const populatedTrip = await Trip.findById(tripId).populate({
+      path: "ticketingRules.rule",
+      select: "ruleName ruleType restrictedWindowHours sameDayOnly startOffsetDays normalFee restrictedPenalty noShowPenalty conditions",
+    })
+
+    res.status(200).json({
+      success: true,
+      message: "Ticketing rules assigned successfully",
+      data: {
+        tripId: populatedTrip._id,
+        ticketingRules: populatedTrip.ticketingRules,
+      },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * GET /api/trips/:tripId/ticketing-rules
+ * Get ticketing rules assigned to a trip
+ */
+const getTicketingRulesForTrip = async (req, res, next) => {
+  try {
+    const { tripId } = req.params
+    const { companyId } = req
+
+    // Validate trip ID format
+    if (!mongoose.Types.ObjectId.isValid(tripId)) {
+      throw createHttpError(400, "Invalid trip ID format")
+    }
+
+    // Fetch trip with populated ticketing rules
+    const trip = await Trip.findOne({
+      _id: tripId,
+      company: companyId,
+      isDeleted: false,
+    }).populate({
+      path: "ticketingRules.rule",
+      select: "ruleName ruleType restrictedWindowHours sameDayOnly startOffsetDays normalFee restrictedPenalty noShowPenalty conditions",
+    })
+
+    if (!trip) {
+      throw createHttpError(404, "Trip not found")
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Ticketing rules retrieved successfully",
+      data: {
+        tripId: trip._id,
+        tripName: trip.tripName,
+        tripCode: trip.tripCode,
+        ticketingRules: trip.ticketingRules || [],
+      },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 module.exports = {
   listTrips,
   getTripById,
@@ -817,4 +962,6 @@ module.exports = {
   updateTrip,
   deleteTrip,
   getTripAvailability,
+  assignTicketingRules,
+  getTicketingRulesForTrip,
 }

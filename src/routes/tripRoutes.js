@@ -51,6 +51,20 @@ router.put("/:id", checkPermission("ship-trips", "trips", "edit"), tripControlle
  */
 router.delete("/:id", checkPermission("ship-trips", "trips", "delete"), tripController.deleteTrip)
 
+// ==================== TICKETING RULES ROUTES ====================
+
+/**
+ * GET /api/trips/:tripId/ticketing-rules
+ * Get ticketing rules assigned to a trip - requires read permission on trips
+ */
+router.get("/:tripId/ticketing-rules", checkPermission("ship-trips", "trips", "read"), tripController.getTicketingRulesForTrip)
+
+/**
+ * PUT /api/trips/:tripId/ticketing-rules
+ * Assign ticketing rules to a trip - requires edit permission on trips
+ */
+router.put("/:tripId/ticketing-rules", checkPermission("ship-trips", "trips", "edit"), tripController.assignTicketingRules)
+
 router.use("/:tripId/availabilities", tripAvailabilityRoutes)
 router.use("/", agentAllocationRoutes)
 

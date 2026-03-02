@@ -185,6 +185,22 @@ const tripSchema = new mongoose.Schema(
       ref: "Promotion",
       default: null,
     },
+    // Ticketing Rules - one per ruleType (VOID, REFUND, REISSUE)
+    ticketingRules: [
+      {
+        ruleType: {
+          type: String,
+          enum: ["VOID", "REFUND", "REISSUE"],
+          required: true,
+        },
+        rule: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "TicketingRule",
+          required: true,
+        },
+        _id: false,
+      },
+    ],
     // Reporting Status
     reportingStatus: {
       type: String,
