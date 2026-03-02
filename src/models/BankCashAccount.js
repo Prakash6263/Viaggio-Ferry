@@ -9,7 +9,6 @@ const BankCashAccountSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
       required: true,
-      index: true,
     },
     layer: {
       type: String,
@@ -26,7 +25,6 @@ const BankCashAccountSchema = new mongoose.Schema(
       type: String,
       enum: ACCOUNT_TYPES,
       required: true,
-      index: true,
     },
     accountName: {
       type: String,
@@ -43,13 +41,11 @@ const BankCashAccountSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Currency",
       required: true,
-      index: true,
     },
     ledgerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "CompanyLedger",
       required: false,
-      index: true,
     },
     ledgerCode: {
       type: String,
@@ -63,13 +59,11 @@ const BankCashAccountSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "ChartOfAccount",
       required: false,
-      index: true,
     },
     status: {
       type: String,
       enum: STATUS,
       default: "Active",
-      index: true,
     },
     note: {
       type: String,
@@ -77,7 +71,7 @@ const BankCashAccountSchema = new mongoose.Schema(
       default: "",
       maxlength: 2000,
     },
-    isDeleted: { type: Boolean, default: false, index: true },
+    isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true },
 )

@@ -24,7 +24,6 @@ const CompanyLedgerSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
       required: true,
-      index: true,
     },
     ledgerCode: {
       type: String,
@@ -47,7 +46,6 @@ const CompanyLedgerSchema = new mongoose.Schema(
       type: String,
       enum: LEDGER_TYPES,
       required: true,
-      index: true,
     },
     typeSequence: {
       type: String,
@@ -58,7 +56,6 @@ const CompanyLedgerSchema = new mongoose.Schema(
       type: String,
       enum: STATUS,
       default: "Active",
-      index: true,
     },
     // True for base ledgers and system-generated ledgers (Partner, Salesman, Bank)
     systemAccount: {
@@ -95,7 +92,6 @@ const CompanyLedgerSchema = new mongoose.Schema(
     isDeleted: {
       type: Boolean,
       default: false,
-      index: true,
     },
   },
   {

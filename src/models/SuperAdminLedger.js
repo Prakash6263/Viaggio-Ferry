@@ -35,13 +35,11 @@ const SuperAdminLedgerSchema = new mongoose.Schema(
       required: false,
       trim: true,
       maxlength: 500,
-      index: true,
     },
     ledgerType: {
       type: String,
       enum: LEDGER_TYPES,
       required: true,
-      index: true,
     },
     typeSequence: {
       type: String,
@@ -52,7 +50,6 @@ const SuperAdminLedgerSchema = new mongoose.Schema(
       type: String,
       enum: STATUS,
       default: "Active",
-      index: true,
     },
     // These fields are ALWAYS true for SuperAdminLedger
     systemAccount: {
@@ -92,7 +89,6 @@ const SuperAdminLedgerSchema = new mongoose.Schema(
 )
 
 // Indexes for query optimization
-SuperAdminLedgerSchema.index({ ledgerCode: 1 }, { unique: true })
 SuperAdminLedgerSchema.index({ ledgerType: 1, status: 1 })
 SuperAdminLedgerSchema.index({ ledgerDescription: "text", ledgerCode: "text" })
 

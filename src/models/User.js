@@ -26,7 +26,6 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ["company", "marine-agent", "commercial-agent", "selling-agent"],
       required: true,
-      index: true,
     },
     agent: { type: mongoose.Schema.Types.ObjectId, ref: "Partner", default: null },
     isSalesman: { type: Boolean, default: false },

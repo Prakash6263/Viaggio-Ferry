@@ -10,7 +10,6 @@ const TaxSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
       required: true,
-      index: true,
     },
     code: { type: String, required: true, trim: true, uppercase: true, minlength: 1, maxlength: 10 },
     name: { type: String, required: true, trim: true, maxlength: 100 },

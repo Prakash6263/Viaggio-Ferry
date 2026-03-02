@@ -6,35 +6,29 @@ const TrialBalanceSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
       required: true,
-      index: true,
     },
     // Account details
     ledgerCode: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "ChartOfAccount",
       required: true,
-      index: true,
     },
     ledgerCodeText: {
       type: String,
       required: true,
-      index: true,
     },
     ledgerDescription: {
       type: String,
       required: true,
-      index: true,
     },
     ledgerType: {
       type: String,
       required: true,
-      index: true,
     },
     // Balance information
     initialBalance: {
       type: Number,
       default: 0,
-      index: false,
     },
     debit: {
       type: Number,
@@ -55,13 +49,11 @@ const TrialBalanceSchema = new mongoose.Schema(
       type: String,
       enum: ["Debit", "Credit", "Balanced"],
       default: "Balanced",
-      index: true,
     },
     // Period information
     asOfDate: {
       type: Date,
       required: true,
-      index: true,
     },
     startDate: {
       type: Date,
@@ -84,7 +76,6 @@ const TrialBalanceSchema = new mongoose.Schema(
     isDeleted: {
       type: Boolean,
       default: false,
-      index: true,
     },
   },
   { timestamps: true },
