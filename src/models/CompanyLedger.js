@@ -24,7 +24,22 @@ const CompanyLedgerSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
       required: true,
-      index: true,
+      index: false,
+    },
+    // Reference to the base ledger (if inherited from SuperAdminLedger)
+    baseLedger: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SuperAdminLedger",
+      default: null,
+      index: false,
+    },
+    ledgerCode: {
+      type: String,
+      required: true,
+      uppercase: true,
+      trim: true,
+      match: /^\d{2}-\d{5}$/,
+      index: false,
     },
     ledgerCode: {
       type: String,
