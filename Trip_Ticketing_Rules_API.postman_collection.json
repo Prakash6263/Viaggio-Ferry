@@ -1,0 +1,467 @@
+{
+  "info": {
+    "name": "Trip Ticketing Rules API",
+    "description": "APIs for managing trip ticketing rules assignment and retrieval",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Ticketing Rules (Company)",
+      "item": [
+        {
+          "name": "List All Ticketing Rules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ticketing-rules?ruleType=REFUND&page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ticketing-rules"
+              ],
+              "query": [
+                {
+                  "key": "ruleType",
+                  "value": "REFUND",
+                  "disabled": false
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "Retrieve all ticketing rules for the company with optional filtering"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/ticketing-rules?ruleType=REFUND&page=1&limit=10",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "ticketing-rules"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Ticketing rules retrieved successfully\",\n  \"data\": {\n    \"rules\": [\n      {\n        \"_id\": \"rule_id_1\",\n        \"ruleName\": \"Standard Refund\",\n        \"ruleType\": \"REFUND\",\n        \"penaltyAmount\": 100,\n        \"penaltyPercentage\": 5,\n        \"restrictions\": {\n          \"refundBefore\": 24,\n          \"allowPartialRefund\": true\n        },\n        \"companyId\": \"company_id_1\",\n        \"status\": \"ACTIVE\",\n        \"createdAt\": \"2024-01-15T10:30:00Z\"\n      },\n      {\n        \"_id\": \"rule_id_2\",\n        \"ruleName\": \"Express Void\",\n        \"ruleType\": \"VOID\",\n        \"penaltyAmount\": 50,\n        \"penaltyPercentage\": 2,\n        \"restrictions\": {\n          \"voidBefore\": 12,\n          \"allowVoidAfterCheckIn\": false\n        },\n        \"companyId\": \"company_id_1\",\n        \"status\": \"ACTIVE\",\n        \"createdAt\": \"2024-01-15T10:30:00Z\"\n      }\n    ],\n    \"pagination\": {\n      \"page\": 1,\n      \"limit\": 10,\n      \"total\": 2\n    }\n  }\n}"
+            },
+            {
+              "name": "Unauthorized",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer invalid_token",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/ticketing-rules",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "ticketing-rules"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Unauthorized access\",\n  \"error\": \"Invalid or expired token\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Trip Rule Assignment",
+      "item": [
+        {
+          "name": "Assign Ticketing Rules to Trip",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticketingRules\": [\n    {\n      \"ruleType\": \"REFUND\",\n      \"rule\": \"{{rule_id}}\"\n    },\n    {\n      \"ruleType\": \"VOID\",\n      \"rule\": \"rule_id_2\"\n    },\n    {\n      \"ruleType\": \"REISSUE\",\n      \"rule\": \"rule_id_3\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/ticketing-rules",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "ticketing-rules"
+              ]
+            },
+            "description": "Assign or update ticketing rules for a specific trip"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"ticketingRules\": [\n    {\n      \"ruleType\": \"REFUND\",\n      \"rule\": \"rule_id_1\"\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/trips/{{trip_id}}/ticketing-rules",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trips",
+                    "{{trip_id}}",
+                    "ticketing-rules"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Ticketing rules assigned successfully\",\n  \"data\": {\n    \"tripId\": \"{{trip_id}}\",\n    \"ticketingRules\": [\n      {\n        \"ruleType\": \"REFUND\",\n        \"rule\": {\n          \"_id\": \"rule_id_1\",\n          \"ruleName\": \"Standard Refund\",\n          \"ruleType\": \"REFUND\",\n          \"penaltyAmount\": 100,\n          \"penaltyPercentage\": 5,\n          \"restrictions\": {\n            \"refundBefore\": 24,\n            \"allowPartialRefund\": true\n          }\n        }\n      },\n      {\n        \"ruleType\": \"VOID\",\n        \"rule\": {\n          \"_id\": \"rule_id_2\",\n          \"ruleName\": \"Express Void\",\n          \"ruleType\": \"VOID\",\n          \"penaltyAmount\": 50,\n          \"penaltyPercentage\": 2,\n          \"restrictions\": {\n            \"voidBefore\": 12,\n            \"allowVoidAfterCheckIn\": false\n          }\n        }\n      },\n      {\n        \"ruleType\": \"REISSUE\",\n        \"rule\": {\n          \"_id\": \"rule_id_3\",\n          \"ruleName\": \"Reissue Policy\",\n          \"ruleType\": \"REISSUE\",\n          \"penaltyAmount\": 25,\n          \"penaltyPercentage\": 1,\n          \"restrictions\": {\n            \"reissueBefore\": 48\n          }\n        }\n      }\n    ],\n    \"assignedAt\": \"2024-01-15T10:30:00Z\"\n  }\n}"
+            },
+            {
+              "name": "Error - Rule Not Found",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"ticketingRules\": [\n    {\n      \"ruleType\": \"REFUND\",\n      \"rule\": \"invalid_rule_id\"\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/trips/{{trip_id}}/ticketing-rules",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trips",
+                    "{{trip_id}}",
+                    "ticketing-rules"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Ticketing rule not found\",\n  \"error\": \"Rule with ID invalid_rule_id does not exist\"\n}"
+            },
+            {
+              "name": "Error - Rule Type Mismatch",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"ticketingRules\": [\n    {\n      \"ruleType\": \"REFUND\",\n      \"rule\": \"rule_id_2\"\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/trips/{{trip_id}}/ticketing-rules",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trips",
+                    "{{trip_id}}",
+                    "ticketing-rules"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Rule type mismatch\",\n  \"error\": \"Expected rule type REFUND but rule_id_2 has type VOID\"\n}"
+            },
+            {
+              "name": "Error - Duplicate Rule Type",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"ticketingRules\": [\n    {\n      \"ruleType\": \"REFUND\",\n      \"rule\": \"rule_id_1\"\n    },\n    {\n      \"ruleType\": \"REFUND\",\n      \"rule\": \"rule_id_4\"\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/trips/{{trip_id}}/ticketing-rules",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trips",
+                    "{{trip_id}}",
+                    "ticketing-rules"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Duplicate rule type\",\n  \"error\": \"Only one rule per type (REFUND) is allowed per trip\"\n}"
+            },
+            {
+              "name": "Error - Unauthorized Company Rule",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"ticketingRules\": [\n    {\n      \"ruleType\": \"REFUND\",\n      \"rule\": \"rule_from_other_company\"\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/trips/{{trip_id}}/ticketing-rules",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trips",
+                    "{{trip_id}}",
+                    "ticketing-rules"
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Unauthorized company rule\",\n  \"error\": \"Rule does not belong to your company\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Trip With Ticketing Rules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}"
+              ]
+            },
+            "description": "Retrieve trip details with populated ticketing rules"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/trips/{{trip_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trips",
+                    "{{trip_id}}"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Trip retrieved successfully\",\n  \"data\": {\n    \"_id\": \"{{trip_id}}\",\n    \"tripName\": \"Ferry Route A-B\",\n    \"source\": \"Port A\",\n    \"destination\": \"Port B\",\n    \"departureTime\": \"2024-01-20T08:00:00Z\",\n    \"arrivalTime\": \"2024-01-20T12:00:00Z\",\n    \"capacity\": 500,\n    \"companyId\": \"company_id_1\",\n    \"status\": \"ACTIVE\",\n    \"ticketingRules\": [\n      {\n        \"ruleType\": \"REFUND\",\n        \"rule\": {\n          \"_id\": \"rule_id_1\",\n          \"ruleName\": \"Standard Refund\",\n          \"ruleType\": \"REFUND\",\n          \"penaltyAmount\": 100,\n          \"penaltyPercentage\": 5,\n          \"restrictions\": {\n            \"refundBefore\": 24,\n            \"allowPartialRefund\": true,\n            \"refundMethod\": \"ORIGINAL_PAYMENT\"\n          }\n        }\n      },\n      {\n        \"ruleType\": \"VOID\",\n        \"rule\": {\n          \"_id\": \"rule_id_2\",\n          \"ruleName\": \"Express Void\",\n          \"ruleType\": \"VOID\",\n          \"penaltyAmount\": 50,\n          \"penaltyPercentage\": 2,\n          \"restrictions\": {\n            \"voidBefore\": 12,\n            \"allowVoidAfterCheckIn\": false,\n            \"voidMethod\": \"AUTOMATIC\"\n          }\n        }\n      },\n      {\n        \"ruleType\": \"REISSUE\",\n        \"rule\": {\n          \"_id\": \"rule_id_3\",\n          \"ruleName\": \"Reissue Policy\",\n          \"ruleType\": \"REISSUE\",\n          \"penaltyAmount\": 25,\n          \"penaltyPercentage\": 1,\n          \"restrictions\": {\n            \"reissueBefore\": 48,\n            \"reissueLimit\": 2,\n            \"reissueMethod\": \"MANUAL_REQUEST\"\n          }\n        }\n      }\n    ],\n    \"createdAt\": \"2024-01-15T10:30:00Z\",\n    \"updatedAt\": \"2024-01-15T11:45:00Z\"\n  }\n}"
+            },
+            {
+              "name": "Error - Trip Not Found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/trips/invalid_trip_id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trips",
+                    "invalid_trip_id"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Trip not found\",\n  \"error\": \"Trip with ID invalid_trip_id does not exist\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "your_jwt_token_here",
+      "type": "string"
+    },
+    {
+      "key": "trip_id",
+      "value": "trip_123456789",
+      "type": "string"
+    },
+    {
+      "key": "rule_id",
+      "value": "rule_123456789",
+      "type": "string"
+    }
+  ]
+}
