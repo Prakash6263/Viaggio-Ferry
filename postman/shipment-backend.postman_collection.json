@@ -693,6 +693,149 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Trip Ticketing Rules",
+      "item": [
+        {
+          "name": "List Trip Ticketing Rules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trips", "{{tripId}}", "ticketing-rules"]
+            },
+            "description": "Get all ticketing rules applied to a specific trip"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Trip Ticketing Rule",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules/{{ruleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trips", "{{tripId}}", "ticketing-rules", "{{ruleId}}"]
+            },
+            "description": "Get details of a specific ticketing rule applied to a trip"
+          },
+          "response": []
+        },
+        {
+          "name": "Add Global Rule to Trip",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleId\": \"{{globalRuleId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trips", "{{tripId}}", "ticketing-rules"]
+            },
+            "description": "Add a global ticketing rule to a specific trip. Automatically assigns position based on existing rules."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Trip Ticketing Rule",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"position\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules/{{ruleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trips", "{{tripId}}", "ticketing-rules", "{{ruleId}}"]
+            },
+            "description": "Update trip-specific ticketing rule properties like position/order"
+          },
+          "response": []
+        },
+        {
+          "name": "Remove Rule from Trip",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules/{{ruleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trips", "{{tripId}}", "ticketing-rules", "{{ruleId}}"]
+            },
+            "description": "Remove a ticketing rule from a trip (soft delete)"
+          },
+          "response": []
+        },
+        {
+          "name": "Reorder Trip Ticketing Rules",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rules\": [\n    {\n      \"ruleId\": \"rule1\",\n      \"position\": 1\n    },\n    {\n      \"ruleId\": \"rule2\",\n      \"position\": 2\n    },\n    {\n      \"ruleId\": \"rule3\",\n      \"position\": 3\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trips/{{tripId}}/ticketing-rules/reorder",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trips", "{{tripId}}", "ticketing-rules", "reorder"]
+            },
+            "description": "Bulk update positions for multiple trip ticketing rules. Useful for drag-and-drop reordering in UI."
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [
@@ -718,6 +861,24 @@
       "value": "",
       "type": "string",
       "description": "Company ID from registration or list response"
+    },
+    {
+      "key": "tripId",
+      "value": "",
+      "type": "string",
+      "description": "Trip ID from trip creation or list response"
+    },
+    {
+      "key": "ruleId",
+      "value": "",
+      "type": "string",
+      "description": "Trip ticketing rule ID from list response"
+    },
+    {
+      "key": "globalRuleId",
+      "value": "",
+      "type": "string",
+      "description": "Global ticketing rule ID to add to trip"
     }
   ]
 }
