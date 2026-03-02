@@ -266,7 +266,22 @@
                   "raw": "{{base_url}}/api/trips/invalid_id/ticketing-rules",
                   "host": [
                     "{{base_url}}"
-                  ],\n                  \"path\": [\n                    \"api\",\n                    \"trips\",\n                    \"invalid_id\",\n                    \"ticketing-rules\"\n                  ]\n                }\n              },\n              \"status\": \"Not Found\",\n              \"code\": 404,\n              \"_postman_previewlanguage\": \"json\",\n              \"header\": [],\n              \"cookie\": [],\n              \"body\": \"{\n  \\\"success\\\": false,\n  \\\"message\\\": \\\"Trip not found\\\"\n}\n              \"\n            }\n          ]
+                  ],
+                  "path": [
+                    "api",
+                    "trips",
+                    "invalid_id",
+                    "ticketing-rules"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Trip not found\"\n}\n"
+            }\n          ]
         },
         {
           "name": "Get Trip With Rules",
