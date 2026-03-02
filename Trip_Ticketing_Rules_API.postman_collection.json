@@ -281,7 +281,8 @@
               "header": [],
               "cookie": [],
               "body": "{\n  \"success\": false,\n  \"message\": \"Trip not found\"\n}\n"
-            }\n          ]
+            }
+          ]
         },
         {
           "name": "Get Trip With Rules",
