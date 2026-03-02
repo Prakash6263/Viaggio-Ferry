@@ -43,12 +43,21 @@ const listTripAvailabilities = async (req, res, next) => {
 
     let result = availability.toObject()
 
+    // Add remainingSeats to each cabin
+    result.availabilityTypes = result.availabilityTypes.map(at => ({
+      ...at,
+      cabins: at.cabins.map(cabin => ({
+        ...cabin,
+        remainingSeats: cabin.seats - cabin.allocatedSeats,
+      })),
+    }))
+
     // If type filter requested, return only that availability type
     if (type) {
       if (!AVAILABILITY_TYPE.includes(type)) {
         throw createHttpError(400, `Invalid type. Must be one of: ${AVAILABILITY_TYPE.join(", ")}`)
       }
-      const availType = availability.availabilityTypes.find(at => at.type === type)
+      const availType = result.availabilityTypes.find(at => at.type === type)
       if (!availType) {
         return res.json({
           success: true,
@@ -103,7 +112,18 @@ const getTripAvailabilityById = async (req, res, next) => {
 
     if (!availability) throw createHttpError(404, "Availability not found")
 
-    res.json({ success: true, data: availability })
+    let result = availability.toObject()
+
+    // Add remainingSeats to each cabin
+    result.availabilityTypes = result.availabilityTypes.map(at => ({
+      ...at,
+      cabins: at.cabins.map(cabin => ({
+        ...cabin,
+        remainingSeats: cabin.seats - cabin.allocatedSeats,
+      })),
+    }))
+
+    res.json({ success: true, data: result })
   } catch (error) {
     next(error)
   }
@@ -283,9 +303,20 @@ const createTripAvailability = async (req, res, next) => {
       "name type"
     )
 
+    let response = result.toObject()
+
+    // Add remainingSeats to each cabin
+    response.availabilityTypes = response.availabilityTypes.map(at => ({
+      ...at,
+      cabins: at.cabins.map(cabin => ({
+        ...cabin,
+        remainingSeats: cabin.seats - cabin.allocatedSeats,
+      })),
+    }))
+
     res.json({
       success: true,
-      data: result,
+      data: response,
       message: "Availability created successfully",
     })
   } catch (error) {
@@ -484,9 +515,20 @@ const updateTripAvailability = async (req, res, next) => {
       "name type"
     )
 
+    let response = result.toObject()
+
+    // Add remainingSeats to each cabin
+    response.availabilityTypes = response.availabilityTypes.map(at => ({
+      ...at,
+      cabins: at.cabins.map(cabin => ({
+        ...cabin,
+        remainingSeats: cabin.seats - cabin.allocatedSeats,
+      })),
+    }))
+
     res.json({
       success: true,
-      data: result,
+      data: response,
       message: "Availability updated successfully",
     })
   } catch (error) {

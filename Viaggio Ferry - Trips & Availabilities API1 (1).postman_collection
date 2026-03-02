@@ -1,0 +1,774 @@
+{
+  "info": {
+    "_postman_id": "48643766-9a7d-471c-a172-0a2cc623feec",
+    "name": "Viaggio Ferry - Trips & Availabilities API",
+    "description": "Complete CRUD API collection for Ferry Trip and Availability Management",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "46536919"
+  },
+  "item": [
+    {
+      "name": "Trips",
+      "item": [
+        {
+          "name": "List Trips",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/trips?page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Get list of all trips with pagination. Response includes fully populated ship details (name, IMO number, flag state, capacity arrays, etc.)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Trip by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}"
+              ]
+            },
+            "description": "Get specific trip details"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Trip",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tripName\": \"Dubai to Muscat Express\",\n  \"tripCode\": \"DXB-MSC-001\",\n  \"ship\": \"{{ship_id}}\",\n  \"departurePort\": \"{{port_id}}\",\n  \"arrivalPort\": \"{{arrival_port_id}}\",\n  \"departureDateTime\": \"2024-03-15T10:00:00Z\",\n  \"arrivalDateTime\": \"2024-03-15T14:30:00Z\",\n  \"status\": \"SCHEDULED\",\n  \"bookingOpeningDate\": \"2024-02-15T00:00:00Z\",\n  \"bookingClosingDate\": \"2024-03-15T08:00:00Z\",\n  \"checkInOpeningDate\": \"2024-03-15T07:00:00Z\",\n  \"checkInClosingDate\": \"2024-03-15T09:30:00Z\",\n  \"boardingClosingDate\": \"2024-03-15T09:45:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips"
+              ]
+            },
+            "description": "Create a new ferry trip. Remaining seats are auto-calculated from the ship's cabin capacities. Do not include remainingPassengerSeats, remainingCargoSeats, or remainingVehicleSeats in the request."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Trip",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tripName\": \"Dubai to Muscat Express - Updated\",\n  \"status\": \"ONGOING\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}"
+              ]
+            },
+            "description": "Update trip details. Remaining seats cannot be manually updated - they are managed automatically via availability creation/deletion."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Trip",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}"
+              ]
+            },
+            "description": "Delete trip (soft delete)"
+          },
+          "response": []
+        }
+      ],
+      "description": "Trip CRUD operations"
+    },
+    {
+      "name": "Trip Availability",
+      "item": [
+        {
+          "name": "List Trip Availabilities",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "passenger",
+                  "description": "Optional: Filter by availability type (passenger, cargo, vehicle)",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Optional: Search cabins by name",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Fetch the availability document for a trip. Returns single object (not paginated). Supports type filter and search."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trips",
+                    "{{trip_id}}",
+                    "availabilities"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"_id\": \"availability_id\",\n    \"company\": \"company_id\",\n    \"trip\": \"trip_id\",\n    \"availabilityTypes\": [\n      {\n        \"type\": \"passenger\",\n        \"cabins\": [\n          {\n            \"cabin\": \"cabin_id\",\n            \"seats\": 100,\n            \"allocatedSeats\": 20\n          }\n        ]\n      },\n      {\n        \"type\": \"cargo\",\n        \"cabins\": [\n          {\n            \"cabin\": \"cabin_id\",\n            \"seats\": 50,\n            \"allocatedSeats\": 10\n          }\n        ]\n      }\n    ],\n    \"createdAt\": \"2026-03-02T10:00:00Z\",\n    \"updatedAt\": \"2026-03-02T10:00:00Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Availability by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities",
+                "{{availability_id}}"
+              ]
+            },
+            "description": "Fetch a specific availability document by ID with all populated cabin details"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Trip Availability",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"availabilityTypes\": [\n    {\n      \"type\": \"passenger\",\n      \"cabins\": [\n        {\n          \"cabin\": \"cabin_id_1\",\n          \"seats\": 120,\n          \"allocatedSeats\": 0\n        }\n      ]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities",
+                "{{availability_id}}"
+              ]
+            },
+            "description": "Update specific availability types within the document. Uses array update operators for safe modifications."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Trip Availability",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities",
+                "{{availability_id}}"
+              ]
+            },
+            "description": "Soft delete an availability document. Restores all seats to the trip."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Availability Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/summary",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities",
+                "summary"
+              ]
+            },
+            "description": "Get a summary of availability including total seats, allocated seats, and available seats per type"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Trip Availability",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"availabilityTypes\": [\n    {\n      \"type\": \"passenger\",\n      \"cabins\": [\n        {\n          \"cabin\": \"cabin_id_1\",\n          \"seats\": 100\n        },\n        {\n          \"cabin\": \"cabin_id_2\",\n          \"seats\": 80\n        }\n      ]\n    },\n    {\n      \"type\": \"cargo\",\n      \"cabins\": [\n        {\n          \"cabin\": \"cabin_id_3\",\n          \"seats\": 50\n        }\n      ]\n    },\n    {\n      \"type\": \"vehicle\",\n      \"cabins\": [\n        {\n          \"cabin\": \"cabin_id_4\",\n          \"seats\": 20\n        }\n      ]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities"
+              ]
+            },
+            "description": "Create a new availability document for a trip with multiple availability types. One availability per trip (unique constraint). Validates against ship capacity and trip remaining seats. Returns created availability with populated cabin details."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"availabilityTypes\": [\n    {\n      \"type\": \"passenger\",\n      \"cabins\": [\n        {\n          \"cabin\": \"cabin_id_1\",\n          \"seats\": 100\n        }\n      ]\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trips",
+                    "{{trip_id}}",
+                    "availabilities"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Availability created successfully\",\n  \"data\": {\n    \"_id\": \"availability_id\",\n    \"company\": \"company_id\",\n    \"trip\": \"trip_id\",\n    \"availabilityTypes\": [\n      {\n        \"type\": \"passenger\",\n        \"cabins\": [\n          {\n            \"_id\": \"ObjectId\",\n            \"cabin\": {\n              \"_id\": \"cabin_id\",\n              \"name\": \"Main Cabin\",\n              \"type\": \"passenger\"\n            },\n            \"seats\": 100,\n            \"allocatedSeats\": 0\n          }\n        ]\n      },\n      {\n        \"type\": \"cargo\",\n        \"cabins\": [\n          {\n            \"_id\": \"ObjectId\",\n            \"cabin\": {\n              \"_id\": \"cabin_id\",\n              \"name\": \"Cargo Hold\",\n              \"type\": \"cargo\"\n            },\n            \"seats\": 50,\n            \"allocatedSeats\": 0\n          }\n        ]\n      }\n    ],\n    \"createdBy\": {\n      \"id\": \"user_id\",\n      \"name\": \"Admin User\",\n      \"type\": \"user\",\n      \"layer\": \"system\"\n    },\n    \"createdAt\": \"2026-03-02T10:00:00Z\",\n    \"updatedAt\": \"2026-03-02T10:00:00Z\"\n  }\n}"
+            },
+            {
+              "name": "Error - Availability Already Exists",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "trips",
+                    "{{trip_id}}",
+                    "availabilities"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Availability already exists for this trip. Use update endpoint to modify.\"\n}"
+            }
+          ]
+        }
+      ],
+      "description": "Manage trip availability with availabilityTypes array (single document per trip)"
+    },
+    {
+      "name": "Agent Allocation",
+      "item": [
+        {
+          "name": "List Agent Allocations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}/agent-allocations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities",
+                "{{availability_id}}",
+                "agent-allocations"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List all agent allocations for a specific availability"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Agent Allocation by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}/agent-allocations/{{allocation_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities",
+                "{{availability_id}}",
+                "agent-allocations",
+                "{{allocation_id}}"
+              ]
+            },
+            "description": "Get a specific agent allocation with full details"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Agent Allocation (with Transaction)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"agent\": \"agent_id_1\",\n    \"allocations\": [\n      {\n        \"type\": \"passenger\",\n        \"cabins\": [\n          {\n            \"cabin\": \"cabin_id_1\",\n            \"allocatedSeats\": 20\n          },\n          {\n            \"cabin\": \"cabin_id_2\",\n            \"allocatedSeats\": 15\n          }\n        ]\n      },\n      {\n        \"type\": \"cargo\",\n        \"cabins\": [\n          {\n            \"cabin\": \"cabin_id_3\",\n            \"allocatedSeats\": 10\n          }\n        ]\n      }\n    ]\n  },\n  {\n    \"agent\": \"agent_id_2\",\n    \"allocations\": [\n      {\n        \"type\": \"passenger\",\n        \"cabins\": [\n          {\n            \"cabin\": \"cabin_id_1\",\n            \"allocatedSeats\": 25\n          }\n        ]\n      }\n    ]\n  },\n  {\n    \"agent\": \"agent_id_3\",\n    \"allocations\": [\n      {\n        \"type\": \"vehicle\",\n        \"cabins\": [\n          {\n            \"cabin\": \"cabin_id_4\",\n            \"allocatedSeats\": 5\n          }\n        ]\n      }\n    ]\n  }\n]"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}/agent-allocations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities",
+                "{{availability_id}}",
+                "agent-allocations"
+              ]
+            },
+            "description": "Create agent allocations for multiple agents with MongoDB transaction support. Accepts array of agent objects with allocations. Each agent gets the same allocation structure. Validates all agents, updates availability, and creates allocation records atomically. On error, entire transaction rolls back."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Agent Allocation (with Transaction)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"allocations\": [\n    {\n      \"type\": \"passenger\",\n      \"cabins\": [\n        {\n          \"cabin\": \"cabin_id_1\",\n          \"allocatedSeats\": 25\n        }\n      ]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}/agent-allocations/{{allocation_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities",
+                "{{availability_id}}",
+                "agent-allocations",
+                "{{allocation_id}}"
+              ]
+            },
+            "description": "Update an agent allocation with transaction support. Restores previous allocation and applies new one atomically."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Agent Allocation (with Transaction)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}/agent-allocations/{{allocation_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities",
+                "{{availability_id}}",
+                "agent-allocations",
+                "{{allocation_id}}"
+              ]
+            },
+            "description": "Delete an agent allocation with transaction support. Restores allocated seats back to availability atomically."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Availability Summary for Allocation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/trips/{{trip_id}}/availabilities/{{availability_id}}/agent-allocations/summary",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "trips",
+                "{{trip_id}}",
+                "availabilities",
+                "{{availability_id}}",
+                "agent-allocations",
+                "summary"
+              ]
+            },
+            "description": "Get availability summary for allocation purposes showing available seats per cabin"
+          },
+          "response": []
+        }
+      ],
+      "description": "Manage agent allocations with transaction support. Allocations reduce available seats but NOT trip operational capacity."
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "company_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ship_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "port_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "arrival_port_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "promotion_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "trip_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "availability_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "passenger_cabin_id_1",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "passenger_cabin_id_2",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cargo_cabin_id_1",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "vehicle_cabin_id_1",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "agent_id",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
