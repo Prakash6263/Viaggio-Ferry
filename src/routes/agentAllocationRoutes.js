@@ -4,6 +4,7 @@ const {
   listAgentAllocations,
   getAgentAllocationById,
   createAgentAllocation,
+  createBulkAgentAllocations,
   updateAgentAllocation,
   deleteAgentAllocation,
   getAvailabilityForAllocation,
@@ -18,8 +19,14 @@ router.get(
   getAvailabilityForAllocation
 )
 
+// POST /api/trips/:tripId/availabilities/:availabilityId/agent-allocations/bulk - Create bulk agent allocations (MUST be before /:allocationId route)
+router.post("/agent-allocations/bulk", checkPermission("ship-trips", "trips", "write"), createBulkAgentAllocations)
+
 // GET /api/trips/:tripId/availabilities/:availabilityId/agent-allocations - List all agent allocations
 router.get("/agent-allocations", checkPermission("ship-trips", "trips", "read"), listAgentAllocations)
+
+// POST /api/trips/:tripId/availabilities/:availabilityId/agent-allocations - Create single agent allocation
+router.post("/agent-allocations", checkPermission("ship-trips", "trips", "write"), createAgentAllocation)
 
 // GET /api/trips/:tripId/availabilities/:availabilityId/agent-allocations/:allocationId - Get specific agent allocation
 router.get(
@@ -27,9 +34,6 @@ router.get(
   checkPermission("ship-trips", "trips", "read"),
   getAgentAllocationById
 )
-
-// POST /api/trips/:tripId/availabilities/:availabilityId/agent-allocations - Create agent allocation
-router.post("/agent-allocations", checkPermission("ship-trips", "trips", "write"), createAgentAllocation)
 
 // PUT /api/trips/:tripId/availabilities/:availabilityId/agent-allocations/:allocationId - Update agent allocation
 router.put(
