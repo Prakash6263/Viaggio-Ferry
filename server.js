@@ -20,7 +20,8 @@ const allowedOrigins = [
   "https://company.voyagian.com",
   "http://localhost:3000",
   "http://localhost:3001",
-  "http://localhost:3002"
+  "http://localhost:3002",
+  "https://vm-qdttxsd394t2pjqt38xti8.vusercontent.net"
 ]
 
 app.use((req, res, next) => {
