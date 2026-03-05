@@ -21,7 +21,7 @@ const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:3001",
   "http://localhost:3002",
-  "https://vm-tc6vu6jp43y32jy107bvpb.vusercontent.net"
+  "https://vm-vzkgws301e96xu6ujshna7.vusercontent.net"
 ]
 
 app.use((req, res, next) => {
