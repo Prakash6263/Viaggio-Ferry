@@ -1,6 +1,7 @@
 const express = require("express")
 const router = express.Router()
 const tripController = require("../controllers/tripController")
+const agentAllocationController = require("../controllers/agentAllocationController")
 const agentAllocationRoutes = require("./agentAllocationRoutes")
 const tripAvailabilityRoutes = require("./tripAvailabilityRoutes")
 
@@ -64,6 +65,12 @@ router.get("/:tripId/ticketing-rules", checkPermission("ship-trips", "trips", "r
  * Assign ticketing rules to a trip - requires edit permission on trips
  */
 router.put("/:tripId/ticketing-rules", checkPermission("ship-trips", "trips", "edit"), tripController.assignTicketingRules)
+
+/**
+ * GET /api/trips/:tripId/agent-allocations
+ * Get all agent allocations for a trip (across all availabilities) - requires read permission on trips
+ */
+router.get("/:tripId/agent-allocations", checkPermission("ship-trips", "trips", "read"), agentAllocationController.listAgentAllocationsByTrip)
 
 router.use("/:tripId/availabilities", tripAvailabilityRoutes)
 router.use("/", agentAllocationRoutes)

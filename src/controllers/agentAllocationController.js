@@ -62,6 +62,55 @@ exports.listAgentAllocations = async (req, res) => {
   }
 }
 
+// GET - List all agent allocations for a trip (without needing availability ID)
+exports.listAgentAllocationsByTrip = async (req, res) => {
+  try {
+    const { companyId } = req
+    const { tripId } = req.params
+    const { page = 1, limit = 10 } = req.query
+
+    const skip = (parseInt(page) - 1) * parseInt(limit)
+    const limitNum = parseInt(limit)
+
+    const query = {
+      company: companyId,
+      trip: tripId,
+      isDeleted: false,
+    }
+
+    const [allocations, total] = await Promise.all([
+      AvailabilityAgentAllocation.find(query)
+        .populate("agent", "name code type")
+        .populate("availability", "type cabins")
+        .populate("allocations.cabins.cabin", "name type")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      AvailabilityAgentAllocation.countDocuments(query),
+    ])
+
+    res.status(200).json({
+      success: true,
+      message: "Agent allocations fetched successfully",
+      data: allocations,
+      pagination: {
+        page: parseInt(page),
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum),
+      },
+    })
+  } catch (error) {
+    console.error("[v0] Error in listAgentAllocationsByTrip:", error)
+    res.status(error.status || 500).json({
+      success: false,
+      message: error.message,
+      stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+    })
+  }
+}
+
 // GET - Get specific agent allocation
 exports.getAgentAllocationById = async (req, res) => {
   try {
