@@ -33,6 +33,7 @@ exports.listAgentAllocations = async (req, res) => {
       AvailabilityAgentAllocation.find(query)
         .populate("agent", "name code type")
         .populate("availability", "type cabins")
+        .populate("allocations.cabins.cabin", "name type")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limitNum)
