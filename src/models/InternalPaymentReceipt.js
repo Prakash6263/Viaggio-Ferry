@@ -7,7 +7,6 @@ const internalPaymentReceiptSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
       required: true,
-      index: true,
     },
 
     // Transaction Identifiers
