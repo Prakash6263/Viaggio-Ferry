@@ -8,7 +8,6 @@ const { Cabin } = require("../models/Cabin")
 const { TicketingRule } = require("../models/TicketingRule")
 const { TripAvailability } = require("../models/TripAvailability")
 const TripAgentAllocation = require("../models/AvailabilityAgentAllocation")
-const { TripTicketRule } = require("../models/TripTicketRule")
 
 /**
  * Helper function to build actor object based on user role
