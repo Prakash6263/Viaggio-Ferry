@@ -698,7 +698,7 @@ const updateTrip = async (req, res, next) => {
 
 /**
  * DELETE /api/trips/:id
- * Soft delete a trip and all related data (availability, agent allocations, ticket rules)
+ * Soft delete a trip and all related data (availability, agent allocations)
  */
 const deleteTrip = async (req, res, next) => {
   try {
@@ -729,12 +729,6 @@ const deleteTrip = async (req, res, next) => {
 
     // Delete related TripAgentAllocation records
     await TripAgentAllocation.updateMany(
-      { trip: id, company: companyId, isDeleted: false },
-      { isDeleted: true, updatedBy }
-    )
-
-    // Delete related TripTicketRule records
-    await TripTicketRule.updateMany(
       { trip: id, company: companyId, isDeleted: false },
       { isDeleted: true, updatedBy }
     )
