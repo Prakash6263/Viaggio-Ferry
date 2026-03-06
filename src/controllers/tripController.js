@@ -6,14 +6,130 @@ const { Port } = require("../models/Port")
 const { Promotion } = require("../models/Promotion")
 const { Cabin } = require("../models/Cabin")
 const { TicketingRule } = require("../models/TicketingRule")
+const TripAvailability = require("../models/TripAvailability")
+const AvailabilityAgentAllocation = require("../models/AvailabilityAgentAllocation")
 
 /**
- * Helper function to build actor object based on user role
+ * Delete a trip with cascade deletion of related records:
+ * - Trip availabilities
+ * - Agent allocations
+ * - Trip ticketing rules
  */
-function buildActor(user) {
-  if (!user) {
-    return { type: "system", name: "System" }
+const deleteTrip = async (req, res, next) => {
+  const session = await mongoose.startSession()
+  session.startTransaction()
+
+  try {
+    const { id } = req.params
+    const { companyId, user } = req
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw createHttpError(400, "Invalid trip ID format")
+    }
+
+    const tripDoc = await Trip.findOne({
+      _id: id,
+      company: companyId,
+      isDeleted: false,
+    }).session(session)
+
+    if (!tripDoc) {
+      throw createHttpError(404, "Trip not found")
+    }
+
+    console.log(`[v0] DELETE: Starting cascade delete for trip ${id}`)
+
+    // Step 1: Get all availabilities for this trip
+    const availabilities = await TripAvailability.find({
+      trip: id,
+      isDeleted: false,
+    }).session(session)
+
+    console.log(`[v0] DELETE: Found ${availabilities.length} availabilities to delete`)
+
+    // Step 2: Delete all agent allocations related to these availabilities
+    if (availabilities.length > 0) {
+      const availabilityIds = availabilities.map(a => a._id)
+      const deletedAllocations = await AvailabilityAgentAllocation.updateMany(
+        {
+          availability: { $in: availabilityIds },
+          isDeleted: false,
+        },
+        {
+          $set: {
+            isDeleted: true,
+            updatedBy: buildActor(user),
+          },
+        },
+        { session }
+      )
+      console.log(`[v0] DELETE: Marked ${deletedAllocations.modifiedCount} agent allocations as deleted`)
+    }
+
+    // Step 3: Delete all availabilities
+    const deletedAvailabilities = await TripAvailability.updateMany(
+      {
+        trip: id,
+        isDeleted: false,
+      },
+      {
+        $set: {
+          isDeleted: true,
+          updatedBy: buildActor(user),
+        },
+      },
+      { session }
+    )
+    console.log(`[v0] DELETE: Marked ${deletedAvailabilities.modifiedCount} availabilities as deleted`)
+
+    // Step 4: Delete all ticketing rules assigned to this trip
+    const deletedRules = await TicketingRule.updateMany(
+      {
+        trips: id,
+        isDeleted: false,
+      },
+      {
+        $pull: { trips: id },
+        $set: {
+          updatedBy: buildActor(user),
+        },
+      },
+      { session }
+    )
+    console.log(`[v0] DELETE: Removed trip from ${deletedRules.modifiedCount} ticketing rules`)
+
+    // Step 5: Soft delete the trip
+    tripDoc.isDeleted = true
+    tripDoc.updatedBy = buildActor(user)
+    await tripDoc.save({ session })
+
+    console.log(`[v0] DELETE: Trip ${id} marked as deleted`)
+
+    // Commit transaction
+    await session.commitTransaction()
+
+    res.status(200).json({
+      success: true,
+      message: "Trip and all related data deleted successfully",
+      data: {
+        _id: tripDoc._id,
+        tripName: tripDoc.tripName,
+        deletedAt: new Date(),
+        cascadeDeleteStats: {
+          availabilitiesDeleted: deletedAvailabilities.modifiedCount,
+          agentAllocationsDeleted: deletedAllocations.modifiedCount,
+          ticketingRulesUpdated: deletedRules.modifiedCount,
+        },
+      },
+    })
+  } catch (error) {
+    await session.abortTransaction()
+    console.error(`[v0] DELETE ERROR: ${error.message}`)
+    next(error)
+  } finally {
+    await session.endSession()
   }
+}
 
   if (user.role === "company") {
     return {
