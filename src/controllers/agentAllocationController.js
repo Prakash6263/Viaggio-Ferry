@@ -513,76 +513,100 @@ exports.updateAgentAllocation = async (req, res) => {
     }
     console.log(`[v0] UPDATE: Restored ${seatMovements.length} cabin allocations`, JSON.stringify(seatMovements))
 
-    // Validate new allocations
-    const processedAllocations = []
+      // Validate new allocations
+      const processedAllocations = []
 
-    for (const allocationEntry of allocations) {
-      const { type, cabins: cabinAllocations } = allocationEntry
+      for (const allocationEntry of allocations) {
+        const { type, cabins: cabinAllocations } = allocationEntry
 
-      if (!type || !cabinAllocations || !Array.isArray(cabinAllocations)) {
-        throw createHttpError(400, `Invalid allocation format`)
-      }
+        if (!type || !cabinAllocations || !Array.isArray(cabinAllocations)) {
+          throw createHttpError(400, `Invalid allocation format`)
+        }
 
-      const processedCabins = []
-      let totalAllocatedSeats = 0
+        // Check for duplicate cabins within the same type
+        const cabinIds = cabinAllocations.map(c => c.cabin.toString())
+        const uniqueCabinIds = new Set(cabinIds)
+        if (uniqueCabinIds.size !== cabinIds.length) {
+          throw createHttpError(400, `Cannot allocate the same cabin multiple times in a single request for type '${type}'`)
+        }
 
-      for (const cabinEntry of cabinAllocations) {
-        const { cabin, allocatedSeats } = cabinEntry
+        const processedCabins = []
+        let totalAllocatedSeats = 0
 
-        const cabinDoc = await Cabin.findOne({
-          _id: cabin,
-          company: companyId,
+        for (const cabinEntry of cabinAllocations) {
+          const { cabin, allocatedSeats } = cabinEntry
+
+          const cabinDoc = await Cabin.findOne({
+            _id: cabin,
+            company: companyId,
+            type,
+            isDeleted: false,
+          }).session(session)
+          if (!cabinDoc) {
+            throw createHttpError(404, `Cabin not found for ID: ${cabin}`)
+          }
+
+          const seatsNum = parseInt(allocatedSeats)
+          if (isNaN(seatsNum) || seatsNum < 0) {
+            throw createHttpError(400, `Allocated seats must be non-negative`)
+          }
+
+          // Find the availability type
+          const availType = availability.availabilityTypes.find(at => at.type === type)
+          if (!availType) {
+            throw createHttpError(400, `Availability type '${type}' not found`)
+          }
+
+          const availabilityCabin = availType.cabins.find(c => {
+            const cabinId = c.cabin && c.cabin._id ? c.cabin._id.toString() : (c.cabin ? c.cabin.toString() : null)
+            return cabinId === cabin.toString()
+          })
+          if (!availabilityCabin) {
+            throw createHttpError(400, `Cabin not available in this availability`)
+          }
+
+          if (seatsNum > availabilityCabin.seats - availabilityCabin.allocatedSeats) {
+            throw createHttpError(
+              400,
+              `Cannot allocate ${seatsNum} seats. Only ${availabilityCabin.seats - availabilityCabin.allocatedSeats} available.`
+            )
+          }
+
+          totalAllocatedSeats += seatsNum
+          processedCabins.push({
+            cabin,
+            allocatedSeats: seatsNum,
+          })
+        }
+
+        processedAllocations.push({
           type,
-          isDeleted: false,
-        }).session(session)
-        if (!cabinDoc) {
-          throw createHttpError(404, `Cabin not found for ID: ${cabin}`)
-        }
-
-        const seatsNum = parseInt(allocatedSeats)
-        if (isNaN(seatsNum) || seatsNum < 0) {
-          throw createHttpError(400, `Allocated seats must be non-negative`)
-        }
-
-        // Find the availability type
-        const availType = availability.availabilityTypes.find(at => at.type === type)
-        if (!availType) {
-          throw createHttpError(400, `Availability type '${type}' not found`)
-        }
-
-        const availabilityCabin = availType.cabins.find(c => {
-          const cabinId = c.cabin && c.cabin._id ? c.cabin._id.toString() : (c.cabin ? c.cabin.toString() : null)
-          return cabinId === cabin.toString()
-        })
-        if (!availabilityCabin) {
-          throw createHttpError(400, `Cabin not available in this availability`)
-        }
-
-        if (seatsNum > availabilityCabin.seats - availabilityCabin.allocatedSeats) {
-          throw createHttpError(
-            400,
-            `Cannot allocate ${seatsNum} seats. Only ${availabilityCabin.seats - availabilityCabin.allocatedSeats} available.`
-          )
-        }
-
-        totalAllocatedSeats += seatsNum
-        processedCabins.push({
-          cabin,
-          allocatedSeats: seatsNum,
+          cabins: processedCabins,
+          totalAllocatedSeats,
         })
       }
 
-      processedAllocations.push({
-        type,
-        cabins: processedCabins,
-        totalAllocatedSeats,
-      })
-    }
+      // Merge new allocations with existing ones - replace entire allocation type if it exists
+      // This prevents duplicate cabin IDs within the same type
+      const finalAllocations = []
+      const processedTypes = new Set()
 
-    // Update with new allocations
-    allocation.allocations = processedAllocations
-    allocation.updatedBy = buildActor(user)
-    await allocation.save({ session })
+      // First, add all newly processed allocations (these replace existing ones for the same type)
+      for (const newAlloc of processedAllocations) {
+        finalAllocations.push(newAlloc)
+        processedTypes.add(newAlloc.type)
+      }
+
+      // Then, add any existing allocations for types that weren't updated
+      for (const existingAlloc of allocation.allocations) {
+        if (!processedTypes.has(existingAlloc.type)) {
+          finalAllocations.push(existingAlloc)
+        }
+      }
+
+      allocation.allocations = finalAllocations
+      allocation.updatedBy = buildActor(user)
+      await allocation.save({ session })
 
     // Apply new allocations to availability (track seat allocation changes)
     console.log(`[v0] UPDATE: Applying new allocations for agent allocation ${allocationId}`)
