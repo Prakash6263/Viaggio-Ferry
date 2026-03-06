@@ -6,6 +6,8 @@ const { Port } = require("../models/Port")
 const { Promotion } = require("../models/Promotion")
 const { Cabin } = require("../models/Cabin")
 const { TicketingRule } = require("../models/TicketingRule")
+const { TripAvailability } = require("../models/TripAvailability")
+const TripAgentAllocation = require("../models/AvailabilityAgentAllocation")
 
 /**
  * Helper function to build actor object based on user role
@@ -696,7 +698,7 @@ const updateTrip = async (req, res, next) => {
 
 /**
  * DELETE /api/trips/:id
- * Soft delete a trip
+ * Soft delete a trip and all related data (availability, agent allocations)
  */
 const deleteTrip = async (req, res, next) => {
   try {
@@ -717,15 +719,28 @@ const deleteTrip = async (req, res, next) => {
       throw createHttpError(404, "Trip not found")
     }
 
-    // Soft delete
-    tripDoc.isDeleted = true
     const updatedBy = buildActor(user)
+
+    // Delete related TripAvailability records
+    await TripAvailability.updateMany(
+      { trip: id, company: companyId, isDeleted: false },
+      { isDeleted: true, updatedBy }
+    )
+
+    // Delete related TripAgentAllocation records
+    await TripAgentAllocation.updateMany(
+      { trip: id, company: companyId, isDeleted: false },
+      { isDeleted: true, updatedBy }
+    )
+
+    // Soft delete the trip itself
+    tripDoc.isDeleted = true
     tripDoc.updatedBy = updatedBy
     await tripDoc.save()
 
     res.status(200).json({
       success: true,
-      message: "Trip deleted successfully",
+      message: "Trip and all related data deleted successfully",
       data: { _id: tripDoc._id, deletedAt: new Date() },
     })
   } catch (error) {
