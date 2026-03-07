@@ -513,6 +513,14 @@ exports.updateAgentAllocation = async (req, res) => {
     }
     console.log(`[v0] UPDATE: Restored ${seatMovements.length} cabin allocations`, JSON.stringify(seatMovements))
 
+    // Reload availability from database to get updated seat counts
+    console.log(`[v0] UPDATE: Reloading availability to refresh seat counts`)
+    availability = await TripAvailability.findById(allocation.availability)
+      .session(session)
+      .populate("availabilityTypes.cabins.cabin", "name type")
+    if (!availability) throw createHttpError(404, "Availability not found after reload")
+    console.log(`[v0] UPDATE: Availability reloaded successfully`)
+
       // Validate new allocations
       const processedAllocations = []
 
