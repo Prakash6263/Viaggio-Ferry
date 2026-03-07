@@ -515,13 +515,13 @@ exports.updateAgentAllocation = async (req, res) => {
 
     // Reload availability from database to get updated seat counts
     console.log(`[v0] UPDATE: Reloading availability to refresh seat counts`)
-    availability = await TripAvailability.findById(allocation.availability)
+    const updatedAvailability = await TripAvailability.findById(allocation.availability)
       .session(session)
       .populate("availabilityTypes.cabins.cabin", "name type")
-    if (!availability) throw createHttpError(404, "Availability not found after reload")
+    if (!updatedAvailability) throw createHttpError(404, "Availability not found after reload")
     console.log(`[v0] UPDATE: Availability reloaded successfully`)
 
-      // Validate new allocations
+      // Validate new allocations against the refreshed availability
       const processedAllocations = []
 
       for (const allocationEntry of allocations) {
@@ -560,7 +560,7 @@ exports.updateAgentAllocation = async (req, res) => {
           }
 
           // Find the availability type
-          const availType = availability.availabilityTypes.find(at => at.type === type)
+          const availType = updatedAvailability.availabilityTypes.find(at => at.type === type)
           if (!availType) {
             throw createHttpError(400, `Availability type '${type}' not found`)
           }
@@ -621,17 +621,17 @@ exports.updateAgentAllocation = async (req, res) => {
     const newSeatMovements = []
     
     for (const newAllocation of processedAllocations) {
-      const newAvailTypeIndex = availability.availabilityTypes.findIndex(at => at.type === newAllocation.type)
+      const newAvailTypeIndex = updatedAvailability.availabilityTypes.findIndex(at => at.type === newAllocation.type)
       
       for (const cabin of newAllocation.cabins) {
-        const cabinIndex = availability.availabilityTypes[newAvailTypeIndex].cabins.findIndex(c => {
+        const cabinIndex = updatedAvailability.availabilityTypes[newAvailTypeIndex].cabins.findIndex(c => {
           const cabinId = c.cabin && c.cabin._id ? c.cabin._id.toString() : (c.cabin ? c.cabin.toString() : null)
           const requestCabinId = cabin.cabin.toString()
           return cabinId === requestCabinId
         })
         
         if (cabinIndex >= 0) {
-          const cabinData = availability.availabilityTypes[newAvailTypeIndex].cabins[cabinIndex]
+          const cabinData = updatedAvailability.availabilityTypes[newAvailTypeIndex].cabins[cabinIndex]
           const beforeAllocated = cabinData.allocatedSeats
           
           newSeatMovements.push({
@@ -666,8 +666,8 @@ exports.updateAgentAllocation = async (req, res) => {
       .populate("allocations.cabins.cabin", "name type")
 
     // Build availability summary for all types
-    const updatedAvailability = await TripAvailability.findById(allocation.availability)
-    const availabilitySummary = updatedAvailability.availabilityTypes.map(availType => ({
+    const finalAvailability = await TripAvailability.findById(allocation.availability)
+    const availabilitySummary = finalAvailability.availabilityTypes.map(availType => ({
       type: availType.type,
       cabins: availType.cabins.map(cabin => ({
         cabin: cabin.cabin,
