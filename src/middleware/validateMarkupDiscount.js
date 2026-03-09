@@ -1,6 +1,5 @@
 const createHttpError = require("http-errors")
 const mongoose = require("mongoose")
-const { PayloadType } = require("../models/PayloadType")
 const { Cabin } = require("../models/Cabin")
 const Partner = require("../models/Partner")
 
@@ -25,7 +24,7 @@ const validateMarkupDiscount = async (req, res, next) => {
       ruleType,
       ruleValue,
       valueType,
-      payloadTypes,
+      serviceTypes,
       cabins,
       routeFrom,
       routeTo,
@@ -129,50 +128,45 @@ const validateMarkupDiscount = async (req, res, next) => {
       errors.push(`valueType must be one of: ${VALID_VALUE_TYPES.join(", ")}`)
     }
 
-    // Validate payloadTypes
-    if (!payloadTypes || !Array.isArray(payloadTypes) || payloadTypes.length === 0) {
-      errors.push("payloadTypes is required and must be a non-empty array")
+    // Validate serviceTypes
+    const ALLOWED_SERVICE_TYPES = ["Passenger", "Cargo", "Vehicle"]
+    if (!serviceTypes || !Array.isArray(serviceTypes) || serviceTypes.length === 0) {
+      errors.push("serviceTypes is required and must be a non-empty array")
     } else {
-      for (const payloadTypeId of payloadTypes) {
-        if (!mongoose.Types.ObjectId.isValid(payloadTypeId)) {
-          errors.push(`Invalid payloadType ObjectId: ${payloadTypeId}`)
+      for (const type of serviceTypes) {
+        if (!ALLOWED_SERVICE_TYPES.includes(type)) {
+          errors.push(`Invalid service type: ${type}. Allowed values: ${ALLOWED_SERVICE_TYPES.join(", ")}`)
           break
-        }
-      }
-      // Check if payloadTypes exist in database (only if companyId is available)
-      if (errors.length === 0 && companyId) {
-        const existingPayloadTypes = await PayloadType.countDocuments({
-          _id: { $in: payloadTypes.map((id) => mongoose.Types.ObjectId(id)) },
-          company: companyId,
-          isDeleted: false,
-        })
-        if (existingPayloadTypes !== payloadTypes.length) {
-          errors.push("One or more payloadTypes do not exist or are deleted")
         }
       }
     }
 
-    // Validate cabins
-    if (!cabins || !Array.isArray(cabins) || cabins.length === 0) {
-      errors.push("cabins is required and must be a non-empty array")
-    } else {
-      for (const cabinId of cabins) {
-        if (!mongoose.Types.ObjectId.isValid(cabinId)) {
-          errors.push(`Invalid cabin ObjectId: ${cabinId}`)
-          break
+    // Validate cabins - only required for Passenger service type
+    if (serviceTypes && serviceTypes.includes("Passenger")) {
+      if (!cabins || !Array.isArray(cabins) || cabins.length === 0) {
+        errors.push("cabins is required when serviceTypes includes Passenger")
+      } else {
+        for (const cabinId of cabins) {
+          if (!mongoose.Types.ObjectId.isValid(cabinId)) {
+            errors.push(`Invalid cabin ObjectId: ${cabinId}`)
+            break
+          }
+        }
+        // Check if cabins exist in database
+        if (errors.length === 0 && companyId) {
+          const existingCabins = await Cabin.countDocuments({
+            _id: { $in: cabins.map((id) => mongoose.Types.ObjectId(id)) },
+            company: companyId,
+            isDeleted: false,
+          })
+          if (existingCabins !== cabins.length) {
+            errors.push("One or more cabins do not exist or are deleted")
+          }
         }
       }
-      // Check if cabins exist in database (only if companyId is available)
-      if (errors.length === 0 && companyId) {
-        const existingCabins = await Cabin.countDocuments({
-          _id: { $in: cabins.map((id) => mongoose.Types.ObjectId(id)) },
-          company: companyId,
-          isDeleted: false,
-        })
-        if (existingCabins !== cabins.length) {
-          errors.push("One or more cabins do not exist or are deleted")
-        }
-      }
+    } else if (cabins && Array.isArray(cabins) && cabins.length > 0) {
+      // Cabins should be empty for Cargo and Vehicle service types
+      errors.push("cabins must be empty when serviceTypes only includes Cargo and/or Vehicle")
     }
 
     // Validate routeFrom

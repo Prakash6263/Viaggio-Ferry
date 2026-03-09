@@ -25,11 +25,11 @@ const MarkupDiscountRuleSchema = new mongoose.Schema(
     partnerScope: { type: String, enum: ["AllChildPartners", "SpecificPartner"], required: true },
     partner: { type: mongoose.Schema.Types.ObjectId, ref: "Partner", default: null },
 
-    // References to PayloadType and Cabin models
-    payloadTypes: [
+    serviceTypes: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "PayloadType",
+        type: String,
+        enum: ["Passenger", "Cargo", "Vehicle"],
+        required: true,
       },
     ],
     cabins: [
@@ -63,10 +63,17 @@ MarkupDiscountRuleSchema.index({ company: 1, providerCompany: 1, appliedLayer: 1
 MarkupDiscountRuleSchema.index({ company: 1, providerPartner: 1, appliedLayer: 1 })
 MarkupDiscountRuleSchema.index({ company: 1, appliedLayer: 1, partner: 1 })
 MarkupDiscountRuleSchema.index({ company: 1, effectiveDate: 1, expiryDate: 1 })
-MarkupDiscountRuleSchema.index({ company: 1, payloadTypes: 1 })
+MarkupDiscountRuleSchema.index({ company: 1, serviceTypes: 1 })
 MarkupDiscountRuleSchema.index({ company: 1, cabins: 1 })
 MarkupDiscountRuleSchema.index({ company: 1, routeFrom: 1, routeTo: 1 })
 MarkupDiscountRuleSchema.index({ company: 1, ruleName: "text" })
+// Compound index for duplicate detection and rule lookup
+MarkupDiscountRuleSchema.index({
+  company: 1,
+  serviceTypes: 1,
+  routeFrom: 1,
+  routeTo: 1,
+})
 // Compound index for duplicate detection
 MarkupDiscountRuleSchema.index({
   company: 1,
