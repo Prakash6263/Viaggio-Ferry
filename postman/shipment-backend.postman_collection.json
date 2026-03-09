@@ -693,6 +693,194 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Markup/Discount Rules",
+      "item": [
+        {
+          "name": "Create Markup Rule - Passenger Economy",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Passenger Economy Markup\",\n  \"provider\": \"{{companyId}}\",\n  \"providerType\": \"Company\",\n  \"appliedLayer\": \"Commercial Agent\",\n  \"partnerScope\": \"AllChildPartners\",\n  \"ruleType\": \"Markup\",\n  \"ruleValue\": 10,\n  \"valueType\": \"percentage\",\n  \"serviceDetails\": {\n    \"passenger\": [\n      {\n        \"cabinId\": \"66f4e5c1b2c3d4e5f6g7h8i9\"\n      }\n    ],\n    \"cargo\": [],\n    \"vehicle\": []\n  },\n  \"visaType\": null,\n  \"routeFrom\": \"66f4e5c1b2c3d4e5f6g7h8i0\",\n  \"routeTo\": \"66f4e5c1b2c3d4e5f6g7h8i1\",\n  \"effectiveDate\": \"2024-01-01T00:00:00Z\",\n  \"expiryDate\": \"2025-12-31T23:59:59Z\",\n  \"priority\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/markup-discounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markup-discounts"]
+            },
+            "description": "Create a new markup rule for passenger service with cabin details using serviceDetails structure"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Discount Rule - Cargo Route",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Cargo Route Discount\",\n  \"provider\": \"{{companyId}}\",\n  \"providerType\": \"Company\",\n  \"appliedLayer\": \"Selling Agent\",\n  \"partnerScope\": \"AllChildPartners\",\n  \"ruleType\": \"Discount\",\n  \"ruleValue\": 5,\n  \"valueType\": \"percentage\",\n  \"serviceDetails\": {\n    \"passenger\": [],\n    \"cargo\": [\n      {\n        \"cabinId\": \"66f4e5c1b2c3d4e5f6g7h8i2\"\n      }\n    ],\n    \"vehicle\": []\n  },\n  \"visaType\": null,\n  \"routeFrom\": \"66f4e5c1b2c3d4e5f6g7h8i0\",\n  \"routeTo\": \"66f4e5c1b2c3d4e5f6g7h8i1\",\n  \"effectiveDate\": \"2024-01-01T00:00:00Z\",\n  \"expiryDate\": null,\n  \"priority\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/markup-discounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markup-discounts"]
+            },
+            "description": "Create a cargo route discount rule with serviceDetails containing cargo cabin information"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Markup Rule - Vehicle Transport",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Vehicle Transport Markup\",\n  \"provider\": \"{{companyId}}\",\n  \"providerType\": \"Company\",\n  \"appliedLayer\": \"Marine Agent\",\n  \"partnerScope\": \"AllChildPartners\",\n  \"ruleType\": \"Markup\",\n  \"ruleValue\": 15,\n  \"valueType\": \"fixed\",\n  \"serviceDetails\": {\n    \"passenger\": [],\n    \"cargo\": [],\n    \"vehicle\": [\n      {\n        \"cabinId\": \"66f4e5c1b2c3d4e5f6g7h8i3\"\n      }\n    ]\n  },\n  \"visaType\": null,\n  \"routeFrom\": \"66f4e5c1b2c3d4e5f6g7h8i0\",\n  \"routeTo\": \"66f4e5c1b2c3d4e5f6g7h8i1\",\n  \"effectiveDate\": \"2024-02-01T00:00:00Z\",\n  \"expiryDate\": null,\n  \"priority\": 3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/markup-discounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markup-discounts"]
+            },
+            "description": "Create a vehicle transport markup rule with serviceDetails containing vehicle cabin information"
+          },
+          "response": []
+        },
+        {
+          "name": "List Markup/Discount Rules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/markup-discounts?page=1&limit=10&layer=Commercial Agent&ruleType=Markup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markup-discounts"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "layer",
+                  "value": "Commercial Agent"
+                },
+                {
+                  "key": "ruleType",
+                  "value": "Markup"
+                }
+              ]
+            },
+            "description": "List all markup/discount rules with pagination and filtering by layer and rule type"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Markup/Discount Rule",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/markup-discounts/{{ruleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markup-discounts", "{{ruleId}}"]
+            },
+            "description": "Get details of a specific markup/discount rule"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Markup/Discount Rule",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleValue\": 12,\n  \"serviceDetails\": {\n    \"passenger\": [\n      {\n        \"cabinId\": \"66f4e5c1b2c3d4e5f6g7h8i9\"\n      },\n      {\n        \"cabinId\": \"66f4e5c1b2c3d4e5f6g7h8i4\"\n      }\n    ],\n    \"cargo\": [],\n    \"vehicle\": []\n  },\n  \"expiryDate\": \"2026-12-31T23:59:59Z\",\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/markup-discounts/{{ruleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markup-discounts", "{{ruleId}}"]
+            },
+            "description": "Update an existing markup/discount rule - can update value, serviceDetails, dates, and active status"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Markup/Discount Rule",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/markup-discounts/{{ruleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markup-discounts", "{{ruleId}}"]
+            },
+            "description": "Soft delete a markup/discount rule (sets isDeleted to true)"
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [
@@ -718,6 +906,12 @@
       "value": "",
       "type": "string",
       "description": "Company ID from registration or list response"
+    },
+    {
+      "key": "ruleId",
+      "value": "",
+      "type": "string",
+      "description": "Markup/Discount rule ID from create or list response"
     }
   ]
 }
