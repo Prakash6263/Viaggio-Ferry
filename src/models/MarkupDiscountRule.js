@@ -25,19 +25,32 @@ const MarkupDiscountRuleSchema = new mongoose.Schema(
     partnerScope: { type: String, enum: ["AllChildPartners", "SpecificPartner"], required: true },
     partner: { type: mongoose.Schema.Types.ObjectId, ref: "Partner", default: null },
 
-    serviceTypes: [
-      {
-        type: String,
-        enum: ["Passenger", "Cargo", "Vehicle"],
-        required: true,
-      },
-    ],
-    cabins: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Cabin",
-      },
-    ],
+    serviceDetails: {
+      passenger: [
+        {
+          cabinId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Cabin",
+          },
+        },
+      ],
+      cargo: [
+        {
+          cabinId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Cabin",
+          },
+        },
+      ],
+      vehicle: [
+        {
+          cabinId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Cabin",
+          },
+        },
+      ],
+    },
 
     visaType: { type: String, trim: true, default: null },
     routeFrom: { type: mongoose.Schema.Types.ObjectId, ref: "Port", required: true },
@@ -63,14 +76,17 @@ MarkupDiscountRuleSchema.index({ company: 1, providerCompany: 1, appliedLayer: 1
 MarkupDiscountRuleSchema.index({ company: 1, providerPartner: 1, appliedLayer: 1 })
 MarkupDiscountRuleSchema.index({ company: 1, appliedLayer: 1, partner: 1 })
 MarkupDiscountRuleSchema.index({ company: 1, effectiveDate: 1, expiryDate: 1 })
-MarkupDiscountRuleSchema.index({ company: 1, serviceTypes: 1 })
-MarkupDiscountRuleSchema.index({ company: 1, cabins: 1 })
+MarkupDiscountRuleSchema.index({ company: 1, "serviceDetails.passenger": 1 })
+MarkupDiscountRuleSchema.index({ company: 1, "serviceDetails.cargo": 1 })
+MarkupDiscountRuleSchema.index({ company: 1, "serviceDetails.vehicle": 1 })
 MarkupDiscountRuleSchema.index({ company: 1, routeFrom: 1, routeTo: 1 })
 MarkupDiscountRuleSchema.index({ company: 1, ruleName: "text" })
 // Compound index for duplicate detection and rule lookup
 MarkupDiscountRuleSchema.index({
   company: 1,
-  serviceTypes: 1,
+  "serviceDetails.passenger": 1,
+  "serviceDetails.cargo": 1,
+  "serviceDetails.vehicle": 1,
   routeFrom: 1,
   routeTo: 1,
 })

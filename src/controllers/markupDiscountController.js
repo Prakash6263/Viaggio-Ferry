@@ -18,8 +18,7 @@ const createMarkupDiscountRule = async (req, res, next) => {
       ruleType,
       ruleValue,
       valueType,
-      serviceTypes,
-      cabins,
+      serviceDetails,
       visaType,
       routeFrom,
       routeTo,
@@ -42,15 +41,6 @@ const createMarkupDiscountRule = async (req, res, next) => {
       throw createHttpError(400, "ruleValue is required")
     if (ruleValue < 0) throw createHttpError(400, "ruleValue must be positive")
     if (!valueType) throw createHttpError(400, "valueType is required")
-    if (!serviceTypes || !Array.isArray(serviceTypes) || serviceTypes.length === 0)
-      throw createHttpError(400, "serviceTypes is required (must be a non-empty array)")
-    // Conditional cabin validation: required only for Passenger, empty for others
-    if (serviceTypes.includes("Passenger")) {
-      if (!cabins || !Array.isArray(cabins) || cabins.length === 0)
-        throw createHttpError(400, "cabins is required when serviceTypes includes Passenger")
-    } else if (cabins && Array.isArray(cabins) && cabins.length > 0) {
-      throw createHttpError(400, "cabins must be empty when serviceTypes only includes Cargo and/or Vehicle")
-    }
     if (!routeFrom) throw createHttpError(400, "routeFrom is required")
     if (!routeTo) throw createHttpError(400, "routeTo is required")
     if (!effectiveDate) throw createHttpError(400, "effectiveDate is required")
@@ -79,8 +69,7 @@ const createMarkupDiscountRule = async (req, res, next) => {
       appliedLayer,
       partnerScope,
       partner: partnerScope === "SpecificPartner" ? partner : null,
-      serviceTypes: { $all: serviceTypes },
-      cabins: { $all: cabins || [] },
+      serviceDetails,
       routeFrom,
       routeTo,
       visaType: visaType || null,
@@ -103,8 +92,7 @@ const createMarkupDiscountRule = async (req, res, next) => {
       ruleType,
       ruleValue,
       valueType,
-      serviceTypes,
-      cabins,
+      serviceDetails,
       visaType: visaType || null,
       routeFrom,
       routeTo,
@@ -151,8 +139,6 @@ const listMarkupDiscountRules = async (req, res, next) => {
       search,
       layer,
       routeFrom,
-      serviceType,
-      cabin,
       ruleType,
     } = req.query
 
@@ -177,14 +163,6 @@ const listMarkupDiscountRules = async (req, res, next) => {
 
     if (routeFrom) {
       filter.routeFrom = routeFrom
-    }
-
-    if (serviceType) {
-      filter.serviceTypes = { $in: [serviceType] }
-    }
-
-    if (cabin) {
-      filter.cabins = { $in: [cabin] }
     }
 
     if (ruleType) {
@@ -278,8 +256,7 @@ const updateMarkupDiscountRule = async (req, res, next) => {
       ruleType,
       ruleValue,
       valueType,
-      serviceTypes,
-      cabins,
+      serviceDetails,
       visaType,
       routeFrom,
       routeTo,
@@ -341,27 +318,8 @@ const updateMarkupDiscountRule = async (req, res, next) => {
     }
 
     if (valueType !== undefined) rule.valueType = valueType
-    if (serviceTypes !== undefined) {
-      if (!Array.isArray(serviceTypes) || serviceTypes.length === 0)
-        throw createHttpError(400, "serviceTypes must be a non-empty array")
-      rule.serviceTypes = serviceTypes
-    }
-
-    if (cabins !== undefined) {
-      // Conditional cabin validation
-      if (serviceTypes && serviceTypes.includes("Passenger")) {
-        if (!Array.isArray(cabins) || cabins.length === 0)
-          throw createHttpError(400, "cabins must be provided when serviceTypes includes Passenger")
-        rule.cabins = cabins
-      } else if (rule.serviceTypes && rule.serviceTypes.includes("Passenger")) {
-        if (!Array.isArray(cabins) || cabins.length === 0)
-          throw createHttpError(400, "cabins must be provided when serviceTypes includes Passenger")
-        rule.cabins = cabins
-      } else if (Array.isArray(cabins) && cabins.length > 0) {
-        throw createHttpError(400, "cabins must be empty when serviceTypes only includes Cargo and/or Vehicle")
-      } else {
-        rule.cabins = cabins || []
-      }
+    if (serviceDetails !== undefined) {
+      rule.serviceDetails = serviceDetails
     }
 
     if (visaType !== undefined) rule.visaType = visaType || null

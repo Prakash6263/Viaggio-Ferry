@@ -2,6 +2,7 @@ const createHttpError = require("http-errors")
 const mongoose = require("mongoose")
 const { Cabin } = require("../models/Cabin")
 const Partner = require("../models/Partner")
+const { MarkupDiscountRule } = require("../models/MarkupDiscountRule")
 
 const VALID_PROVIDER_TYPES = ["Company", "Partner"]
 const VALID_APPLIED_LAYERS = ["Company", "Marine Agent", "Commercial Agent", "Selling Agent"]
@@ -24,8 +25,7 @@ const validateMarkupDiscount = async (req, res, next) => {
       ruleType,
       ruleValue,
       valueType,
-      serviceTypes,
-      cabins,
+      serviceDetails,
       routeFrom,
       routeTo,
       effectiveDate,
@@ -128,45 +128,87 @@ const validateMarkupDiscount = async (req, res, next) => {
       errors.push(`valueType must be one of: ${VALID_VALUE_TYPES.join(", ")}`)
     }
 
-    // Validate serviceTypes
-    const ALLOWED_SERVICE_TYPES = ["Passenger", "Cargo", "Vehicle"]
-    if (!serviceTypes || !Array.isArray(serviceTypes) || serviceTypes.length === 0) {
-      errors.push("serviceTypes is required and must be a non-empty array")
+    // Validate serviceDetails
+    if (!serviceDetails || typeof serviceDetails !== "object") {
+      errors.push("serviceDetails is required and must be an object")
     } else {
-      for (const type of serviceTypes) {
-        if (!ALLOWED_SERVICE_TYPES.includes(type)) {
-          errors.push(`Invalid service type: ${type}. Allowed values: ${ALLOWED_SERVICE_TYPES.join(", ")}`)
-          break
+      const { passenger = [], cargo = [], vehicle = [] } = serviceDetails
+
+      // Check if at least one service type exists
+      const hasServiceDetails =
+        (Array.isArray(passenger) && passenger.length > 0) ||
+        (Array.isArray(cargo) && cargo.length > 0) ||
+        (Array.isArray(vehicle) && vehicle.length > 0)
+
+      if (!hasServiceDetails) {
+        errors.push("serviceDetails must contain at least one service type (passenger, cargo, or vehicle)")
+      }
+
+      // Validate passenger service
+      if (Array.isArray(passenger) && passenger.length > 0) {
+        if (passenger.length === 0) {
+          errors.push("passenger service must have at least one cabinId when included")
+        } else {
+          for (const service of passenger) {
+            if (!service.cabinId) {
+              errors.push("passenger service items must have cabinId")
+              break
+            }
+            if (!mongoose.Types.ObjectId.isValid(service.cabinId)) {
+              errors.push(`Invalid passenger cabinId: ${service.cabinId}`)
+              break
+            }
+          }
         }
       }
-    }
 
-    // Validate cabins - only required for Passenger service type
-    if (serviceTypes && serviceTypes.includes("Passenger")) {
-      if (!cabins || !Array.isArray(cabins) || cabins.length === 0) {
-        errors.push("cabins is required when serviceTypes includes Passenger")
-      } else {
-        for (const cabinId of cabins) {
-          if (!mongoose.Types.ObjectId.isValid(cabinId)) {
-            errors.push(`Invalid cabin ObjectId: ${cabinId}`)
+      // Validate cargo service
+      if (Array.isArray(cargo) && cargo.length > 0) {
+        for (const service of cargo) {
+          if (!service.cabinId) {
+            errors.push("cargo service items must have cabinId")
+            break
+          }
+          if (!mongoose.Types.ObjectId.isValid(service.cabinId)) {
+            errors.push(`Invalid cargo cabinId: ${service.cabinId}`)
             break
           }
         }
-        // Check if cabins exist in database
-        if (errors.length === 0 && companyId) {
+      }
+
+      // Validate vehicle service
+      if (Array.isArray(vehicle) && vehicle.length > 0) {
+        for (const service of vehicle) {
+          if (!service.cabinId) {
+            errors.push("vehicle service items must have cabinId")
+            break
+          }
+          if (!mongoose.Types.ObjectId.isValid(service.cabinId)) {
+            errors.push(`Invalid vehicle cabinId: ${service.cabinId}`)
+            break
+          }
+        }
+      }
+
+      // Check if cabins exist in database
+      if (errors.length === 0 && companyId) {
+        const allCabinIds = [
+          ...(passenger || []).map((s) => s.cabinId),
+          ...(cargo || []).map((s) => s.cabinId),
+          ...(vehicle || []).map((s) => s.cabinId),
+        ]
+
+        if (allCabinIds.length > 0) {
           const existingCabins = await Cabin.countDocuments({
-            _id: { $in: cabins.map((id) => mongoose.Types.ObjectId(id)) },
+            _id: { $in: allCabinIds },
             company: companyId,
             isDeleted: false,
           })
-          if (existingCabins !== cabins.length) {
+          if (existingCabins !== allCabinIds.length) {
             errors.push("One or more cabins do not exist or are deleted")
           }
         }
       }
-    } else if (cabins && Array.isArray(cabins) && cabins.length > 0) {
-      // Cabins should be empty for Cargo and Vehicle service types
-      errors.push("cabins must be empty when serviceTypes only includes Cargo and/or Vehicle")
     }
 
     // Validate routeFrom
