@@ -358,6 +358,38 @@ const PERMISSION_MAPPING = {
     action: "delete",
     description: "Delete ticketing rule",
   },
+
+  // ==================== MARKUP & DISCOUNT RULES ====================
+  "POST /api/markup-discounts": {
+    module: "partners-management",
+    submodule: "markup-discounts",
+    action: "write",
+    description: "Create markup/discount rule",
+  },
+  "GET /api/markup-discounts": {
+    module: "partners-management",
+    submodule: "markup-discounts",
+    action: "read",
+    description: "List markup/discount rules",
+  },
+  "GET /api/markup-discounts/:id": {
+    module: "partners-management",
+    submodule: "markup-discounts",
+    action: "read",
+    description: "Get markup/discount rule details",
+  },
+  "PUT /api/markup-discounts/:id": {
+    module: "partners-management",
+    submodule: "markup-discounts",
+    action: "edit",
+    description: "Update markup/discount rule",
+  },
+  "DELETE /api/markup-discounts/:id": {
+    module: "partners-management",
+    submodule: "markup-discounts",
+    action: "delete",
+    description: "Delete markup/discount rule",
+  },
 }
 
 /**

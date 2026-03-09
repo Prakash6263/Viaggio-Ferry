@@ -1,21 +1,9 @@
 const mongoose = require("mongoose")
 
 const RULE_TYPES = ["Markup", "Discount"]
-const VALUE_TYPES = ["PERCENT", "AMOUNT"]
-const APPLIED_TO_LAYERS = ["Company", "Marine Agent", "Commercial Agent", "Selling Agent"]
-const PASSENGER_TYPES = ["Adult", "Child", "Infant", "Student", "Senior"]
-const CABIN_CLASSES = ["Economy", "Business", "First"]
-const CARGO_TYPES = ["General Cargo", "Dangerous Goods", "Perishable Goods", "Livestock", "Refrigerated"]
-const VEHICLE_TYPES = ["Car", "Truck", "Motorcycle", "RV", "Trailer"]
+const VALUE_TYPES = ["percentage", "fixed"]
+const APPLIED_LAYERS = ["Company", "Marine Agent", "Commercial Agent", "Selling Agent"]
 const RULE_STATUS = ["Active", "Inactive"]
-
-const RouteSchema = new mongoose.Schema(
-  {
-    from: { type: String, required: true, trim: true },
-    to: { type: String, required: true, trim: true },
-  },
-  { _id: false },
-)
 
 const MarkupDiscountRuleSchema = new mongoose.Schema(
   {
@@ -25,50 +13,82 @@ const MarkupDiscountRuleSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    ruleName: { type: String, required: true, trim: true, maxlength: 100 },
+    ruleName: { type: String, required: true, trim: true, maxlength: 200 },
     ruleType: { type: String, enum: RULE_TYPES, required: true },
-    valueType: { type: String, enum: VALUE_TYPES, default: "PERCENT" },
-    value: { type: Number, required: true, min: 0 },
+    valueType: { type: String, enum: VALUE_TYPES, default: "percentage" },
+    ruleValue: { type: Number, required: true, min: 0 },
 
-    provider: { type: mongoose.Schema.Types.ObjectId, ref: "Partner", required: true },
-    appliedToLayer: { type: String, enum: APPLIED_TO_LAYERS, required: true },
+    providerType: { type: String, enum: ["Company", "Partner"], required: true },
+    providerCompany: { type: mongoose.Schema.Types.ObjectId, ref: "Company", default: null },
+    providerPartner: { type: mongoose.Schema.Types.ObjectId, ref: "Partner", default: null },
+    appliedLayer: { type: String, enum: APPLIED_LAYERS, required: true },
+    partnerScope: { type: String, enum: ["AllChildPartners", "SpecificPartner"], required: true },
     partner: { type: mongoose.Schema.Types.ObjectId, ref: "Partner", default: null },
 
-    commissionValue: { type: Number, default: 0, min: 0 },
-
-    serviceTypes: { type: [String], enum: ["Passenger", "Cargo", "Vehicle"], default: [] },
-
-    passengerCabins: { type: [String], enum: CABIN_CLASSES, default: [] },
-    passengerTypes: { type: [String], enum: PASSENGER_TYPES, default: [] },
-    cargoTypes: { type: [String], enum: CARGO_TYPES, default: [] },
-    vehicleTypes: { type: [String], enum: VEHICLE_TYPES, default: [] },
+    serviceTypes: [
+      {
+        type: String,
+        enum: ["Passenger", "Cargo", "Vehicle"],
+        required: true,
+      },
+    ],
+    cabins: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Cabin",
+      },
+    ],
 
     visaType: { type: String, trim: true, default: null },
-    routes: { type: [RouteSchema], default: [] },
+    routeFrom: { type: mongoose.Schema.Types.ObjectId, ref: "Port", required: true },
+    routeTo: { type: mongoose.Schema.Types.ObjectId, ref: "Port", required: true },
 
     effectiveDate: { type: Date, required: true },
     expiryDate: { type: Date, default: null },
+    priority: { type: Number, default: 1, min: 1 },
 
     status: { type: String, enum: RULE_STATUS, default: "Active" },
+    isActive: { type: Boolean, default: true },
     isDeleted: { type: Boolean, default: false },
+
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   },
   { timestamps: true },
 )
 
-MarkupDiscountRuleSchema.index({ company: 1, provider: 1, status: 1, isDeleted: 1 })
-MarkupDiscountRuleSchema.index({ company: 1, appliedToLayer: 1, partner: 1 })
+MarkupDiscountRuleSchema.index({ company: 1, providerCompany: 1, status: 1, isDeleted: 1 })
+MarkupDiscountRuleSchema.index({ company: 1, providerPartner: 1, status: 1, isDeleted: 1 })
+MarkupDiscountRuleSchema.index({ company: 1, providerCompany: 1, appliedLayer: 1 })
+MarkupDiscountRuleSchema.index({ company: 1, providerPartner: 1, appliedLayer: 1 })
+MarkupDiscountRuleSchema.index({ company: 1, appliedLayer: 1, partner: 1 })
 MarkupDiscountRuleSchema.index({ company: 1, effectiveDate: 1, expiryDate: 1 })
 MarkupDiscountRuleSchema.index({ company: 1, serviceTypes: 1 })
+MarkupDiscountRuleSchema.index({ company: 1, cabins: 1 })
+MarkupDiscountRuleSchema.index({ company: 1, routeFrom: 1, routeTo: 1 })
 MarkupDiscountRuleSchema.index({ company: 1, ruleName: "text" })
+// Compound index for duplicate detection and rule lookup
+MarkupDiscountRuleSchema.index({
+  company: 1,
+  serviceTypes: 1,
+  routeFrom: 1,
+  routeTo: 1,
+})
+// Compound index for duplicate detection
+MarkupDiscountRuleSchema.index({
+  company: 1,
+  providerCompany: 1,
+  providerPartner: 1,
+  appliedLayer: 1,
+  routeFrom: 1,
+  routeTo: 1,
+  visaType: 1,
+})
 
 module.exports = {
   RULE_TYPES,
   VALUE_TYPES,
-  APPLIED_TO_LAYERS,
-  PASSENGER_TYPES,
-  CABIN_CLASSES,
-  CARGO_TYPES,
-  VEHICLE_TYPES,
+  APPLIED_LAYERS,
   RULE_STATUS,
   MarkupDiscountRule: mongoose.model("MarkupDiscountRule", MarkupDiscountRuleSchema),
 }
