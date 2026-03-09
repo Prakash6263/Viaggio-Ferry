@@ -65,6 +65,27 @@ const createMarkupDiscountRule = async (req, res, next) => {
       providerPartner = provider
     }
 
+    // Check for duplicate rules before creating
+    const duplicateRule = await MarkupDiscountRule.findOne({
+      company: companyId,
+      providerType,
+      providerCompany,
+      providerPartner,
+      appliedLayer,
+      partnerScope,
+      partner: partnerScope === "SpecificPartner" ? partner : null,
+      routeFrom,
+      routeTo,
+      visaType: visaType || null,
+      payloadTypes: { $all: payloadTypes || [] },
+      cabins: { $all: cabins || [] },
+      isDeleted: false,
+    })
+
+    if (duplicateRule) {
+      throw createHttpError(400, "Duplicate rule already exists for this configuration")
+    }
+
     const rule = new MarkupDiscountRule({
       company: companyId,
       ruleName: ruleName.trim(),

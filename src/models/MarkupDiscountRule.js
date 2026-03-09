@@ -67,6 +67,16 @@ MarkupDiscountRuleSchema.index({ company: 1, payloadTypes: 1 })
 MarkupDiscountRuleSchema.index({ company: 1, cabins: 1 })
 MarkupDiscountRuleSchema.index({ company: 1, routeFrom: 1, routeTo: 1 })
 MarkupDiscountRuleSchema.index({ company: 1, ruleName: "text" })
+// Compound index for duplicate detection
+MarkupDiscountRuleSchema.index({
+  company: 1,
+  providerCompany: 1,
+  providerPartner: 1,
+  appliedLayer: 1,
+  routeFrom: 1,
+  routeTo: 1,
+  visaType: 1,
+})
 
 module.exports = {
   RULE_TYPES,
