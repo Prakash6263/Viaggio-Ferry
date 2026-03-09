@@ -1,0 +1,341 @@
+{
+  "info": {
+    "_postman_id": "markup-discount-api-collection",
+    "name": "Markup & Discount Rules API",
+    "description": "Complete API collection for managing Markup and Discount Rules in the Ferry Booking Platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Markup Discount APIs",
+      "item": [
+        {
+          "name": "Create Markup Rule",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('ruleId', jsonData.data._id);",
+                  "    pm.test('Rule created successfully', function() {",
+                  "        pm.expect(jsonData.success).to.equal(true);",
+                  "        pm.expect(jsonData.data.ruleName).to.exist;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Marine Markup Rule - Passenger\",\n  \"provider\": \"{{companyId}}\",\n  \"providerType\": \"Company\",\n  \"appliedLayer\": \"Marine\",\n  \"partnerScope\": \"AllChildPartners\",\n  \"ruleType\": \"Markup\",\n  \"ruleValue\": 10,\n  \"valueType\": \"percentage\",\n  \"serviceTypes\": [\"Passenger\", \"Cargo\"],\n  \"routeFrom\": \"{{portId}}\",\n  \"routeTo\": \"{{portId}}\",\n  \"effectiveDate\": \"2026-03-01T00:00:00Z\",\n  \"priority\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/markup-discounts",
+              "host": ["{{base_url}}"],
+              "path": ["api", "markup-discounts"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List All Rules",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test('Rules retrieved successfully', function() {",
+                  "        pm.expect(jsonData.success).to.equal(true);",
+                  "        pm.expect(jsonData.data).to.be.an('array');",
+                  "        pm.expect(jsonData.pagination).to.exist;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/markup-discounts?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "markup-discounts"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "layer",
+                  "value": "Marine",
+                  "disabled": true
+                },
+                {
+                  "key": "serviceType",
+                  "value": "Passenger",
+                  "disabled": true
+                },
+                {
+                  "key": "ruleType",
+                  "value": "Markup",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "marine",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Rule By ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test('Rule retrieved successfully', function() {",
+                  "        pm.expect(jsonData.success).to.equal(true);",
+                  "        pm.expect(jsonData.data._id).to.exist;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/markup-discounts/{{ruleId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "markup-discounts", "{{ruleId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Rule",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test('Rule updated successfully', function() {",
+                  "        pm.expect(jsonData.success).to.equal(true);",
+                  "        pm.expect(jsonData.message).to.include('updated');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Marine Markup Rule - Updated\",\n  \"ruleValue\": 15,\n  \"priority\": 2,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/markup-discounts/{{ruleId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "markup-discounts", "{{ruleId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Rule",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test('Rule deleted successfully', function() {",
+                  "        pm.expect(jsonData.success).to.equal(true);",
+                  "        pm.expect(jsonData.message).to.include('deleted');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/markup-discounts/{{ruleId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "markup-discounts", "{{ruleId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Discount Rule (Specific Partner)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Commercial Discount Rule - Specific Partner\",\n  \"provider\": \"{{companyId}}\",\n  \"providerType\": \"Company\",\n  \"appliedLayer\": \"Commercial\",\n  \"partnerScope\": \"SpecificPartner\",\n  \"partner\": \"{{partnerId}}\",\n  \"ruleType\": \"Discount\",\n  \"ruleValue\": 5,\n  \"valueType\": \"fixed\",\n  \"serviceTypes\": [\"Vehicle\"],\n  \"routeFrom\": \"{{portId}}\",\n  \"routeTo\": \"{{portId}}\",\n  \"effectiveDate\": \"2026-04-01T00:00:00Z\",\n  \"visaType\": \"Standard\",\n  \"priority\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/markup-discounts",
+              "host": ["{{base_url}}"],
+              "path": ["api", "markup-discounts"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Rules with Filters",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/markup-discounts?page=1&limit=5&layer=Marine&serviceType=Passenger&ruleType=Markup",
+              "host": ["{{base_url}}"],
+              "path": ["api", "markup-discounts"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                },
+                {
+                  "key": "layer",
+                  "value": "Marine"
+                },
+                {
+                  "key": "serviceType",
+                  "value": "Passenger"
+                },
+                {
+                  "key": "ruleType",
+                  "value": "Markup"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "your_bearer_token_here",
+      "type": "string"
+    },
+    {
+      "key": "companyId",
+      "value": "your_company_id_here",
+      "type": "string"
+    },
+    {
+      "key": "portId",
+      "value": "your_port_id_here",
+      "type": "string"
+    },
+    {
+      "key": "partnerId",
+      "value": "your_partner_id_here",
+      "type": "string"
+    },
+    {
+      "key": "ruleId",
+      "value": "rule_id_auto_populated",
+      "type": "string"
+    }
+  ]
+}
