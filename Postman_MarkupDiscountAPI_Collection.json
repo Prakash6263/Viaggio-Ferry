@@ -44,7 +44,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"ruleName\": \"Marine Markup Rule - Passenger\",\n  \"provider\": \"{{companyId}}\",\n  \"providerType\": \"Company\",\n  \"appliedLayer\": \"Company\",\n  \"partnerScope\": \"AllChildPartners\",\n  \"ruleType\": \"Markup\",\n  \"ruleValue\": 10,\n  \"valueType\": \"percentage\",\n  \"payloadTypes\": [\"{{payload_type_adult}}\"],\n  \"cabins\": [\"{{cabin_economy}}\"],\n  \"routeFrom\": \"{{port_id_1}}\",\n  \"routeTo\": \"{{port_id_2}}\",\n  \"effectiveDate\": \"2026-03-01T00:00:00Z\",\n  \"priority\": 1\n}"
+              "raw": "{\n  \"ruleName\": \"Marine Markup Rule - Passenger\",\n  \"provider\": \"{{companyId}}\",\n  \"providerType\": \"Company\",\n  \"appliedLayer\": \"Company\",\n  \"partnerScope\": \"AllChildPartners\",\n  \"ruleType\": \"Markup\",\n  \"ruleValue\": 10,\n  \"valueType\": \"percentage\",\n  \"payloadTypes\": [\"{{payload_type_adult}}\"],\n  \"cabins\": [\"{{cabin_economy}}\"],\n  \"routeFrom\": \"{{port_id_1}}\",\n  \"routeTo\": \"{{port_id_2}}\",\n  \"effectiveDate\": \"2026-03-01T00:00:00Z\",\n  \"expiryDate\": \"2026-12-31T00:00:00Z\",\n  \"priority\": 1\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/markup-discounts",
@@ -194,7 +194,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"ruleName\": \"Marine Markup Rule - Updated\",\n  \"ruleValue\": 15,\n  \"priority\": 2,\n  \"isActive\": true\n}"
+              "raw": "{\n  \"ruleName\": \"Marine Markup Rule - Updated\",\n  \"ruleValue\": 15,\n  \"expiryDate\": \"2026-12-31T00:00:00Z\",\n  \"priority\": 2,\n  \"isActive\": true\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/markup-discounts/{{ruleId}}",
@@ -257,7 +257,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"ruleName\": \"Commercial Discount Rule - Specific Partner\",\n  \"provider\": \"{{companyId}}\",\n  \"providerType\": \"Company\",\n  \"appliedLayer\": \"Commercial Agent\",\n  \"partnerScope\": \"SpecificPartner\",\n  \"partner\": \"{{partnerId}}\",\n  \"ruleType\": \"Discount\",\n  \"ruleValue\": 5,\n  \"valueType\": \"fixed\",\n  \"payloadTypes\": [\"{{payload_type_vehicle}}\"],\n  \"cabins\": [\"{{cabin_vehicle_deck}}\"],\n  \"routeFrom\": \"{{port_id_1}}\",\n  \"routeTo\": \"{{port_id_2}}\",\n  \"effectiveDate\": \"2026-04-01T00:00:00Z\",\n  \"visaType\": \"Standard\",\n  \"priority\": 2\n}"
+              "raw": "{\n  \"ruleName\": \"Commercial Discount Rule - Specific Partner\",\n  \"provider\": \"{{companyId}}\",\n  \"providerType\": \"Company\",\n  \"appliedLayer\": \"Commercial Agent\",\n  \"partnerScope\": \"SpecificPartner\",\n  \"partner\": \"{{partnerId}}\",\n  \"ruleType\": \"Discount\",\n  \"ruleValue\": 5,\n  \"valueType\": \"fixed\",\n  \"payloadTypes\": [\"{{payload_type_vehicle}}\"],\n  \"cabins\": [\"{{cabin_vehicle_deck}}\"],\n  \"routeFrom\": \"{{port_id_1}}\",\n  \"routeTo\": \"{{port_id_2}}\",\n  \"effectiveDate\": \"2026-04-01T00:00:00Z\",\n  \"expiryDate\": \"2026-12-31T00:00:00Z\",\n  \"visaType\": \"Standard\",\n  \"priority\": 2\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/markup-discounts",

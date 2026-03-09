@@ -24,6 +24,7 @@ const createMarkupDiscountRule = async (req, res, next) => {
       routeFrom,
       routeTo,
       effectiveDate,
+      expiryDate,
       priority,
     } = req.body
 
@@ -71,6 +72,7 @@ const createMarkupDiscountRule = async (req, res, next) => {
       routeFrom,
       routeTo,
       effectiveDate: new Date(effectiveDate),
+      expiryDate: expiryDate ? new Date(expiryDate) : null,
       priority: priority || 1,
       isActive: true,
       createdBy: userId,
@@ -80,7 +82,7 @@ const createMarkupDiscountRule = async (req, res, next) => {
 
     // Populate references for response
     const populatedRule = await MarkupDiscountRule.findById(rule._id)
-      .populate("provider", "name partnerName")
+      .populate("provider", rule.providerType === "Company" ? "companyName" : "name")
       .populate("partner", "name partnerName")
       .populate("payloadTypes", "name code category")
       .populate("cabins", "name type")
@@ -120,7 +122,12 @@ const listMarkupDiscountRules = async (req, res, next) => {
     if (!companyId) throw createHttpError(400, "Company ID is required")
 
     const skip = (page - 1) * limit
-    const filter = { company: companyId, isActive: true }
+    const filter = {
+      company: companyId,
+      isActive: true,
+      isDeleted: false,
+      $or: [{ expiryDate: null }, { expiryDate: { $gte: new Date() } }],
+    }
 
     // Apply filters
     if (search && search.trim().length > 0) {
@@ -136,11 +143,11 @@ const listMarkupDiscountRules = async (req, res, next) => {
     }
 
     if (payloadType) {
-      filter.payloadTypes = payloadType
+      filter.payloadTypes = { $in: [payloadType] }
     }
 
     if (cabin) {
-      filter.cabins = cabin
+      filter.cabins = { $in: [cabin] }
     }
 
     if (ruleType) {
@@ -148,7 +155,7 @@ const listMarkupDiscountRules = async (req, res, next) => {
     }
 
     const rules = await MarkupDiscountRule.find(filter)
-      .populate("provider", "name partnerName")
+      .populate("provider", "name partnerName companyName")
       .populate("partner", "name partnerName")
       .populate("payloadTypes", "name code category")
       .populate("cabins", "name type")
@@ -192,8 +199,9 @@ const getMarkupDiscountRule = async (req, res, next) => {
       _id: id,
       company: companyId,
       isActive: true,
+      isDeleted: false,
     })
-      .populate("provider", "name partnerName")
+      .populate("provider", "name partnerName companyName")
       .populate("partner", "name partnerName")
       .populate("payloadTypes", "name code category")
       .populate("cabins", "name type")
@@ -239,6 +247,7 @@ const updateMarkupDiscountRule = async (req, res, next) => {
       routeFrom,
       routeTo,
       effectiveDate,
+      expiryDate,
       priority,
       isActive,
     } = req.body
@@ -299,6 +308,7 @@ const updateMarkupDiscountRule = async (req, res, next) => {
     if (routeFrom !== undefined) rule.routeFrom = routeFrom
     if (routeTo !== undefined) rule.routeTo = routeTo
     if (effectiveDate !== undefined) rule.effectiveDate = new Date(effectiveDate)
+    if (expiryDate !== undefined) rule.expiryDate = expiryDate ? new Date(expiryDate) : null
     if (priority !== undefined) rule.priority = priority
     if (isActive !== undefined) rule.isActive = isActive
 
@@ -306,7 +316,7 @@ const updateMarkupDiscountRule = async (req, res, next) => {
     await rule.save()
 
     const populatedRule = await MarkupDiscountRule.findById(rule._id)
-      .populate("provider", "name partnerName")
+      .populate("provider", "name partnerName companyName")
       .populate("partner", "name partnerName")
       .populate("payloadTypes", "name code category")
       .populate("cabins", "name type")
@@ -347,6 +357,7 @@ const deleteMarkupDiscountRule = async (req, res, next) => {
 
     // Soft delete
     rule.isActive = false
+    rule.isDeleted = true
     await rule.save()
 
     res.json({

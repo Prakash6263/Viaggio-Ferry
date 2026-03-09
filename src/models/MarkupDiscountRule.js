@@ -57,6 +57,7 @@ const MarkupDiscountRuleSchema = new mongoose.Schema(
 )
 
 MarkupDiscountRuleSchema.index({ company: 1, provider: 1, status: 1, isDeleted: 1 })
+MarkupDiscountRuleSchema.index({ company: 1, provider: 1, appliedLayer: 1 })
 MarkupDiscountRuleSchema.index({ company: 1, appliedLayer: 1, partner: 1 })
 MarkupDiscountRuleSchema.index({ company: 1, effectiveDate: 1, expiryDate: 1 })
 MarkupDiscountRuleSchema.index({ company: 1, payloadTypes: 1 })

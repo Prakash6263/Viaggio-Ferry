@@ -2,6 +2,7 @@ const createHttpError = require("http-errors")
 const mongoose = require("mongoose")
 const { PayloadType } = require("../models/PayloadType")
 const { Cabin } = require("../models/Cabin")
+const Partner = require("../models/Partner")
 
 const VALID_PROVIDER_TYPES = ["Company", "Partner"]
 const VALID_APPLIED_LAYERS = ["Company", "Marine Agent", "Commercial Agent", "Selling Agent"]
@@ -29,6 +30,7 @@ const validateMarkupDiscount = async (req, res, next) => {
       routeFrom,
       routeTo,
       effectiveDate,
+      expiryDate,
       priority,
     } = req.body
     const { companyId } = req
@@ -49,6 +51,8 @@ const validateMarkupDiscount = async (req, res, next) => {
       errors.push("provider is required")
     } else if (typeof provider !== "string") {
       errors.push("provider must be a valid ObjectId string")
+    } else if (!mongoose.Types.ObjectId.isValid(provider)) {
+      errors.push("provider must be a valid ObjectId")
     }
 
     // Validate providerType
@@ -56,6 +60,27 @@ const validateMarkupDiscount = async (req, res, next) => {
       errors.push("providerType is required")
     } else if (!VALID_PROVIDER_TYPES.includes(providerType)) {
       errors.push(`providerType must be one of: ${VALID_PROVIDER_TYPES.join(", ")}`)
+    } else if (providerType === "Company" && provider !== companyId) {
+      errors.push("provider must match companyId when providerType is Company")
+    }
+
+    // Validate provider exists in database (if no errors so far)
+    if (errors.length === 0 && provider && providerType) {
+      try {
+        if (providerType === "Partner") {
+          const partnerExists = await Partner.exists({
+            _id: provider,
+            company: companyId,
+            isDeleted: false,
+          })
+          if (!partnerExists) {
+            errors.push("provider does not exist or does not belong to this company")
+          }
+        }
+      } catch (err) {
+        console.error("[v0] Error validating provider:", err)
+        errors.push("Error validating provider")
+      }
     }
 
     // Validate appliedLayer
@@ -174,6 +199,19 @@ const validateMarkupDiscount = async (req, res, next) => {
       const date = new Date(effectiveDate)
       if (isNaN(date.getTime())) {
         errors.push("effectiveDate must be a valid ISO date string")
+      }
+    }
+
+    // Validate expiryDate (optional, but validate if provided)
+    if (expiryDate !== undefined && expiryDate !== null && expiryDate !== "") {
+      const expDate = new Date(expiryDate)
+      if (isNaN(expDate.getTime())) {
+        errors.push("expiryDate must be a valid ISO date string")
+      } else if (effectiveDate) {
+        const effDate = new Date(effectiveDate)
+        if (expDate <= effDate) {
+          errors.push("expiryDate must be greater than effectiveDate")
+        }
       }
     }
 
