@@ -18,7 +18,8 @@ const createMarkupDiscountRule = async (req, res, next) => {
       ruleType,
       ruleValue,
       valueType,
-      serviceTypes,
+      payloadTypes,
+      cabins,
       visaType,
       routeFrom,
       routeTo,
@@ -40,8 +41,10 @@ const createMarkupDiscountRule = async (req, res, next) => {
       throw createHttpError(400, "ruleValue is required")
     if (ruleValue < 0) throw createHttpError(400, "ruleValue must be positive")
     if (!valueType) throw createHttpError(400, "valueType is required")
-    if (!serviceTypes || !Array.isArray(serviceTypes) || serviceTypes.length === 0)
-      throw createHttpError(400, "serviceTypes is required (must be a non-empty array)")
+    if (!payloadTypes || !Array.isArray(payloadTypes) || payloadTypes.length === 0)
+      throw createHttpError(400, "payloadTypes is required (must be a non-empty array)")
+    if (!cabins || !Array.isArray(cabins) || cabins.length === 0)
+      throw createHttpError(400, "cabins is required (must be a non-empty array)")
     if (!routeFrom) throw createHttpError(400, "routeFrom is required")
     if (!routeTo) throw createHttpError(400, "routeTo is required")
     if (!effectiveDate) throw createHttpError(400, "effectiveDate is required")
@@ -62,7 +65,8 @@ const createMarkupDiscountRule = async (req, res, next) => {
       ruleType,
       ruleValue,
       valueType,
-      serviceTypes,
+      payloadTypes,
+      cabins,
       visaType: visaType || null,
       routeFrom,
       routeTo,
@@ -78,6 +82,8 @@ const createMarkupDiscountRule = async (req, res, next) => {
     const populatedRule = await MarkupDiscountRule.findById(rule._id)
       .populate("provider", "name partnerName")
       .populate("partner", "name partnerName")
+      .populate("payloadTypes", "name code category")
+      .populate("cabins", "name type")
       .populate("routeFrom", "portName")
       .populate("routeTo", "portName")
       .populate("createdBy", "email name")
@@ -106,7 +112,8 @@ const listMarkupDiscountRules = async (req, res, next) => {
       search,
       layer,
       routeFrom,
-      serviceType,
+      payloadType,
+      cabin,
       ruleType,
     } = req.query
 
@@ -128,8 +135,12 @@ const listMarkupDiscountRules = async (req, res, next) => {
       filter.routeFrom = routeFrom
     }
 
-    if (serviceType) {
-      filter.serviceTypes = serviceType
+    if (payloadType) {
+      filter.payloadTypes = payloadType
+    }
+
+    if (cabin) {
+      filter.cabins = cabin
     }
 
     if (ruleType) {
@@ -139,6 +150,8 @@ const listMarkupDiscountRules = async (req, res, next) => {
     const rules = await MarkupDiscountRule.find(filter)
       .populate("provider", "name partnerName")
       .populate("partner", "name partnerName")
+      .populate("payloadTypes", "name code category")
+      .populate("cabins", "name type")
       .populate("routeFrom", "portName")
       .populate("routeTo", "portName")
       .populate("createdBy", "email name")
@@ -182,6 +195,8 @@ const getMarkupDiscountRule = async (req, res, next) => {
     })
       .populate("provider", "name partnerName")
       .populate("partner", "name partnerName")
+      .populate("payloadTypes", "name code category")
+      .populate("cabins", "name type")
       .populate("routeFrom", "portName")
       .populate("routeTo", "portName")
       .populate("createdBy", "email name")
@@ -218,7 +233,8 @@ const updateMarkupDiscountRule = async (req, res, next) => {
       ruleType,
       ruleValue,
       valueType,
-      serviceTypes,
+      payloadTypes,
+      cabins,
       visaType,
       routeFrom,
       routeTo,
@@ -267,10 +283,16 @@ const updateMarkupDiscountRule = async (req, res, next) => {
     }
 
     if (valueType !== undefined) rule.valueType = valueType
-    if (serviceTypes !== undefined) {
-      if (!Array.isArray(serviceTypes) || serviceTypes.length === 0)
-        throw createHttpError(400, "serviceTypes must be a non-empty array")
-      rule.serviceTypes = serviceTypes
+    if (payloadTypes !== undefined) {
+      if (!Array.isArray(payloadTypes) || payloadTypes.length === 0)
+        throw createHttpError(400, "payloadTypes must be a non-empty array")
+      rule.payloadTypes = payloadTypes
+    }
+
+    if (cabins !== undefined) {
+      if (!Array.isArray(cabins) || cabins.length === 0)
+        throw createHttpError(400, "cabins must be a non-empty array")
+      rule.cabins = cabins
     }
 
     if (visaType !== undefined) rule.visaType = visaType || null
@@ -286,6 +308,8 @@ const updateMarkupDiscountRule = async (req, res, next) => {
     const populatedRule = await MarkupDiscountRule.findById(rule._id)
       .populate("provider", "name partnerName")
       .populate("partner", "name partnerName")
+      .populate("payloadTypes", "name code category")
+      .populate("cabins", "name type")
       .populate("routeFrom", "portName")
       .populate("routeTo", "portName")
       .populate("createdBy", "email name")

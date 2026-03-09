@@ -44,7 +44,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"ruleName\": \"Marine Markup Rule - Passenger\",\n  \"provider\": \"{{companyId}}\",\n  \"providerType\": \"Company\",\n  \"appliedLayer\": \"Marine\",\n  \"partnerScope\": \"AllChildPartners\",\n  \"ruleType\": \"Markup\",\n  \"ruleValue\": 10,\n  \"valueType\": \"percentage\",\n  \"serviceTypes\": [\"Passenger\", \"Cargo\"],\n  \"routeFrom\": \"{{portId}}\",\n  \"routeTo\": \"{{portId}}\",\n  \"effectiveDate\": \"2026-03-01T00:00:00Z\",\n  \"priority\": 1\n}"
+              "raw": "{\n  \"ruleName\": \"Marine Markup Rule - Passenger\",\n  \"provider\": \"{{companyId}}\",\n  \"providerType\": \"Company\",\n  \"appliedLayer\": \"Company\",\n  \"partnerScope\": \"AllChildPartners\",\n  \"ruleType\": \"Markup\",\n  \"ruleValue\": 10,\n  \"valueType\": \"percentage\",\n  \"payloadTypes\": [\"{{payload_type_adult}}\"],\n  \"cabins\": [\"{{cabin_economy}}\"],\n  \"routeFrom\": \"{{port_id_1}}\",\n  \"routeTo\": \"{{port_id_2}}\",\n  \"effectiveDate\": \"2026-03-01T00:00:00Z\",\n  \"priority\": 1\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/markup-discounts",
@@ -97,12 +97,17 @@
                 },
                 {
                   "key": "layer",
-                  "value": "Marine",
+                  "value": "Company",
                   "disabled": true
                 },
                 {
-                  "key": "serviceType",
-                  "value": "Passenger",
+                  "key": "payloadType",
+                  "value": "{{payload_type_adult}}",
+                  "disabled": true
+                },
+                {
+                  "key": "cabin",
+                  "value": "{{cabin_economy}}",
                   "disabled": true
                 },
                 {
@@ -252,7 +257,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"ruleName\": \"Commercial Discount Rule - Specific Partner\",\n  \"provider\": \"{{companyId}}\",\n  \"providerType\": \"Company\",\n  \"appliedLayer\": \"Commercial\",\n  \"partnerScope\": \"SpecificPartner\",\n  \"partner\": \"{{partnerId}}\",\n  \"ruleType\": \"Discount\",\n  \"ruleValue\": 5,\n  \"valueType\": \"fixed\",\n  \"serviceTypes\": [\"Vehicle\"],\n  \"routeFrom\": \"{{portId}}\",\n  \"routeTo\": \"{{portId}}\",\n  \"effectiveDate\": \"2026-04-01T00:00:00Z\",\n  \"visaType\": \"Standard\",\n  \"priority\": 2\n}"
+              "raw": "{\n  \"ruleName\": \"Commercial Discount Rule - Specific Partner\",\n  \"provider\": \"{{companyId}}\",\n  \"providerType\": \"Company\",\n  \"appliedLayer\": \"Commercial Agent\",\n  \"partnerScope\": \"SpecificPartner\",\n  \"partner\": \"{{partnerId}}\",\n  \"ruleType\": \"Discount\",\n  \"ruleValue\": 5,\n  \"valueType\": \"fixed\",\n  \"payloadTypes\": [\"{{payload_type_vehicle}}\"],\n  \"cabins\": [\"{{cabin_vehicle_deck}}\"],\n  \"routeFrom\": \"{{port_id_1}}\",\n  \"routeTo\": \"{{port_id_2}}\",\n  \"effectiveDate\": \"2026-04-01T00:00:00Z\",\n  \"visaType\": \"Standard\",\n  \"priority\": 2\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/markup-discounts",
@@ -274,7 +279,7 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/markup-discounts?page=1&limit=5&layer=Marine&serviceType=Passenger&ruleType=Markup",
+              "raw": "{{base_url}}/api/markup-discounts?page=1&limit=5&layer=Company&payloadType={{payload_type_adult}}&cabin={{cabin_economy}}&ruleType=Markup",
               "host": ["{{base_url}}"],
               "path": ["api", "markup-discounts"],
               "query": [
@@ -288,11 +293,15 @@
                 },
                 {
                   "key": "layer",
-                  "value": "Marine"
+                  "value": "Company"
                 },
                 {
-                  "key": "serviceType",
-                  "value": "Passenger"
+                  "key": "payloadType",
+                  "value": "{{payload_type_adult}}"
+                },
+                {
+                  "key": "cabin",
+                  "value": "{{cabin_economy}}"
                 },
                 {
                   "key": "ruleType",
@@ -323,13 +332,48 @@
       "type": "string"
     },
     {
-      "key": "portId",
-      "value": "your_port_id_here",
+      "key": "port_id_1",
+      "value": "port_muscat_id",
+      "type": "string"
+    },
+    {
+      "key": "port_id_2",
+      "value": "port_dubai_id",
       "type": "string"
     },
     {
       "key": "partnerId",
       "value": "your_partner_id_here",
+      "type": "string"
+    },
+    {
+      "key": "payload_type_adult",
+      "value": "adult_payload_type_id",
+      "type": "string"
+    },
+    {
+      "key": "payload_type_child",
+      "value": "child_payload_type_id",
+      "type": "string"
+    },
+    {
+      "key": "payload_type_vehicle",
+      "value": "vehicle_payload_type_id",
+      "type": "string"
+    },
+    {
+      "key": "cabin_economy",
+      "value": "economy_passenger_cabin_id",
+      "type": "string"
+    },
+    {
+      "key": "cabin_vip",
+      "value": "vip_passenger_cabin_id",
+      "type": "string"
+    },
+    {
+      "key": "cabin_vehicle_deck",
+      "value": "vehicle_deck_cabin_id",
       "type": "string"
     },
     {

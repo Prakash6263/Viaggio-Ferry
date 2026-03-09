@@ -1,16 +1,18 @@
 const createHttpError = require("http-errors")
+const mongoose = require("mongoose")
+const { PayloadType } = require("../models/PayloadType")
+const { Cabin } = require("../models/Cabin")
 
 const VALID_PROVIDER_TYPES = ["Company", "Partner"]
-const VALID_APPLIED_LAYERS = ["Marine", "Commercial", "Selling"]
+const VALID_APPLIED_LAYERS = ["Company", "Marine Agent", "Commercial Agent", "Selling Agent"]
 const VALID_PARTNER_SCOPES = ["AllChildPartners", "SpecificPartner"]
 const VALID_RULE_TYPES = ["Markup", "Discount"]
 const VALID_VALUE_TYPES = ["percentage", "fixed"]
-const VALID_SERVICE_TYPES = ["Passenger", "Cargo", "Vehicle"]
 
 /**
  * Middleware to validate markup/discount rule request body
  */
-const validateMarkupDiscount = (req, res, next) => {
+const validateMarkupDiscount = async (req, res, next) => {
   try {
     const {
       ruleName,
@@ -22,12 +24,14 @@ const validateMarkupDiscount = (req, res, next) => {
       ruleType,
       ruleValue,
       valueType,
-      serviceTypes,
+      payloadTypes,
+      cabins,
       routeFrom,
       routeTo,
       effectiveDate,
       priority,
     } = req.body
+    const { companyId } = req
 
     const errors = []
 
@@ -98,15 +102,49 @@ const validateMarkupDiscount = (req, res, next) => {
       errors.push(`valueType must be one of: ${VALID_VALUE_TYPES.join(", ")}`)
     }
 
-    // Validate serviceTypes
-    if (!serviceTypes || !Array.isArray(serviceTypes) || serviceTypes.length === 0) {
-      errors.push("serviceTypes is required and must be a non-empty array")
+    // Validate payloadTypes
+    if (!payloadTypes || !Array.isArray(payloadTypes) || payloadTypes.length === 0) {
+      errors.push("payloadTypes is required and must be a non-empty array")
     } else {
-      const invalidServiceTypes = serviceTypes.filter((st) => !VALID_SERVICE_TYPES.includes(st))
-      if (invalidServiceTypes.length > 0) {
-        errors.push(
-          `Invalid serviceTypes: ${invalidServiceTypes.join(", ")}. Must be one of: ${VALID_SERVICE_TYPES.join(", ")}`
-        )
+      for (const payloadTypeId of payloadTypes) {
+        if (!mongoose.Types.ObjectId.isValid(payloadTypeId)) {
+          errors.push(`Invalid payloadType ObjectId: ${payloadTypeId}`)
+          break
+        }
+      }
+      // Check if payloadTypes exist in database (only if companyId is available)
+      if (errors.length === 0 && companyId) {
+        const existingPayloadTypes = await PayloadType.countDocuments({
+          _id: { $in: payloadTypes.map((id) => mongoose.Types.ObjectId(id)) },
+          company: companyId,
+          isDeleted: false,
+        })
+        if (existingPayloadTypes !== payloadTypes.length) {
+          errors.push("One or more payloadTypes do not exist or are deleted")
+        }
+      }
+    }
+
+    // Validate cabins
+    if (!cabins || !Array.isArray(cabins) || cabins.length === 0) {
+      errors.push("cabins is required and must be a non-empty array")
+    } else {
+      for (const cabinId of cabins) {
+        if (!mongoose.Types.ObjectId.isValid(cabinId)) {
+          errors.push(`Invalid cabin ObjectId: ${cabinId}`)
+          break
+        }
+      }
+      // Check if cabins exist in database (only if companyId is available)
+      if (errors.length === 0 && companyId) {
+        const existingCabins = await Cabin.countDocuments({
+          _id: { $in: cabins.map((id) => mongoose.Types.ObjectId(id)) },
+          company: companyId,
+          isDeleted: false,
+        })
+        if (existingCabins !== cabins.length) {
+          errors.push("One or more cabins do not exist or are deleted")
+        }
       }
     }
 
@@ -158,6 +196,7 @@ const validateMarkupDiscount = (req, res, next) => {
 
     next()
   } catch (error) {
+    console.error("[v0] Validation middleware error:", error)
     next(error)
   }
 }

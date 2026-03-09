@@ -56,12 +56,9 @@ router.post(
   ruleValue: Number (required, >= 0)
   valueType: enum ["percentage", "fixed"] (default: "percentage")
   
-  // Service Configuration
-  serviceTypes: Array [
-    "Passenger",
-    "Cargo",
-    "Vehicle"
-  ] (required)
+  // Payload & Cabin Configuration
+  payloadTypes: Array of ObjectId (ref: PayloadType, required)
+  cabins: Array of ObjectId (ref: Cabin, required)
   visaType: String (optional)
   
   // Route
@@ -96,17 +93,18 @@ Content-Type: application/json
 **Request Body:**
 ```json
 {
-  "ruleName": "Marine markup rule",
-  "provider": "companyId",
-  "providerType": "Company",
-  "appliedLayer": "Marine",
+  "ruleName": "Passenger Economy Marine Markup",
+  "provider": "partnerId",
+  "providerType": "Partner",
+  "appliedLayer": "Commercial",
   "partnerScope": "AllChildPartners",
   "ruleType": "Markup",
   "ruleValue": 10,
   "valueType": "percentage",
-  "serviceTypes": ["Passenger", "Cargo"],
-  "routeFrom": "portId",
-  "routeTo": "portId",
+  "payloadTypes": ["payloadTypeIdAdult"],
+  "cabins": ["cabinIdEconomy"],
+  "routeFrom": "portIdMuscat",
+  "routeTo": "portIdDubai",
   "effectiveDate": "2026-03-01T00:00:00Z",
   "priority": 1,
   "visaType": "Standard"
@@ -127,15 +125,29 @@ Content-Type: application/json
       "name": "Company Name"
     },
     "providerType": "Company",
-    "appliedLayer": "Marine",
+    "appliedLayer": "Commercial",
     "partnerScope": "AllChildPartners",
     "ruleType": "Markup",
     "ruleValue": 10,
     "valueType": "percentage",
-    "serviceTypes": ["Passenger", "Cargo"],
+    "payloadTypes": [
+      {
+        "_id": "payloadTypeId",
+        "name": "Adult",
+        "code": "ADT",
+        "category": "passenger"
+      }
+    ],
+    "cabins": [
+      {
+        "_id": "cabinId",
+        "name": "Economy Passenger Cabin",
+        "type": "passenger"
+      }
+    ],
     "routeFrom": {
       "_id": "portId",
-      "portName": "Port Name"
+      "portName": "Muscat"
     },
     "routeTo": {
       "_id": "portId",
@@ -166,14 +178,15 @@ Content-Type: application/json
 | page | number | Page number (default: 1) | 1 |
 | limit | number | Items per page (default: 10) | 10 |
 | search | string | Search by rule name | "marine" |
-| layer | string | Filter by applied layer | "Marine" |
+| layer | string | Filter by applied layer | "Company" |
 | routeFrom | string | Filter by origin port ID | "portId" |
-| serviceType | string | Filter by service type | "Passenger" |
+| payloadType | string | Filter by payload type ID | "payloadTypeId" |
+| cabin | string | Filter by cabin ID | "cabinId" |
 | ruleType | string | Filter by rule type | "Markup" |
 
 **Request:**
 ```
-GET /api/markup-discounts?page=1&limit=10&layer=Marine&serviceType=Passenger
+GET /api/markup-discounts?page=1&limit=10&layer=Company&payloadType=payloadTypeId&cabin=cabinId
 Authorization: Bearer {{token}}
 ```
 
@@ -188,8 +201,9 @@ Authorization: Bearer {{token}}
       "ruleType": "Markup",
       "ruleValue": 10,
       "valueType": "percentage",
-      "appliedLayer": "Marine",
-      "serviceTypes": ["Passenger", "Cargo"],
+      "appliedLayer": "Commercial",
+      "payloadTypes": ["payloadTypeId"],
+      "cabins": ["cabinId"],
       "effectiveDate": "2026-03-01T00:00:00Z",
       "priority": 1,
       "isActive": true
