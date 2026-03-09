@@ -2,7 +2,7 @@ const createHttpError = require("http-errors")
 const mongoose = require("mongoose")
 const { Cabin } = require("../models/Cabin")
 const Partner = require("../models/Partner")
-const { MarkupDiscountRule } = require("../models/MarkupDiscountRule")
+const { MarkupDiscountRule, VISA_TYPES } = require("../models/MarkupDiscountRule")
 
 const VALID_PROVIDER_TYPES = ["Company", "Partner"]
 const VALID_APPLIED_LAYERS = ["Company", "Marine Agent", "Commercial Agent", "Selling Agent"]
@@ -259,6 +259,15 @@ const validateMarkupDiscount = async (req, res, next) => {
         errors.push("priority must be a number")
       } else if (priority < 1) {
         errors.push("priority must be at least 1")
+      }
+    }
+
+    // Validate visaType (optional, but validate if provided)
+    if (req.body.visaType !== undefined && req.body.visaType !== null && req.body.visaType !== "") {
+      if (typeof req.body.visaType !== "string") {
+        errors.push("visaType must be a string")
+      } else if (!VISA_TYPES.includes(req.body.visaType)) {
+        errors.push(`visaType must be one of: ${VISA_TYPES.join(", ")}`)
       }
     }
 

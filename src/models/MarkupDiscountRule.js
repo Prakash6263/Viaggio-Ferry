@@ -4,6 +4,7 @@ const RULE_TYPES = ["Markup", "Discount"]
 const VALUE_TYPES = ["percentage", "fixed"]
 const APPLIED_LAYERS = ["Company", "Marine Agent", "Commercial Agent", "Selling Agent"]
 const RULE_STATUS = ["Active", "Inactive"]
+const VISA_TYPES = ["Tourist", "Business", "Transit", "Diplomatic", "Official", "Work", "Student", "Residence", "Other"]
 
 const MarkupDiscountRuleSchema = new mongoose.Schema(
   {
@@ -52,7 +53,7 @@ const MarkupDiscountRuleSchema = new mongoose.Schema(
       ],
     },
 
-    visaType: { type: String, trim: true, default: null },
+    visaType: { type: String, enum: VISA_TYPES, default: null },
     routeFrom: { type: mongoose.Schema.Types.ObjectId, ref: "Port", required: true },
     routeTo: { type: mongoose.Schema.Types.ObjectId, ref: "Port", required: true },
 
@@ -97,5 +98,6 @@ module.exports = {
   VALUE_TYPES,
   APPLIED_LAYERS,
   RULE_STATUS,
+  VISA_TYPES,
   MarkupDiscountRule: mongoose.model("MarkupDiscountRule", MarkupDiscountRuleSchema),
 }
