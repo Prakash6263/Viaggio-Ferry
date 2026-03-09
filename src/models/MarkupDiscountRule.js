@@ -18,8 +18,9 @@ const MarkupDiscountRuleSchema = new mongoose.Schema(
     valueType: { type: String, enum: VALUE_TYPES, default: "percentage" },
     ruleValue: { type: Number, required: true, min: 0 },
 
-    provider: { type: mongoose.Schema.Types.ObjectId, ref: "Partner", required: true },
     providerType: { type: String, enum: ["Company", "Partner"], required: true },
+    providerCompany: { type: mongoose.Schema.Types.ObjectId, ref: "Company", default: null },
+    providerPartner: { type: mongoose.Schema.Types.ObjectId, ref: "Partner", default: null },
     appliedLayer: { type: String, enum: APPLIED_LAYERS, required: true },
     partnerScope: { type: String, enum: ["AllChildPartners", "SpecificPartner"], required: true },
     partner: { type: mongoose.Schema.Types.ObjectId, ref: "Partner", default: null },
@@ -56,8 +57,10 @@ const MarkupDiscountRuleSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-MarkupDiscountRuleSchema.index({ company: 1, provider: 1, status: 1, isDeleted: 1 })
-MarkupDiscountRuleSchema.index({ company: 1, provider: 1, appliedLayer: 1 })
+MarkupDiscountRuleSchema.index({ company: 1, providerCompany: 1, status: 1, isDeleted: 1 })
+MarkupDiscountRuleSchema.index({ company: 1, providerPartner: 1, status: 1, isDeleted: 1 })
+MarkupDiscountRuleSchema.index({ company: 1, providerCompany: 1, appliedLayer: 1 })
+MarkupDiscountRuleSchema.index({ company: 1, providerPartner: 1, appliedLayer: 1 })
 MarkupDiscountRuleSchema.index({ company: 1, appliedLayer: 1, partner: 1 })
 MarkupDiscountRuleSchema.index({ company: 1, effectiveDate: 1, expiryDate: 1 })
 MarkupDiscountRuleSchema.index({ company: 1, payloadTypes: 1 })

@@ -60,14 +60,16 @@ const validateMarkupDiscount = async (req, res, next) => {
       errors.push("providerType is required")
     } else if (!VALID_PROVIDER_TYPES.includes(providerType)) {
       errors.push(`providerType must be one of: ${VALID_PROVIDER_TYPES.join(", ")}`)
-    } else if (providerType === "Company" && provider !== companyId) {
-      errors.push("provider must match companyId when providerType is Company")
     }
 
-    // Validate provider exists in database (if no errors so far)
+    // Validate provider based on providerType
     if (errors.length === 0 && provider && providerType) {
       try {
-        if (providerType === "Partner") {
+        if (providerType === "Company") {
+          if (provider !== companyId) {
+            errors.push("provider must match companyId when providerType is Company")
+          }
+        } else if (providerType === "Partner") {
           const partnerExists = await Partner.exists({
             _id: provider,
             company: companyId,

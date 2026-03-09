@@ -55,11 +55,22 @@ const createMarkupDiscountRule = async (req, res, next) => {
       throw createHttpError(400, "partner is required when partnerScope is SpecificPartner")
     }
 
+    // Set provider fields based on providerType
+    let providerCompany = null
+    let providerPartner = null
+
+    if (providerType === "Company") {
+      providerCompany = companyId
+    } else if (providerType === "Partner") {
+      providerPartner = provider
+    }
+
     const rule = new MarkupDiscountRule({
       company: companyId,
       ruleName: ruleName.trim(),
-      provider,
       providerType,
+      providerCompany,
+      providerPartner,
       appliedLayer,
       partnerScope,
       partner: partnerScope === "SpecificPartner" ? partner : null,
@@ -82,7 +93,8 @@ const createMarkupDiscountRule = async (req, res, next) => {
 
     // Populate references for response
     const populatedRule = await MarkupDiscountRule.findById(rule._id)
-      .populate("provider", rule.providerType === "Company" ? "companyName" : "name")
+      .populate("providerCompany", "companyName")
+      .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
       .populate("payloadTypes", "name code category")
       .populate("cabins", "name type")
@@ -155,7 +167,8 @@ const listMarkupDiscountRules = async (req, res, next) => {
     }
 
     const rules = await MarkupDiscountRule.find(filter)
-      .populate("provider", "name partnerName companyName")
+      .populate("providerCompany", "companyName")
+      .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
       .populate("payloadTypes", "name code category")
       .populate("cabins", "name type")
@@ -201,7 +214,8 @@ const getMarkupDiscountRule = async (req, res, next) => {
       isActive: true,
       isDeleted: false,
     })
-      .populate("provider", "name partnerName companyName")
+      .populate("providerCompany", "companyName")
+      .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
       .populate("payloadTypes", "name code category")
       .populate("cabins", "name type")
@@ -270,8 +284,20 @@ const updateMarkupDiscountRule = async (req, res, next) => {
       rule.ruleName = ruleName.trim()
     }
 
-    if (provider !== undefined) rule.provider = provider
-    if (providerType !== undefined) rule.providerType = providerType
+    if (provider !== undefined || providerType !== undefined) {
+      const newProviderType = providerType !== undefined ? providerType : rule.providerType
+      const newProvider = provider !== undefined ? provider : (rule.providerType === "Company" ? rule.providerCompany : rule.providerPartner)
+
+      if (newProviderType === "Company") {
+        rule.providerCompany = companyId
+        rule.providerPartner = null
+      } else if (newProviderType === "Partner") {
+        rule.providerPartner = newProvider
+        rule.providerCompany = null
+      }
+      rule.providerType = newProviderType
+    }
+
     if (appliedLayer !== undefined) rule.appliedLayer = appliedLayer
     if (partnerScope !== undefined) {
       rule.partnerScope = partnerScope
@@ -316,7 +342,8 @@ const updateMarkupDiscountRule = async (req, res, next) => {
     await rule.save()
 
     const populatedRule = await MarkupDiscountRule.findById(rule._id)
-      .populate("provider", "name partnerName companyName")
+      .populate("providerCompany", "companyName")
+      .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
       .populate("payloadTypes", "name code category")
       .populate("cabins", "name type")
