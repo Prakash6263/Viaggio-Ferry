@@ -1,0 +1,437 @@
+{
+  "info": {
+    "_postman_id": "markup-discount-api-collection",
+    "name": "Markup & Discount Rules API",
+    "description": "Complete API collection for managing Markup and Discount Rules in the Ferry Booking Platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Markup Discount APIs",
+      "item": [
+        {
+          "name": "Create Markup Rule - Passenger",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('ruleId', jsonData.data._id);",
+                  "    pm.test('Rule created successfully', function() {",
+                  "        pm.expect(jsonData.success).to.equal(true);",
+                  "        pm.expect(jsonData.data.ruleName).to.exist;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Passenger Economy Markup\",\n  \"provider\": \"{{partnerId}}\",\n  \"providerType\": \"Partner\",\n  \"appliedLayer\": \"Commercial\",\n  \"partnerScope\": \"AllChildPartners\",\n  \"ruleType\": \"Markup\",\n  \"ruleValue\": 10,\n  \"valueType\": \"percentage\",\n  \"serviceDetails\": {\n    \"passenger\": [\n      {\n        \"cabinId\": \"{{cabin_economy}}\"\n      }\n    ],\n    \"cargo\": [],\n    \"vehicle\": []\n  },\n  \"routeFrom\": \"{{port_id_1}}\",\n  \"routeTo\": \"{{port_id_2}}\",\n  \"effectiveDate\": \"2026-03-01T00:00:00Z\",\n  \"expiryDate\": \"2026-12-31T00:00:00Z\",\n  \"priority\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/markup-discounts",
+              "host": ["{{base_url}}"],
+              "path": ["api", "markup-discounts"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Markup Rule - Cargo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Cargo Route Markup\",\n  \"provider\": \"{{partnerId}}\",\n  \"providerType\": \"Partner\",\n  \"appliedLayer\": \"Commercial\",\n  \"partnerScope\": \"AllChildPartners\",\n  \"ruleType\": \"Markup\",\n  \"ruleValue\": 8,\n  \"valueType\": \"percentage\",\n  \"serviceDetails\": {\n    \"passenger\": [],\n    \"cargo\": [\n      {\n        \"cabinId\": \"{{cabin_cargo}}\"\n      }\n    ],\n    \"vehicle\": []\n  },\n  \"routeFrom\": \"{{port_id_1}}\",\n  \"routeTo\": \"{{port_id_2}}\",\n  \"effectiveDate\": \"2026-04-01T00:00:00Z\",\n  \"expiryDate\": \"2026-12-31T00:00:00Z\",\n  \"priority\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/markup-discounts",
+              "host": ["{{base_url}}"],
+              "path": ["api", "markup-discounts"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Markup Rule - Vehicle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Vehicle Transport Markup\",\n  \"provider\": \"{{partnerId}}\",\n  \"providerType\": \"Partner\",\n  \"appliedLayer\": \"Commercial\",\n  \"partnerScope\": \"AllChildPartners\",\n  \"ruleType\": \"Markup\",\n  \"ruleValue\": 15,\n  \"valueType\": \"fixed\",\n  \"serviceDetails\": {\n    \"passenger\": [],\n    \"cargo\": [],\n    \"vehicle\": [\n      {\n        \"cabinId\": \"{{cabin_vehicle_deck}}\"\n      }\n    ]\n  },\n  \"routeFrom\": \"{{port_id_1}}\",\n  \"routeTo\": \"{{port_id_2}}\",\n  \"effectiveDate\": \"2026-03-15T00:00:00Z\",\n  \"expiryDate\": \"2026-12-31T00:00:00Z\",\n  \"priority\": 3\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/markup-discounts",
+              "host": ["{{base_url}}"],
+              "path": ["api", "markup-discounts"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List All Rules",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test('Rules retrieved successfully', function() {",
+                  "        pm.expect(jsonData.success).to.equal(true);",
+                  "        pm.expect(jsonData.data).to.be.an('array');",
+                  "        pm.expect(jsonData.pagination).to.exist;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/markup-discounts?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "markup-discounts"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "layer",
+                  "value": "Commercial",
+                  "disabled": true
+                },
+                {
+                  "key": "ruleType",
+                  "value": "Markup",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "Passenger",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Rule By ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test('Rule retrieved successfully', function() {",
+                  "        pm.expect(jsonData.success).to.equal(true);",
+                  "        pm.expect(jsonData.data._id).to.exist;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/markup-discounts/{{ruleId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "markup-discounts", "{{ruleId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Rule",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test('Rule updated successfully', function() {",
+                  "        pm.expect(jsonData.success).to.equal(true);",
+                  "        pm.expect(jsonData.message).to.include('updated');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Passenger Economy Markup - Updated\",\n  \"ruleValue\": 12,\n  \"serviceDetails\": {\n    \"passenger\": [\n      {\n        \"cabinId\": \"{{cabin_economy}}\"\n      },\n      {\n        \"cabinId\": \"{{cabin_vip}}\"\n      }\n    ],\n    \"cargo\": [],\n    \"vehicle\": []\n  },\n  \"expiryDate\": \"2026-12-31T00:00:00Z\",\n  \"priority\": 2,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/markup-discounts/{{ruleId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "markup-discounts", "{{ruleId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Rule",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test('Rule deleted successfully', function() {",
+                  "        pm.expect(jsonData.success).to.equal(true);",
+                  "        pm.expect(jsonData.message).to.include('deleted');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/markup-discounts/{{ruleId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "markup-discounts", "{{ruleId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Discount Rule - Multi-service",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Multi-Service Discount\",\n  \"provider\": \"{{partnerId}}\",\n  \"providerType\": \"Partner\",\n  \"appliedLayer\": \"Commercial\",\n  \"partnerScope\": \"AllChildPartners\",\n  \"ruleType\": \"Discount\",\n  \"ruleValue\": 5,\n  \"valueType\": \"percentage\",\n  \"serviceDetails\": {\n    \"passenger\": [\n      {\n        \"cabinId\": \"{{cabin_economy}}\"\n      }\n    ],\n    \"cargo\": [\n      {\n        \"cabinId\": \"{{cabin_cargo}}\"\n      }\n    ],\n    \"vehicle\": [\n      {\n        \"cabinId\": \"{{cabin_vehicle_deck}}\"\n      }\n    ]\n  },\n  \"routeFrom\": \"{{port_id_1}}\",\n  \"routeTo\": \"{{port_id_2}}\",\n  \"effectiveDate\": \"2026-03-01T00:00:00Z\",\n  \"expiryDate\": null,\n  \"priority\": 5\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/markup-discounts",
+              "host": ["{{base_url}}"],
+              "path": ["api", "markup-discounts"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Rules with Filters",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/markup-discounts?page=1&limit=5&layer=Commercial&ruleType=Markup&search=Passenger",
+              "host": ["{{base_url}}"],
+              "path": ["api", "markup-discounts"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                },
+                {
+                  "key": "layer",
+                  "value": "Commercial"
+                },
+                {
+                  "key": "ruleType",
+                  "value": "Markup"
+                },
+                {
+                  "key": "search",
+                  "value": "Passenger"
+                },
+                {
+                  "key": "routeFrom",
+                  "value": "{{port_id_1}}",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "your_bearer_token_here",
+      "type": "string"
+    },
+    {
+      "key": "companyId",
+      "value": "your_company_id_here",
+      "type": "string"
+    },
+    {
+      "key": "port_id_1",
+      "value": "port_muscat_id",
+      "type": "string"
+    },
+    {
+      "key": "port_id_2",
+      "value": "port_dubai_id",
+      "type": "string"
+    },
+    {
+      "key": "partnerId",
+      "value": "your_partner_id_here",
+      "type": "string"
+    },
+    {
+      "key": "payload_type_adult",
+      "value": "adult_payload_type_id",
+      "type": "string"
+    },
+    {
+      "key": "payload_type_child",
+      "value": "child_payload_type_id",
+      "type": "string"
+    },
+    {
+      "key": "payload_type_vehicle",
+      "value": "vehicle_payload_type_id",
+      "type": "string"
+    },
+    {
+      "key": "cabin_economy",
+      "value": "economy_passenger_cabin_id",
+      "type": "string"
+    },
+    {
+      "key": "cabin_vip",
+      "value": "vip_passenger_cabin_id",
+      "type": "string"
+    },
+    {
+      "key": "cabin_cargo",
+      "value": "cargo_cabin_id",
+      "type": "string"
+    },
+    {
+      "key": "cabin_vehicle_deck",
+      "value": "vehicle_deck_cabin_id",
+      "type": "string"
+    },
+    {
+      "key": "ruleId",
+      "value": "rule_id_auto_populated",
+      "type": "string"
+    }
+  ]
+}
