@@ -86,9 +86,12 @@ const createCommissionRule = async (req, res, next) => {
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName")
-      .populate("routeTo", "portName")
+      .populate("routeFrom", "portName code")
+      .populate("routeTo", "portName code")
       .populate("createdBy", "email name")
+      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
       .lean()
 
     res.status(201).json({
@@ -125,13 +128,6 @@ const listCommissionRules = async (req, res, next) => {
       isDeleted: false,
     }
 
-    console.log("[v0] Debug - companyId from req:", companyId)
-    console.log("[v0] Debug - Filter before queries:", filter)
-
-    // Check what's in database
-    const allRules = await CommissionRule.find({ company: companyId }).lean()
-    console.log("[v0] Debug - All rules for company:", allRules.length)
-
     // Apply filters
     if (search && search.trim().length > 0) {
       filter.ruleName = { $regex: search.trim(), $options: "i" }
@@ -149,15 +145,16 @@ const listCommissionRules = async (req, res, next) => {
       filter.partnerScope = partnerScope
     }
 
-    console.log("[v0] Debug - Final filter:", JSON.stringify(filter))
-
     const rules = await CommissionRule.find(filter)
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName")
-      .populate("routeTo", "portName")
+      .populate("routeFrom", "portName code")
+      .populate("routeTo", "portName code")
       .populate("createdBy", "email name")
+      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
       .skip(skip)
       .limit(Number.parseInt(limit))
       .sort({ priority: -1, effectiveDate: -1 })
@@ -200,10 +197,13 @@ const getCommissionRule = async (req, res, next) => {
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName")
-      .populate("routeTo", "portName")
+      .populate("routeFrom", "portName code")
+      .populate("routeTo", "portName code")
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
+      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
       .lean()
 
     if (!rule) {
@@ -316,10 +316,13 @@ const updateCommissionRule = async (req, res, next) => {
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName")
-      .populate("routeTo", "portName")
+      .populate("routeFrom", "portName code")
+      .populate("routeTo", "portName code")
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
+      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
       .lean()
 
     res.json({
@@ -400,10 +403,13 @@ const activateCommissionRule = async (req, res, next) => {
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName")
-      .populate("routeTo", "portName")
+      .populate("routeFrom", "portName code")
+      .populate("routeTo", "portName code")
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
+      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
       .lean()
 
     res.json({
