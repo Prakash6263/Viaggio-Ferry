@@ -177,10 +177,16 @@ const listCommissionRules = async (req, res, next) => {
       company: companyId,
       isActive: true,
       isDeleted: false,
-      $or: [{ expiryDate: null }, { expiryDate: { $gte: new Date() } }],
     }
 
-    // Apply filters
+    // Build $or array for expiry date and route filtering
+    const orConditions = []
+
+    // Expiry date conditions
+    orConditions.push({ expiryDate: null })
+    orConditions.push({ expiryDate: { $gte: new Date() } })
+
+    // Apply additional filters
     if (search && search.trim().length > 0) {
       filter.ruleName = { $regex: search.trim(), $options: "i" }
     }
@@ -189,28 +195,22 @@ const listCommissionRules = async (req, res, next) => {
       filter.appliedLayer = layer
     }
 
-    // Filter by routes - can search by routeFrom or routeTo
-    if (routeFrom || routeTo) {
-      const routeFilter = {}
-      if (routeFrom) {
-        routeFilter["routes.routeFrom"] = routeFrom
-      }
-      if (routeTo) {
-        routeFilter["routes.routeTo"] = routeTo
-      }
-      // Merge route filter with main filter
-      if (routeFrom && routeTo) {
-        filter.$and = [
-          { "routes.routeFrom": routeFrom },
-          { "routes.routeTo": routeTo },
-        ]
-      } else {
-        Object.assign(filter, routeFilter)
-      }
+    // Filter by routes
+    if (routeFrom) {
+      filter["routes.routeFrom"] = routeFrom
+    }
+
+    if (routeTo) {
+      filter["routes.routeTo"] = routeTo
     }
 
     if (partnerScope) {
       filter.partnerScope = partnerScope
+    }
+
+    // Apply the $or condition only for expiry date
+    if (orConditions.length > 0) {
+      filter.$or = orConditions
     }
 
     const rules = await CommissionRule.find(filter)
