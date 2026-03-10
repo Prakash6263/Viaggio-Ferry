@@ -1214,6 +1214,121 @@ const getAllPartnersByAllLayers = async (req, res, next) => {
   }
 }
 
+/**
+ * GET /api/partners/children
+ * Get all child users of a partner based on their layer
+ * If layer is "marine" - fetch all commercial and selling user children
+ * If layer is "commercial" - fetch all selling user children
+ * Token header required for authentication and layer detection
+ */
+const getChildPartnersByLayer = async (req, res, next) => {
+  try {
+    const userRole = req.user?.role
+    const tokenCompanyId = req.user?.companyId || req.user?.id
+    const userLayer = req.user?.layer // Layer from token (marine-agent, commercial-agent, selling-agent)
+    const userId = req.user?.id
+
+    // Only partner users can fetch their child partners
+    if (userRole !== "partner" && userRole !== "user") {
+      throw createHttpError(403, "Only partner users can access child partners")
+    }
+
+    if (!userLayer) {
+      throw createHttpError(400, "User layer information not found in token")
+    }
+
+    // Find the partner account associated with this user
+    const userPartner = await Partner.findOne({
+      users: userId,
+      isDeleted: false,
+    }).select("_id layer company")
+
+    if (!userPartner) {
+      throw createHttpError(404, "Partner account not found for this user")
+    }
+
+    // Determine which child layers to fetch based on user's layer
+    let childLayers = []
+    
+    if (userLayer === "marine-agent") {
+      // Marine can see Commercial and Selling children
+      childLayers = ["Commercial", "Selling"]
+    } else if (userLayer === "commercial-agent") {
+      // Commercial can see Selling children
+      childLayers = ["Selling"]
+    } else if (userLayer === "selling-agent") {
+      // Selling agents have no children
+      childLayers = []
+    }
+
+    if (childLayers.length === 0) {
+      return res.json({
+        success: true,
+        message: "No child layers available for this user",
+        count: 0,
+        data: [],
+      })
+    }
+
+    // Fetch child partners based on parent-child relationship
+    const childFilter = {
+      company: userPartner.company,
+      layer: { $in: childLayers },
+      isDeleted: false,
+      disabled: false,
+    }
+
+    // For Marine parents, Commercial and Selling children must have Marine as parent
+    // For Commercial parents, Selling children must have Commercial as parent
+    if (userLayer === "marine-agent") {
+      // Both Commercial and Selling can be direct children of Marine
+      childFilter.$or = [
+        { layer: "Commercial", parentAccount: userPartner._id },
+        { layer: "Selling", parentAccount: { $exists: true } }, // Selling children of Commercial
+      ]
+    } else if (userLayer === "commercial-agent") {
+      // Only Selling children with this Commercial as parent
+      childFilter.layer = "Selling"
+      childFilter.parentAccount = userPartner._id
+    }
+
+    const { status, page = 1, limit = 10 } = req.query
+
+    // Filter by partner status if provided
+    if (status) {
+      childFilter.partnerStatus = status
+    } else {
+      childFilter.partnerStatus = "Active"
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit)
+    const total = await Partner.countDocuments(childFilter)
+    
+    const childPartners = await Partner.find(childFilter)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate("company", "name email")
+      .populate("parentAccount", "name layer")
+      .populate("users", "fullName email position layer")
+      .sort({ createdAt: -1 })
+
+    res.json({
+      success: true,
+      userLayer,
+      parentPartnerId: userPartner._id,
+      childLayers,
+      count: childPartners.length,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      pages: Math.ceil(total / parseInt(limit)),
+      data: childPartners,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 module.exports = {
   createPartner,
   listPartners,
@@ -1224,4 +1339,5 @@ module.exports = {
   getParentPartnersByLayer,
   getPartnersByLayer,
   getAllPartnersByAllLayers,
+  getChildPartnersByLayer,
 }

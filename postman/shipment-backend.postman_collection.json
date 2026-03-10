@@ -693,6 +693,236 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Partner Management",
+      "item": [
+        {
+          "name": "Create Partner",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Marine Partner Co\",\n  \"phone\": \"+1 555 123 4567\",\n  \"address\": \"123 Marine St\",\n  \"layer\": \"Marine\",\n  \"role\": \"B2C_Marine_Partner\",\n  \"partnerStatus\": \"Active\",\n  \"priceList\": \"standard\",\n  \"creditLimit\": {\n    \"limitAmount\": 10000,\n    \"limitTicket\": 100\n  },\n  \"contactInformation\": {\n    \"name\": \"John Doe\",\n    \"title\": \"Manager\",\n    \"phone\": \"+1 555 123 4567\",\n    \"email\": \"john@marine.com\",\n    \"hotline\": \"+1 555 000 0000\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/partners",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "partners"]
+            },
+            "description": "Create a new partner. Layer Marine requires company context. Commercial and Selling layers require parentAccount (Marine or Commercial partner ID)"
+          },
+          "response": []
+        },
+        {
+          "name": "List All Partners",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/partners",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "partners"]
+            },
+            "description": "Get list of all partners with pagination"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Partners by Layer",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/partners/layer/Marine?page=1&limit=10&status=Active",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "partners", "layer", "Marine"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "Active"
+                }
+              ]
+            },
+            "description": "Get all partners by specific layer (Marine, Commercial, or Selling)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Partners by All Layers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/partners/all/layers?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "partners", "all", "layers"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Get all partners across all layers grouped by layer"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Child Partners by User Layer",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{partnerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/partners/children?page=1&limit=10&status=Active",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "partners", "children"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "Active"
+                }
+              ]
+            },
+            "description": "Get all child partners based on authenticated user's layer from token. Marine users get Commercial and Selling children. Commercial users get Selling children. Requires partner token with layer info."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Partner by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/partners/{{partnerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "partners", "{{partnerId}}"]
+            },
+            "description": "Get partner details by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Partner",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Partner Name\",\n  \"phone\": \"+1 555 999 9999\",\n  \"address\": \"Updated Address\",\n  \"partnerStatus\": \"Active\",\n  \"creditLimit\": {\n    \"limitAmount\": 15000,\n    \"limitTicket\": 150\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/partners/{{partnerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "partners", "{{partnerId}}"]
+            },
+            "description": "Update partner information"
+          },
+          "response": []
+        },
+        {
+          "name": "Disable Partner",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/partners/{{partnerId}}/disable",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "partners", "{{partnerId}}", "disable"]
+            },
+            "description": "Disable a partner account"
+          },
+          "response": []
+        },
+        {
+          "name": "Enable Partner",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/partners/{{partnerId}}/enable",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "partners", "{{partnerId}}", "enable"]
+            },
+            "description": "Enable a previously disabled partner account"
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [
@@ -714,10 +944,22 @@
       "description": "JWT token from company login"
     },
     {
+      "key": "partnerToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT token from partner user login with layer info (marine-agent, commercial-agent, selling-agent)"
+    },
+    {
       "key": "companyId",
       "value": "",
       "type": "string",
       "description": "Company ID from registration or list response"
+    },
+    {
+      "key": "partnerId",
+      "value": "",
+      "type": "string",
+      "description": "Partner ID from partner creation or list response"
     }
   ]
 }

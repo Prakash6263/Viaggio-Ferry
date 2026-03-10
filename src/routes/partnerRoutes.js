@@ -94,4 +94,17 @@ router.patch(
   partnerController.enablePartner
 )
 
+/**
+ * GET /api/partners/children
+ * Get all child partners based on user's layer from token
+ * Marine layer users can get Commercial and Selling children
+ * Commercial layer users can get Selling children
+ * Query params: ?status=Active&page=1&limit=10
+ */
+router.get(
+  "/children",
+  checkPermission("partners-management", "business-partners", "read"),
+  partnerController.getChildPartnersByLayer
+)
+
 module.exports = router
