@@ -923,6 +923,136 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Markup & Discount Rules",
+      "item": [
+        {
+          "name": "Create Markup/Discount Rule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Passenger Economy Markup\",\n  \"provider\": \"6979b02dbbd8603b2d60a192\",\n  \"providerType\": \"Partner\",\n  \"appliedLayer\": \"Commercial Agent\",\n  \"partnerScope\": \"AllChildPartners\",\n  \"ruleType\": \"Markup\",\n  \"ruleValue\": 10,\n  \"valueType\": \"percentage\",\n  \"serviceDetails\": {\n    \"passenger\": [\n      {\n        \"cabinId\": \"697cac64ecbc249e3a769100\"\n      }\n    ],\n    \"cargo\": [],\n    \"vehicle\": []\n  },\n  \"routes\": [\n    {\n      \"routeFrom\": \"69a688c2c672c303c672246c\",\n      \"routeTo\": \"697b0fe902f651bd9b300508\"\n    },\n    {\n      \"routeFrom\": \"69a688c2c672c303c672246d\",\n      \"routeTo\": \"697b0fe902f651bd9b300509\"\n    }\n  ],\n  \"effectiveDate\": \"2026-03-01T00:00:00Z\",\n  \"expiryDate\": \"2026-12-31T00:00:00Z\",\n  \"priority\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/markup-discounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markup-discounts"]
+            },
+            "description": "Create a new markup or discount rule. Routes is an array where each object contains routeFrom and routeTo port IDs. This rule will apply to all specified route combinations."
+          },
+          "response": []
+        },
+        {
+          "name": "List All Rules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/markup-discounts?page=1&limit=10&ruleType=Markup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markup-discounts"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "ruleType",
+                  "value": "Markup"
+                }
+              ]
+            },
+            "description": "Get list of all markup/discount rules with pagination. Rules include populated routes array with port details (routeFrom and routeTo with port names)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Rule by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/markup-discounts/{{ruleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markup-discounts", "{{ruleId}}"]
+            },
+            "description": "Get detailed information for a specific rule including all route combinations with populated port data."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Rule",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Passenger Economy Markup Updated\",\n  \"ruleValue\": 15,\n  \"routes\": [\n    {\n      \"routeFrom\": \"69a688c2c672c303c672246c\",\n      \"routeTo\": \"697b0fe902f651bd9b300508\"\n    },\n    {\n      \"routeFrom\": \"69a688c2c672c303c672246e\",\n      \"routeTo\": \"697b0fe902f651bd9b30050a\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/markup-discounts/{{ruleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markup-discounts", "{{ruleId}}"]
+            },
+            "description": "Update an existing markup/discount rule. You can update any field including the routes array. Routes accepts multiple route combinations."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Rule",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/markup-discounts/{{ruleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markup-discounts", "{{ruleId}}"]
+            },
+            "description": "Delete a markup/discount rule"
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [
@@ -960,6 +1090,12 @@
       "value": "",
       "type": "string",
       "description": "Partner ID from partner creation or list response"
+    },
+    {
+      "key": "ruleId",
+      "value": "",
+      "type": "string",
+      "description": "Rule ID from markup/discount rule creation or list response"
     }
   ]
 }
