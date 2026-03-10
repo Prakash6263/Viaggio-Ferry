@@ -693,6 +693,192 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Commission Rules",
+      "item": [
+        {
+          "name": "Create Commission Rule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Ferry Agency Commission - Port A to Port B\",\n  \"provider\": \"{{companyId}}\",\n  \"providerType\": \"Company\",\n  \"appliedLayer\": \"Marine Agent\",\n  \"partnerScope\": \"AllChildPartners\",\n  \"commissionType\": \"percentage\",\n  \"commissionValue\": 5,\n  \"serviceDetails\": {\n    \"passenger\": [\n      {\n        \"cabinId\": \"{{cabinId}}\"\n      }\n    ],\n    \"cargo\": [],\n    \"vehicle\": []\n  },\n  \"routeFrom\": \"{{portFromId}}\",\n  \"routeTo\": \"{{portToId}}\",\n  \"visaType\": null,\n  \"effectiveDate\": \"2024-03-10\",\n  \"expiryDate\": \"2025-03-10\",\n  \"priority\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/commission-rules",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "commission-rules"]
+            },
+            "description": "Create a new commission rule with provider and service details"
+          },
+          "response": []
+        },
+        {
+          "name": "List Commission Rules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/commission-rules?page=1&limit=10&layer=Marine Agent",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "commission-rules"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "layer",
+                  "value": "Marine Agent"
+                }
+              ]
+            },
+            "description": "List all commission rules with pagination and optional filters"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Commission Rule",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/commission-rules/{{ruleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "commission-rules", "{{ruleId}}"]
+            },
+            "description": "Get details of a specific commission rule"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Commission Rule",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Updated Ferry Agency Commission - Port A to Port B\",\n  \"provider\": \"{{companyId}}\",\n  \"providerType\": \"Company\",\n  \"appliedLayer\": \"Marine Agent\",\n  \"partnerScope\": \"AllChildPartners\",\n  \"commissionType\": \"percentage\",\n  \"commissionValue\": 6,\n  \"serviceDetails\": {\n    \"passenger\": [\n      {\n        \"cabinId\": \"{{cabinId}}\"\n      }\n    ],\n    \"cargo\": [],\n    \"vehicle\": []\n  },\n  \"routeFrom\": \"{{portFromId}}\",\n  \"routeTo\": \"{{portToId}}\",\n  \"visaType\": null,\n  \"effectiveDate\": \"2024-03-10\",\n  \"expiryDate\": \"2025-03-10\",\n  \"priority\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/commission-rules/{{ruleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "commission-rules", "{{ruleId}}"]
+            },
+            "description": "Update an existing commission rule"
+          },
+          "response": []
+        },
+        {
+          "name": "Activate Commission Rule",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/commission-rules/{{ruleId}}/activate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "commission-rules", "{{ruleId}}", "activate"]
+            },
+            "description": "Activate an inactive commission rule"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Commission Rule",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/commission-rules/{{ruleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "commission-rules", "{{ruleId}}"]
+            },
+            "description": "Soft delete a commission rule"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Commission History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/commission-rules/history?dateRange=last7days&actionType=Created",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "commission-rules", "history"],
+              "query": [
+                {
+                  "key": "dateRange",
+                  "value": "last7days"
+                },
+                {
+                  "key": "actionType",
+                  "value": "Created"
+                }
+              ]
+            },
+            "description": "Get history of commission rule actions with optional filters"
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [

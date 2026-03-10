@@ -22,6 +22,7 @@ const tripRoutes = require("./tripRoutes")
 const ticketingRuleRoutes = require("./ticketingRuleRoutes")
 const priceListRoutes = require("./priceListRoutes")
 const markupDiscountRoutes = require("./markupDiscountRoutes")
+const commissionRuleRoutes = require("./commissionRuleRoutes")
 
 
 module.exports = (app) => {
@@ -49,4 +50,5 @@ module.exports = (app) => {
   app.use("/api/sidebar", sidebarRoutes)
   app.use("/api/price-lists", priceListRoutes)
   app.use("/api/markup-discounts", markupDiscountRoutes)
+  app.use("/api/commission-rules", commissionRuleRoutes)
 }
