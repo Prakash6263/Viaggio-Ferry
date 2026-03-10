@@ -925,6 +925,136 @@
       ]
     },
     {
+      "name": "Commission Rules",
+      "item": [
+        {
+          "name": "Create Commission Rule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Marine to Commercial Commission\",\n  \"provider\": \"6972facc057e26066d32bfe2\",\n  \"providerType\": \"Partner\",\n  \"appliedLayer\": \"Marine Agent\",\n  \"partnerScope\": \"AllChildPartners\",\n  \"commissionType\": \"percentage\",\n  \"commissionValue\": 5,\n  \"serviceDetails\": {\n    \"passenger\": [\n      {\n        \"cabinId\": \"697cac64ecbc249e3a769100\"\n      }\n    ],\n    \"cargo\": [],\n    \"vehicle\": []\n  },\n  \"routes\": [\n    {\n      \"routeFrom\": \"69a688c2c672c303c672246c\",\n      \"routeTo\": \"697b0fe902f651bd9b300508\"\n    },\n    {\n      \"routeFrom\": \"69a688c2c672c303c672246d\",\n      \"routeTo\": \"697b0fe902f651bd9b300509\"\n    }\n  ],\n  \"effectiveDate\": \"2026-03-01T00:00:00Z\",\n  \"expiryDate\": \"2026-12-31T00:00:00Z\",\n  \"priority\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/commission-rules",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "commission-rules"]
+            },
+            "description": "Create a new commission rule. Routes is an array where each object contains routeFrom and routeTo port IDs. This rule will apply to all specified route combinations."
+          },
+          "response": []
+        },
+        {
+          "name": "List All Commission Rules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/commission-rules?page=1&limit=10&layer=Marine Agent",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "commission-rules"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "layer",
+                  "value": "Marine Agent"
+                }
+              ]
+            },
+            "description": "Get list of all commission rules with pagination. Rules include populated routes array with port details (routeFrom and routeTo with port names)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Commission Rule by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/commission-rules/{{commissionRuleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "commission-rules", "{{commissionRuleId}}"]
+            },
+            "description": "Get detailed information for a specific commission rule including all route combinations with populated port data."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Commission Rule",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Marine to Commercial Commission Updated\",\n  \"commissionValue\": 7,\n  \"routes\": [\n    {\n      \"routeFrom\": \"69a688c2c672c303c672246c\",\n      \"routeTo\": \"697b0fe902f651bd9b300508\"\n    },\n    {\n      \"routeFrom\": \"69a688c2c672c303c672246e\",\n      \"routeTo\": \"697b0fe902f651bd9b30050a\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/commission-rules/{{commissionRuleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "commission-rules", "{{commissionRuleId}}"]
+            },
+            "description": "Update an existing commission rule. You can update any field including the routes array. Routes accepts multiple route combinations."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Commission Rule",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/commission-rules/{{commissionRuleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "commission-rules", "{{commissionRuleId}}"]
+            },
+            "description": "Delete (soft delete) a commission rule"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Markup & Discount Rules",
       "item": [
         {
@@ -1096,6 +1226,12 @@
       "value": "",
       "type": "string",
       "description": "Rule ID from markup/discount rule creation or list response"
+    },
+    {
+      "key": "commissionRuleId",
+      "value": "",
+      "type": "string",
+      "description": "Commission Rule ID from commission rule creation or list response"
     }
   ]
 }

@@ -24,8 +24,7 @@ const validateCommissionRule = async (req, res, next) => {
       commissionType,
       commissionValue,
       serviceDetails,
-      routeFrom,
-      routeTo,
+      routes,
       effectiveDate,
       expiryDate,
       priority,
@@ -198,23 +197,49 @@ const validateCommissionRule = async (req, res, next) => {
       }
     }
 
-    // Validate routeFrom
-    if (!routeFrom) {
-      errors.push("routeFrom is required")
-    } else if (typeof routeFrom !== "string") {
-      errors.push("routeFrom must be a valid ObjectId string")
-    }
-
-    // Validate routeTo
-    if (!routeTo) {
-      errors.push("routeTo is required")
-    } else if (typeof routeTo !== "string") {
-      errors.push("routeTo must be a valid ObjectId string")
-    }
-
-    // Validate routeFrom and routeTo are different
-    if (routeFrom && routeTo && routeFrom === routeTo) {
-      errors.push("routeFrom and routeTo must be different ports")
+    // Validate routes array
+    const { routes } = req.body
+    if (!routes) {
+      errors.push("routes array is required")
+    } else if (!Array.isArray(routes)) {
+      errors.push("routes must be an array")
+    } else if (routes.length === 0) {
+      errors.push("At least one route is required")
+    } else {
+      // Validate each route in the array
+      for (let i = 0; i < routes.length; i++) {
+        const route = routes[i]
+        
+        if (!route || typeof route !== "object") {
+          errors.push(`Route ${i + 1}: must be an object with routeFrom and routeTo`)
+          break
+        }
+        
+        if (!route.routeFrom) {
+          errors.push(`Route ${i + 1}: routeFrom is required`)
+          break
+        }
+        
+        if (!route.routeTo) {
+          errors.push(`Route ${i + 1}: routeTo is required`)
+          break
+        }
+        
+        if (typeof route.routeFrom !== "string" || !mongoose.Types.ObjectId.isValid(route.routeFrom)) {
+          errors.push(`Route ${i + 1}: routeFrom must be a valid ObjectId`)
+          break
+        }
+        
+        if (typeof route.routeTo !== "string" || !mongoose.Types.ObjectId.isValid(route.routeTo)) {
+          errors.push(`Route ${i + 1}: routeTo must be a valid ObjectId`)
+          break
+        }
+        
+        if (route.routeFrom === route.routeTo) {
+          errors.push(`Route ${i + 1}: routeFrom and routeTo must be different ports`)
+          break
+        }
+      }
     }
 
     // Validate effectiveDate

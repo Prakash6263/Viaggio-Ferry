@@ -19,14 +19,28 @@ const createCommissionRule = async (req, res, next) => {
       commissionValue,
       serviceDetails,
       visaType,
-      routeFrom,
-      routeTo,
+      routes,
       effectiveDate,
       expiryDate,
       priority,
     } = req.body
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
+
+    // Validate routes array
+    if (!routes || !Array.isArray(routes) || routes.length === 0) {
+      throw createHttpError(400, "At least one route is required")
+    }
+
+    // Validate each route
+    routes.forEach((route, index) => {
+      if (!route.routeFrom || !route.routeTo) {
+        throw createHttpError(400, `Route ${index + 1}: Both routeFrom and routeTo are required`)
+      }
+      if (route.routeFrom === route.routeTo) {
+        throw createHttpError(400, `Route ${index + 1}: routeFrom and routeTo must be different ports`)
+      }
+    })
 
     // Set provider fields based on providerType
     let providerCompany = null
@@ -38,23 +52,23 @@ const createCommissionRule = async (req, res, next) => {
       providerPartner = provider
     }
 
-    // Check for duplicate rules before creating
+    // Check for duplicate rules before creating - check for overlapping routes
     const duplicateRule = await CommissionRule.findOne({
       company: companyId,
-      providerType,
       providerCompany,
       providerPartner,
       appliedLayer,
       partnerScope,
       partner: partnerScope === "SpecificPartner" ? partner : null,
-      routeFrom,
-      routeTo,
+      serviceDetails,
       visaType: visaType || null,
+      "routes.routeFrom": { $in: routes.map(r => r.routeFrom) },
+      "routes.routeTo": { $in: routes.map(r => r.routeTo) },
       isDeleted: false,
     })
 
     if (duplicateRule) {
-      throw createHttpError(400, "Duplicate rule already exists for this configuration")
+      throw createHttpError(400, "Duplicate rule already exists for one or more of these routes")
     }
 
     const rule = new CommissionRule({
@@ -70,8 +84,7 @@ const createCommissionRule = async (req, res, next) => {
       commissionValue,
       serviceDetails,
       visaType: visaType || null,
-      routeFrom,
-      routeTo,
+      routes,
       effectiveDate: new Date(effectiveDate),
       expiryDate: expiryDate ? new Date(expiryDate) : null,
       priority: priority || 1,
@@ -86,8 +99,8 @@ const createCommissionRule = async (req, res, next) => {
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName code")
-      .populate("routeTo", "portName code")
+      .populate("routes.routeFrom", "portName code")
+      .populate("routes.routeTo", "portName code")
       .populate("createdBy", "email name")
       .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
       .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
@@ -117,6 +130,7 @@ const listCommissionRules = async (req, res, next) => {
       search,
       layer,
       routeFrom,
+      routeTo,
       partnerScope,
     } = req.query
 
@@ -137,8 +151,24 @@ const listCommissionRules = async (req, res, next) => {
       filter.appliedLayer = layer
     }
 
-    if (routeFrom) {
-      filter.routeFrom = routeFrom
+    // Filter by routes - can search by routeFrom or routeTo
+    if (routeFrom || routeTo) {
+      const routeFilter = {}
+      if (routeFrom) {
+        routeFilter["routes.routeFrom"] = routeFrom
+      }
+      if (routeTo) {
+        routeFilter["routes.routeTo"] = routeTo
+      }
+      // Merge route filter with main filter
+      if (routeFrom && routeTo) {
+        filter.$and = [
+          { "routes.routeFrom": routeFrom },
+          { "routes.routeTo": routeTo },
+        ]
+      } else {
+        Object.assign(filter, routeFilter)
+      }
     }
 
     if (partnerScope) {
@@ -149,8 +179,8 @@ const listCommissionRules = async (req, res, next) => {
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName code")
-      .populate("routeTo", "portName code")
+      .populate("routes.routeFrom", "portName code")
+      .populate("routes.routeTo", "portName code")
       .populate("createdBy", "email name")
       .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
       .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
@@ -197,8 +227,8 @@ const getCommissionRule = async (req, res, next) => {
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName code")
-      .populate("routeTo", "portName code")
+      .populate("routes.routeFrom", "portName code")
+      .populate("routes.routeTo", "portName code")
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
       .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
@@ -302,8 +332,26 @@ const updateCommissionRule = async (req, res, next) => {
     }
 
     if (visaType !== undefined) rule.visaType = visaType || null
-    if (routeFrom !== undefined) rule.routeFrom = routeFrom
-    if (routeTo !== undefined) rule.routeTo = routeTo
+    
+    // Handle routes array update
+    if (routes !== undefined) {
+      if (!Array.isArray(routes) || routes.length === 0) {
+        throw createHttpError(400, "At least one route is required")
+      }
+      
+      // Validate each route
+      routes.forEach((route, index) => {
+        if (!route.routeFrom || !route.routeTo) {
+          throw createHttpError(400, `Route ${index + 1}: Both routeFrom and routeTo are required`)
+        }
+        if (route.routeFrom === route.routeTo) {
+          throw createHttpError(400, `Route ${index + 1}: routeFrom and routeTo must be different ports`)
+        }
+      })
+      
+      rule.routes = routes
+    }
+    
     if (effectiveDate !== undefined) rule.effectiveDate = new Date(effectiveDate)
     if (expiryDate !== undefined) rule.expiryDate = expiryDate ? new Date(expiryDate) : null
     if (priority !== undefined) rule.priority = priority
@@ -316,8 +364,8 @@ const updateCommissionRule = async (req, res, next) => {
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName code")
-      .populate("routeTo", "portName code")
+      .populate("routes.routeFrom", "portName code")
+      .populate("routes.routeTo", "portName code")
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
       .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
@@ -403,8 +451,8 @@ const activateCommissionRule = async (req, res, next) => {
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName code")
-      .populate("routeTo", "portName code")
+      .populate("routes.routeFrom", "portName code")
+      .populate("routes.routeTo", "portName code")
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
       .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
