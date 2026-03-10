@@ -76,21 +76,27 @@ MarkupDiscountRuleSchema.index({ company: 1, providerCompany: 1, appliedLayer: 1
 MarkupDiscountRuleSchema.index({ company: 1, providerPartner: 1, appliedLayer: 1 })
 MarkupDiscountRuleSchema.index({ company: 1, appliedLayer: 1, partner: 1 })
 MarkupDiscountRuleSchema.index({ company: 1, effectiveDate: 1, expiryDate: 1 })
-MarkupDiscountRuleSchema.index({ company: 1, "serviceDetails.passenger": 1 })
-MarkupDiscountRuleSchema.index({ company: 1, "serviceDetails.cargo": 1 })
-MarkupDiscountRuleSchema.index({ company: 1, "serviceDetails.vehicle": 1 })
-MarkupDiscountRuleSchema.index({ company: 1, routeFrom: 1, routeTo: 1 })
-MarkupDiscountRuleSchema.index({ company: 1, ruleName: "text" })
-// Compound index for duplicate detection and rule lookup
+
+// serviceDetails indexes
 MarkupDiscountRuleSchema.index({
   company: 1,
-  "serviceDetails.passenger": 1,
-  "serviceDetails.cargo": 1,
-  "serviceDetails.vehicle": 1,
-  routeFrom: 1,
-  routeTo: 1,
+  "serviceDetails.passenger.cabinId": 1,
 })
-// Compound index for duplicate detection
+
+MarkupDiscountRuleSchema.index({
+  company: 1,
+  "serviceDetails.cargo.cabinId": 1,
+})
+
+MarkupDiscountRuleSchema.index({
+  company: 1,
+  "serviceDetails.vehicle.cabinId": 1,
+})
+
+MarkupDiscountRuleSchema.index({ company: 1, routeFrom: 1, routeTo: 1 })
+MarkupDiscountRuleSchema.index({ company: 1, ruleName: "text" })
+
+// Duplicate detection index
 MarkupDiscountRuleSchema.index({
   company: 1,
   providerCompany: 1,
@@ -100,7 +106,6 @@ MarkupDiscountRuleSchema.index({
   routeTo: 1,
   visaType: 1,
 })
-
 module.exports = {
   RULE_TYPES,
   VALUE_TYPES,
