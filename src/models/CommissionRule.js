@@ -58,10 +58,23 @@ const CommissionRuleSchema = new mongoose.Schema(
       ],
     },
 
-    // Route and visa
+    // Route and visa - Support multiple routes per rule
     visaType: { type: String, trim: true, default: null },
-    routeFrom: { type: mongoose.Schema.Types.ObjectId, ref: "Port", required: true },
-    routeTo: { type: mongoose.Schema.Types.ObjectId, ref: "Port", required: true },
+    routes: [
+      {
+        routeFrom: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Port",
+          required: true,
+        },
+        routeTo: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Port",
+          required: true,
+        },
+        _id: false,
+      },
+    ],
 
     // Dates and priority
     effectiveDate: { type: Date, required: true },
@@ -104,17 +117,18 @@ CommissionRuleSchema.index({
   "serviceDetails.vehicle.cabinId": 1,
 })
 
-CommissionRuleSchema.index({ company: 1, routeFrom: 1, routeTo: 1 })
+// Routes indexes for querying by route
+CommissionRuleSchema.index({ company: 1, "routes.routeFrom": 1, "routes.routeTo": 1 })
 CommissionRuleSchema.index({ company: 1, ruleName: "text" })
 
-// Duplicate detection index
+// Duplicate detection index - now includes routes array
 CommissionRuleSchema.index({
   company: 1,
   providerCompany: 1,
   providerPartner: 1,
   appliedLayer: 1,
-  routeFrom: 1,
-  routeTo: 1,
+  "routes.routeFrom": 1,
+  "routes.routeTo": 1,
   visaType: 1,
 })
 
