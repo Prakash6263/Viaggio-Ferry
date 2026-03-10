@@ -1228,36 +1228,49 @@ const getChildPartnersByLayer = async (req, res, next) => {
     const userLayer = req.user?.layer // Layer from token (marine-agent, commercial-agent, selling-agent)
     const userId = req.user?.id
 
-    // Only partner users can fetch their child partners
-    if (userRole !== "partner" && userRole !== "user") {
-      throw createHttpError(403, "Only partner users can access child partners")
+    // Allow company, partner, and user roles to access child partners
+    if (userRole !== "company" && userRole !== "partner" && userRole !== "user") {
+      throw createHttpError(403, "Only company, partner, or user accounts can access child partners")
     }
 
-    if (!userLayer) {
-      throw createHttpError(400, "User layer information not found in token")
+    // For company role, use company ID directly as the parent
+    let parentId = null
+    let parentLayer = null
+    
+    if (userRole === "company") {
+      // Company acts as parent, typically Marine layer
+      parentId = tokenCompanyId
+      parentLayer = "Marine"
+    } else {
+      // For partner/user roles, find the partner account associated with this user
+      if (!userLayer) {
+        throw createHttpError(400, "User layer information not found in token")
+      }
+
+      const userPartner = await Partner.findOne({
+        users: userId,
+        isDeleted: false,
+      }).select("_id layer company")
+
+      if (!userPartner) {
+        throw createHttpError(404, "Partner account not found for this user")
+      }
+
+      parentId = userPartner._id
+      parentLayer = userLayer
     }
 
-    // Find the partner account associated with this user
-    const userPartner = await Partner.findOne({
-      users: userId,
-      isDeleted: false,
-    }).select("_id layer company")
-
-    if (!userPartner) {
-      throw createHttpError(404, "Partner account not found for this user")
-    }
-
-    // Determine which child layers to fetch based on user's layer
+    // Determine which child layers to fetch based on parent's layer
     let childLayers = []
     
-    if (userLayer === "marine-agent") {
+    if (parentLayer === "Marine" || userLayer === "marine-agent") {
       // Marine can see Commercial and Selling children
       childLayers = ["Commercial", "Selling"]
-    } else if (userLayer === "commercial-agent") {
+    } else if (parentLayer === "Commercial" || userLayer === "commercial-agent") {
       // Commercial can see Selling children
       childLayers = ["Selling"]
-    } else if (userLayer === "selling-agent") {
-      // Selling agents have no children
+    } else if (parentLayer === "Selling" || userLayer === "selling-agent") {
+      // Selling agents/partners have no children
       childLayers = []
     }
 
@@ -1270,26 +1283,36 @@ const getChildPartnersByLayer = async (req, res, next) => {
       })
     }
 
+    // Get company ID for filter
+    let companyId = tokenCompanyId
+    if (userRole !== "company") {
+      const parentPartner = await Partner.findById(parentId).select("company")
+      if (!parentPartner) {
+        throw createHttpError(404, "Parent partner not found")
+      }
+      companyId = parentPartner.company
+    }
+
     // Fetch child partners based on parent-child relationship
     const childFilter = {
-      company: userPartner.company,
+      company: companyId,
       layer: { $in: childLayers },
       isDeleted: false,
       disabled: false,
     }
 
-    // For Marine parents, Commercial and Selling children must have Marine as parent
-    // For Commercial parents, Selling children must have Commercial as parent
-    if (userLayer === "marine-agent") {
-      // Both Commercial and Selling can be direct children of Marine
+    // For Marine parents, Commercial and Selling children can have Marine as parentAccount or parentCompany
+    // For Commercial parents, Selling children must have Commercial as parentAccount
+    if (parentLayer === "Marine" || userLayer === "marine-agent") {
+      // Both Commercial and Selling can be direct children of Marine company/partner
       childFilter.$or = [
-        { layer: "Commercial", parentAccount: userPartner._id },
+        { layer: "Commercial", $or: [{ parentAccount: parentId }, { parentCompany: parentId }] },
         { layer: "Selling", parentAccount: { $exists: true } }, // Selling children of Commercial
       ]
-    } else if (userLayer === "commercial-agent") {
+    } else if (parentLayer === "Commercial" || userLayer === "commercial-agent") {
       // Only Selling children with this Commercial as parent
       childFilter.layer = "Selling"
-      childFilter.parentAccount = userPartner._id
+      childFilter.parentAccount = parentId
     }
 
     const { status, page = 1, limit = 10 } = req.query
@@ -1314,8 +1337,10 @@ const getChildPartnersByLayer = async (req, res, next) => {
 
     res.json({
       success: true,
-      userLayer,
-      parentPartnerId: userPartner._id,
+      userRole,
+      userLayer: userLayer || parentLayer,
+      parentId,
+      parentLayer,
       childLayers,
       count: childPartners.length,
       total,
