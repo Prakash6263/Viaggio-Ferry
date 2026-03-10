@@ -20,8 +20,7 @@ const createMarkupDiscountRule = async (req, res, next) => {
       valueType,
       serviceDetails,
       visaType,
-      routeFrom,
-      routeTo,
+      routes,
       effectiveDate,
       expiryDate,
       priority,
@@ -41,9 +40,22 @@ const createMarkupDiscountRule = async (req, res, next) => {
       throw createHttpError(400, "ruleValue is required")
     if (ruleValue < 0) throw createHttpError(400, "ruleValue must be positive")
     if (!valueType) throw createHttpError(400, "valueType is required")
-    if (!routeFrom) throw createHttpError(400, "routeFrom is required")
-    if (!routeTo) throw createHttpError(400, "routeTo is required")
     if (!effectiveDate) throw createHttpError(400, "effectiveDate is required")
+
+    // Validate routes array
+    if (!routes || !Array.isArray(routes) || routes.length === 0) {
+      throw createHttpError(400, "At least one route is required")
+    }
+
+    // Validate each route
+    routes.forEach((route, index) => {
+      if (!route.routeFrom || !route.routeTo) {
+        throw createHttpError(400, `Route ${index + 1}: Both routeFrom and routeTo are required`)
+      }
+      if (route.routeFrom === route.routeTo) {
+        throw createHttpError(400, `Route ${index + 1}: routeFrom and routeTo must be different ports`)
+      }
+    })
 
     // For specific partner scope, partner is required
     if (partnerScope === "SpecificPartner" && !partner) {
@@ -61,23 +73,23 @@ const createMarkupDiscountRule = async (req, res, next) => {
     }
 
     // Check for duplicate rules before creating
+    // Duplicate check: same company, provider, layer, and any overlapping routes
     const duplicateRule = await MarkupDiscountRule.findOne({
       company: companyId,
-      providerType,
       providerCompany,
       providerPartner,
       appliedLayer,
       partnerScope,
       partner: partnerScope === "SpecificPartner" ? partner : null,
       serviceDetails,
-      routeFrom,
-      routeTo,
       visaType: visaType || null,
+      "routes.routeFrom": { $in: routes.map(r => r.routeFrom) },
+      "routes.routeTo": { $in: routes.map(r => r.routeTo) },
       isDeleted: false,
     })
 
     if (duplicateRule) {
-      throw createHttpError(400, "Duplicate rule already exists for this configuration")
+      throw createHttpError(400, "Duplicate rule already exists for one or more of these routes")
     }
 
     const rule = new MarkupDiscountRule({
@@ -94,8 +106,7 @@ const createMarkupDiscountRule = async (req, res, next) => {
       valueType,
       serviceDetails,
       visaType: visaType || null,
-      routeFrom,
-      routeTo,
+      routes,
       effectiveDate: new Date(effectiveDate),
       expiryDate: expiryDate ? new Date(expiryDate) : null,
       priority: priority || 1,
@@ -110,8 +121,8 @@ const createMarkupDiscountRule = async (req, res, next) => {
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName")
-      .populate("routeTo", "portName")
+      .populate("routes.routeFrom", "portName")
+      .populate("routes.routeTo", "portName")
       .populate("createdBy", "email name")
       .lean()
 
@@ -138,6 +149,7 @@ const listMarkupDiscountRules = async (req, res, next) => {
       search,
       layer,
       routeFrom,
+      routeTo,
       ruleType,
     } = req.query
 
@@ -160,8 +172,24 @@ const listMarkupDiscountRules = async (req, res, next) => {
       filter.appliedLayer = layer
     }
 
-    if (routeFrom) {
-      filter.routeFrom = routeFrom
+    // Filter by routes - can search by routeFrom or routeTo
+    if (routeFrom || routeTo) {
+      const routeFilter = {}
+      if (routeFrom) {
+        routeFilter["routes.routeFrom"] = routeFrom
+      }
+      if (routeTo) {
+        routeFilter["routes.routeTo"] = routeTo
+      }
+      // Merge route filter with main filter
+      if (routeFrom && routeTo) {
+        filter.$and = [
+          { "routes.routeFrom": routeFrom },
+          { "routes.routeTo": routeTo },
+        ]
+      } else {
+        Object.assign(filter, routeFilter)
+      }
     }
 
     if (ruleType) {
@@ -172,8 +200,8 @@ const listMarkupDiscountRules = async (req, res, next) => {
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName")
-      .populate("routeTo", "portName")
+      .populate("routes.routeFrom", "portName")
+      .populate("routes.routeTo", "portName")
       .populate("createdBy", "email name")
       .skip(skip)
       .limit(Number.parseInt(limit))
@@ -217,8 +245,8 @@ const getMarkupDiscountRule = async (req, res, next) => {
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName")
-      .populate("routeTo", "portName")
+      .populate("routes.routeFrom", "portName")
+      .populate("routes.routeTo", "portName")
       .populate("createdBy", "email name")
       .lean()
 
@@ -255,8 +283,7 @@ const updateMarkupDiscountRule = async (req, res, next) => {
       valueType,
       serviceDetails,
       visaType,
-      routeFrom,
-      routeTo,
+      routes,
       effectiveDate,
       expiryDate,
       priority,
@@ -320,8 +347,26 @@ const updateMarkupDiscountRule = async (req, res, next) => {
     }
 
     if (visaType !== undefined) rule.visaType = visaType || null
-    if (routeFrom !== undefined) rule.routeFrom = routeFrom
-    if (routeTo !== undefined) rule.routeTo = routeTo
+    
+    // Handle routes array update
+    if (routes !== undefined) {
+      if (!Array.isArray(routes) || routes.length === 0) {
+        throw createHttpError(400, "At least one route is required")
+      }
+      
+      // Validate each route
+      routes.forEach((route, index) => {
+        if (!route.routeFrom || !route.routeTo) {
+          throw createHttpError(400, `Route ${index + 1}: Both routeFrom and routeTo are required`)
+        }
+        if (route.routeFrom === route.routeTo) {
+          throw createHttpError(400, `Route ${index + 1}: routeFrom and routeTo must be different ports`)
+        }
+      })
+      
+      rule.routes = routes
+    }
+    
     if (effectiveDate !== undefined) rule.effectiveDate = new Date(effectiveDate)
     if (expiryDate !== undefined) rule.expiryDate = expiryDate ? new Date(expiryDate) : null
     if (priority !== undefined) rule.priority = priority
@@ -334,8 +379,8 @@ const updateMarkupDiscountRule = async (req, res, next) => {
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName")
-      .populate("routeTo", "portName")
+      .populate("routes.routeFrom", "portName")
+      .populate("routes.routeTo", "portName")
       .populate("createdBy", "email name")
       .lean()
 

@@ -53,8 +53,23 @@ const MarkupDiscountRuleSchema = new mongoose.Schema(
     },
 
     visaType: { type: String, trim: true, default: null },
-    routeFrom: { type: mongoose.Schema.Types.ObjectId, ref: "Port", required: true },
-    routeTo: { type: mongoose.Schema.Types.ObjectId, ref: "Port", required: true },
+    
+    // Support multiple routes per rule
+    routes: [
+      {
+        routeFrom: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Port",
+          required: true,
+        },
+        routeTo: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Port",
+          required: true,
+        },
+        _id: false,
+      },
+    ],
 
     effectiveDate: { type: Date, required: true },
     expiryDate: { type: Date, default: null },
@@ -93,17 +108,18 @@ MarkupDiscountRuleSchema.index({
   "serviceDetails.vehicle.cabinId": 1,
 })
 
-MarkupDiscountRuleSchema.index({ company: 1, routeFrom: 1, routeTo: 1 })
+// Routes indexes for querying by route
+MarkupDiscountRuleSchema.index({ company: 1, "routes.routeFrom": 1, "routes.routeTo": 1 })
 MarkupDiscountRuleSchema.index({ company: 1, ruleName: "text" })
 
-// Duplicate detection index
+// Duplicate detection index - now includes routes array
 MarkupDiscountRuleSchema.index({
   company: 1,
   providerCompany: 1,
   providerPartner: 1,
   appliedLayer: 1,
-  routeFrom: 1,
-  routeTo: 1,
+  "routes.routeFrom": 1,
+  "routes.routeTo": 1,
   visaType: 1,
 })
 module.exports = {
