@@ -115,15 +115,32 @@ const createCommissionRule = async (req, res, next) => {
 
     // Populate references for response
     const populatedRule = await CommissionRule.findById(rule._id)
+      .populate("company", "companyName")
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routes.routeFrom", "portName code")
-      .populate("routes.routeTo", "portName code")
+      .populate({
+        path: "routes.routeFrom",
+        select: "portName code country",
+      })
+      .populate({
+        path: "routes.routeTo",
+        select: "portName code country",
+      })
+      .populate({
+        path: "serviceDetails.passenger.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.cargo.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.cabinId",
+        select: "cabinName cabinCode",
+      })
       .populate("createdBy", "email name")
-      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
+      .populate("updatedBy", "email name")
       .lean()
 
     res.status(201).json({
@@ -197,15 +214,32 @@ const listCommissionRules = async (req, res, next) => {
     }
 
     const rules = await CommissionRule.find(filter)
+      .populate("company", "companyName")
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routes.routeFrom", "portName code")
-      .populate("routes.routeTo", "portName code")
+      .populate({
+        path: "routes.routeFrom",
+        select: "portName code country",
+      })
+      .populate({
+        path: "routes.routeTo",
+        select: "portName code country",
+      })
+      .populate({
+        path: "serviceDetails.passenger.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.cargo.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.cabinId",
+        select: "cabinName cabinCode",
+      })
       .populate("createdBy", "email name")
-      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
+      .populate("updatedBy", "email name")
       .skip(skip)
       .limit(Number.parseInt(limit))
       .sort({ priority: -1, effectiveDate: -1 })
@@ -245,16 +279,32 @@ const getCommissionRule = async (req, res, next) => {
       isActive: true,
       isDeleted: false,
     })
+      .populate("company", "companyName")
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routes.routeFrom", "portName code")
-      .populate("routes.routeTo", "portName code")
+      .populate({
+        path: "routes.routeFrom",
+        select: "portName code country",
+      })
+      .populate({
+        path: "routes.routeTo",
+        select: "portName code country",
+      })
+      .populate({
+        path: "serviceDetails.passenger.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.cargo.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.cabinId",
+        select: "cabinName cabinCode",
+      })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
-      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
       .lean()
 
     if (!rule) {
@@ -381,16 +431,32 @@ const updateCommissionRule = async (req, res, next) => {
     await rule.save()
 
     const populatedRule = await CommissionRule.findById(rule._id)
+      .populate("company", "companyName")
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routes.routeFrom", "portName code")
-      .populate("routes.routeTo", "portName code")
+      .populate({
+        path: "routes.routeFrom",
+        select: "portName code country",
+      })
+      .populate({
+        path: "routes.routeTo",
+        select: "portName code country",
+      })
+      .populate({
+        path: "serviceDetails.passenger.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.cargo.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.cabinId",
+        select: "cabinName cabinCode",
+      })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
-      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
       .lean()
 
     res.json({
@@ -468,16 +534,32 @@ const activateCommissionRule = async (req, res, next) => {
     await rule.save()
 
     const populatedRule = await CommissionRule.findById(rule._id)
+      .populate("company", "companyName")
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routes.routeFrom", "portName code")
-      .populate("routes.routeTo", "portName code")
+      .populate({
+        path: "routes.routeFrom",
+        select: "portName code country",
+      })
+      .populate({
+        path: "routes.routeTo",
+        select: "portName code country",
+      })
+      .populate({
+        path: "serviceDetails.passenger.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.cargo.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.cabinId",
+        select: "cabinName cabinCode",
+      })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
-      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
       .lean()
 
     res.json({
