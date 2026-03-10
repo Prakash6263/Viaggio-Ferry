@@ -1,11 +1,11 @@
 const createHttpError = require("http-errors")
-const { MarkupDiscountRule } = require("../models/MarkupDiscountRule")
+const { CommissionRule } = require("../models/CommissionRule")
 
 /**
- * POST /api/markup-discounts
- * Create a new markup/discount rule
+ * POST /api/commission-rules
+ * Create a new commission rule
  */
-const createMarkupDiscountRule = async (req, res, next) => {
+const createCommissionRule = async (req, res, next) => {
   try {
     const { companyId, userId } = req
     const {
@@ -15,9 +15,8 @@ const createMarkupDiscountRule = async (req, res, next) => {
       appliedLayer,
       partnerScope,
       partner,
-      ruleType,
-      ruleValue,
-      valueType,
+      commissionType,
+      commissionValue,
       serviceDetails,
       visaType,
       routeFrom,
@@ -28,27 +27,6 @@ const createMarkupDiscountRule = async (req, res, next) => {
     } = req.body
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
-
-    // Validate required fields
-    if (!ruleName || ruleName.trim().length === 0)
-      throw createHttpError(400, "ruleName is required")
-    if (!provider) throw createHttpError(400, "provider is required")
-    if (!providerType) throw createHttpError(400, "providerType is required")
-    if (!appliedLayer) throw createHttpError(400, "appliedLayer is required")
-    if (!partnerScope) throw createHttpError(400, "partnerScope is required")
-    if (!ruleType) throw createHttpError(400, "ruleType is required")
-    if (ruleValue === undefined || ruleValue === null)
-      throw createHttpError(400, "ruleValue is required")
-    if (ruleValue < 0) throw createHttpError(400, "ruleValue must be positive")
-    if (!valueType) throw createHttpError(400, "valueType is required")
-    if (!routeFrom) throw createHttpError(400, "routeFrom is required")
-    if (!routeTo) throw createHttpError(400, "routeTo is required")
-    if (!effectiveDate) throw createHttpError(400, "effectiveDate is required")
-
-    // For specific partner scope, partner is required
-    if (partnerScope === "SpecificPartner" && !partner) {
-      throw createHttpError(400, "partner is required when partnerScope is SpecificPartner")
-    }
 
     // Set provider fields based on providerType
     let providerCompany = null
@@ -61,7 +39,7 @@ const createMarkupDiscountRule = async (req, res, next) => {
     }
 
     // Check for duplicate rules before creating
-    const duplicateRule = await MarkupDiscountRule.findOne({
+    const duplicateRule = await CommissionRule.findOne({
       company: companyId,
       providerType,
       providerCompany,
@@ -69,7 +47,6 @@ const createMarkupDiscountRule = async (req, res, next) => {
       appliedLayer,
       partnerScope,
       partner: partnerScope === "SpecificPartner" ? partner : null,
-      serviceDetails,
       routeFrom,
       routeTo,
       visaType: visaType || null,
@@ -80,7 +57,7 @@ const createMarkupDiscountRule = async (req, res, next) => {
       throw createHttpError(400, "Duplicate rule already exists for this configuration")
     }
 
-    const rule = new MarkupDiscountRule({
+    const rule = new CommissionRule({
       company: companyId,
       ruleName: ruleName.trim(),
       providerType,
@@ -89,9 +66,8 @@ const createMarkupDiscountRule = async (req, res, next) => {
       appliedLayer,
       partnerScope,
       partner: partnerScope === "SpecificPartner" ? partner : null,
-      ruleType,
-      ruleValue,
-      valueType,
+      commissionType,
+      commissionValue,
       serviceDetails,
       visaType: visaType || null,
       routeFrom,
@@ -106,18 +82,21 @@ const createMarkupDiscountRule = async (req, res, next) => {
     await rule.save()
 
     // Populate references for response
-    const populatedRule = await MarkupDiscountRule.findById(rule._id)
+    const populatedRule = await CommissionRule.findById(rule._id)
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName")
-      .populate("routeTo", "portName")
+      .populate("routeFrom", "portName code")
+      .populate("routeTo", "portName code")
       .populate("createdBy", "email name")
+      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
       .lean()
 
     res.status(201).json({
       success: true,
-      message: "Markup/Discount rule created successfully",
+      message: "Commission rule created successfully",
       data: populatedRule,
     })
   } catch (error) {
@@ -126,10 +105,10 @@ const createMarkupDiscountRule = async (req, res, next) => {
 }
 
 /**
- * GET /api/markup-discounts
- * List all markup/discount rules for the company
+ * GET /api/commission-rules
+ * List all commission rules for the company
  */
-const listMarkupDiscountRules = async (req, res, next) => {
+const listCommissionRules = async (req, res, next) => {
   try {
     const { companyId } = req
     const {
@@ -138,7 +117,7 @@ const listMarkupDiscountRules = async (req, res, next) => {
       search,
       layer,
       routeFrom,
-      ruleType,
+      partnerScope,
     } = req.query
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
@@ -146,9 +125,7 @@ const listMarkupDiscountRules = async (req, res, next) => {
     const skip = (page - 1) * limit
     const filter = {
       company: companyId,
-      isActive: true,
       isDeleted: false,
-      $or: [{ expiryDate: null }, { expiryDate: { $gte: new Date() } }],
     }
 
     // Apply filters
@@ -164,23 +141,26 @@ const listMarkupDiscountRules = async (req, res, next) => {
       filter.routeFrom = routeFrom
     }
 
-    if (ruleType) {
-      filter.ruleType = ruleType
+    if (partnerScope) {
+      filter.partnerScope = partnerScope
     }
 
-    const rules = await MarkupDiscountRule.find(filter)
+    const rules = await CommissionRule.find(filter)
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName")
-      .populate("routeTo", "portName")
+      .populate("routeFrom", "portName code")
+      .populate("routeTo", "portName code")
       .populate("createdBy", "email name")
+      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
       .skip(skip)
       .limit(Number.parseInt(limit))
       .sort({ priority: -1, effectiveDate: -1 })
       .lean()
 
-    const total = await MarkupDiscountRule.countDocuments(filter)
+    const total = await CommissionRule.countDocuments(filter)
 
     res.json({
       success: true,
@@ -198,17 +178,17 @@ const listMarkupDiscountRules = async (req, res, next) => {
 }
 
 /**
- * GET /api/markup-discounts/:id
- * Get a specific markup/discount rule
+ * GET /api/commission-rules/:id
+ * Get a specific commission rule
  */
-const getMarkupDiscountRule = async (req, res, next) => {
+const getCommissionRule = async (req, res, next) => {
   try {
     const { id } = req.params
     const { companyId } = req
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
 
-    const rule = await MarkupDiscountRule.findOne({
+    const rule = await CommissionRule.findOne({
       _id: id,
       company: companyId,
       isActive: true,
@@ -217,13 +197,17 @@ const getMarkupDiscountRule = async (req, res, next) => {
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName")
-      .populate("routeTo", "portName")
+      .populate("routeFrom", "portName code")
+      .populate("routeTo", "portName code")
       .populate("createdBy", "email name")
+      .populate("updatedBy", "email name")
+      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
       .lean()
 
     if (!rule) {
-      throw createHttpError(404, "Markup/Discount rule not found")
+      throw createHttpError(404, "Commission rule not found")
     }
 
     res.json({
@@ -236,10 +220,10 @@ const getMarkupDiscountRule = async (req, res, next) => {
 }
 
 /**
- * PUT /api/markup-discounts/:id
- * Update a markup/discount rule
+ * PUT /api/commission-rules/:id
+ * Update a commission rule
  */
-const updateMarkupDiscountRule = async (req, res, next) => {
+const updateCommissionRule = async (req, res, next) => {
   try {
     const { id } = req.params
     const { companyId, userId } = req
@@ -250,9 +234,8 @@ const updateMarkupDiscountRule = async (req, res, next) => {
       appliedLayer,
       partnerScope,
       partner,
-      ruleType,
-      ruleValue,
-      valueType,
+      commissionType,
+      commissionValue,
       serviceDetails,
       visaType,
       routeFrom,
@@ -265,13 +248,13 @@ const updateMarkupDiscountRule = async (req, res, next) => {
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
 
-    const rule = await MarkupDiscountRule.findOne({
+    const rule = await CommissionRule.findOne({
       _id: id,
       company: companyId,
     })
 
     if (!rule) {
-      throw createHttpError(404, "Markup/Discount rule not found")
+      throw createHttpError(404, "Commission rule not found")
     }
 
     // Update fields if provided
@@ -308,13 +291,12 @@ const updateMarkupDiscountRule = async (req, res, next) => {
       rule.partner = partner
     }
 
-    if (ruleType !== undefined) rule.ruleType = ruleType
-    if (ruleValue !== undefined) {
-      if (ruleValue < 0) throw createHttpError(400, "ruleValue must be positive")
-      rule.ruleValue = ruleValue
+    if (commissionType !== undefined) rule.commissionType = commissionType
+    if (commissionValue !== undefined) {
+      if (commissionValue < 0) throw createHttpError(400, "commissionValue must be positive")
+      rule.commissionValue = commissionValue
     }
 
-    if (valueType !== undefined) rule.valueType = valueType
     if (serviceDetails !== undefined) {
       rule.serviceDetails = serviceDetails
     }
@@ -330,18 +312,22 @@ const updateMarkupDiscountRule = async (req, res, next) => {
     rule.updatedBy = userId
     await rule.save()
 
-    const populatedRule = await MarkupDiscountRule.findById(rule._id)
+    const populatedRule = await CommissionRule.findById(rule._id)
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName")
-      .populate("routeTo", "portName")
+      .populate("routeFrom", "portName code")
+      .populate("routeTo", "portName code")
       .populate("createdBy", "email name")
+      .populate("updatedBy", "email name")
+      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
       .lean()
 
     res.json({
       success: true,
-      message: "Markup/Discount rule updated successfully",
+      message: "Commission rule updated successfully",
       data: populatedRule,
     })
   } catch (error) {
@@ -350,23 +336,23 @@ const updateMarkupDiscountRule = async (req, res, next) => {
 }
 
 /**
- * DELETE /api/markup-discounts/:id
- * Soft delete a markup/discount rule
+ * DELETE /api/commission-rules/:id
+ * Soft delete a commission rule
  */
-const deleteMarkupDiscountRule = async (req, res, next) => {
+const deleteCommissionRule = async (req, res, next) => {
   try {
     const { id } = req.params
     const { companyId } = req
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
 
-    const rule = await MarkupDiscountRule.findOne({
+    const rule = await CommissionRule.findOne({
       _id: id,
       company: companyId,
     })
 
     if (!rule) {
-      throw createHttpError(404, "Markup/Discount rule not found")
+      throw createHttpError(404, "Commission rule not found")
     }
 
     // Soft delete
@@ -376,7 +362,7 @@ const deleteMarkupDiscountRule = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: "Markup/Discount rule deleted successfully",
+      message: "Commission rule deleted successfully",
     })
   } catch (error) {
     next(error)
@@ -384,10 +370,63 @@ const deleteMarkupDiscountRule = async (req, res, next) => {
 }
 
 /**
- * GET /api/markup-discounts/history
- * Get history of markup/discount rule actions
+ * PATCH /api/commission-rules/:id/activate
+ * Activate an inactive commission rule
  */
-const getMarkupDiscountHistory = async (req, res, next) => {
+const activateCommissionRule = async (req, res, next) => {
+  try {
+    const { id } = req.params
+    const { companyId, userId } = req
+
+    if (!companyId) throw createHttpError(400, "Company ID is required")
+
+    const rule = await CommissionRule.findOne({
+      _id: id,
+      company: companyId,
+      isDeleted: false,
+    })
+
+    if (!rule) {
+      throw createHttpError(404, "Commission rule not found")
+    }
+
+    if (rule.isActive) {
+      throw createHttpError(400, "Commission rule is already active")
+    }
+
+    rule.isActive = true
+    rule.status = "Active"
+    rule.updatedBy = userId
+    await rule.save()
+
+    const populatedRule = await CommissionRule.findById(rule._id)
+      .populate("providerCompany", "companyName")
+      .populate("providerPartner", "name partnerName")
+      .populate("partner", "name partnerName")
+      .populate("routeFrom", "portName code")
+      .populate("routeTo", "portName code")
+      .populate("createdBy", "email name")
+      .populate("updatedBy", "email name")
+      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
+      .lean()
+
+    res.json({
+      success: true,
+      message: "Commission rule activated successfully",
+      data: populatedRule,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * GET /api/commission-rules/history
+ * Get history of commission rule actions
+ */
+const getCommissionHistory = async (req, res, next) => {
   try {
     const { companyId } = req
     const { ruleId, actionType, dateRange = "last7days" } = req.query
@@ -410,7 +449,7 @@ const getMarkupDiscountHistory = async (req, res, next) => {
       dateStart.setDate(dateStart.getDate() - 90)
     }
 
-    const rules = await MarkupDiscountRule.find(filter)
+    const rules = await CommissionRule.find(filter)
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
       .lean()
@@ -425,8 +464,8 @@ const getMarkupDiscountHistory = async (req, res, next) => {
           ruleId: rule._id,
           ruleName: rule.ruleName,
           actionType: "Created",
-          title: `Markup/Discount rule created`,
-          description: `Markup/Discount rule "${rule.ruleName}" was created for ${rule.providerType === "Company" ? "Company" : "Partner"} provider on layer ${rule.appliedLayer}`,
+          title: `Commission rule created`,
+          description: `Commission rule "${rule.ruleName}" was created for ${rule.providerType === "Company" ? "Company" : "Partner"} provider on layer ${rule.appliedLayer}`,
           createdBy: rule.createdBy,
           createdAt: rule.createdAt,
         })
@@ -442,8 +481,8 @@ const getMarkupDiscountHistory = async (req, res, next) => {
           ruleId: rule._id,
           ruleName: rule.ruleName,
           actionType: "Updated",
-          title: `Markup/Discount rule updated`,
-          description: `Markup/Discount rule "${rule.ruleName}" was updated`,
+          title: `Commission rule updated`,
+          description: `Commission rule "${rule.ruleName}" was updated`,
           createdBy: rule.updatedBy,
           createdAt: rule.updatedAt,
         })
@@ -455,8 +494,8 @@ const getMarkupDiscountHistory = async (req, res, next) => {
           ruleId: rule._id,
           ruleName: rule.ruleName,
           actionType: "Deleted",
-          title: `Markup/Discount rule deleted`,
-          description: `Markup/Discount rule "${rule.ruleName}" was deleted`,
+          title: `Commission rule deleted`,
+          description: `Commission rule "${rule.ruleName}" was deleted`,
           createdBy: rule.updatedBy,
           createdAt: rule.updatedAt,
         })
@@ -482,10 +521,11 @@ const getMarkupDiscountHistory = async (req, res, next) => {
 }
 
 module.exports = {
-  createMarkupDiscountRule,
-  listMarkupDiscountRules,
-  getMarkupDiscountRule,
-  updateMarkupDiscountRule,
-  deleteMarkupDiscountRule,
-  getMarkupDiscountHistory,
+  createCommissionRule,
+  listCommissionRules,
+  getCommissionRule,
+  updateCommissionRule,
+  deleteCommissionRule,
+  activateCommissionRule,
+  getCommissionHistory,
 }
