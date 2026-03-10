@@ -122,11 +122,26 @@ const createMarkupDiscountRule = async (req, res, next) => {
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routes.routeFrom", "portName code country")
-      .populate("routes.routeTo", "portName code country")
-      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
+      .populate({
+        path: "routes.routeFrom",
+        select: "portName code country",
+      })
+      .populate({
+        path: "routes.routeTo",
+        select: "portName code country",
+      })
+      .populate({
+        path: "serviceDetails.passenger.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.cargo.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.cabinId",
+        select: "cabinName cabinCode",
+      })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
       .lean()
@@ -206,11 +221,26 @@ const listMarkupDiscountRules = async (req, res, next) => {
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routes.routeFrom", "portName code country")
-      .populate("routes.routeTo", "portName code country")
-      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
+      .populate({
+        path: "routes.routeFrom",
+        select: "portName code country",
+      })
+      .populate({
+        path: "routes.routeTo",
+        select: "portName code country",
+      })
+      .populate({
+        path: "serviceDetails.passenger.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.cargo.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.cabinId",
+        select: "cabinName cabinCode",
+      })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
       .skip(skip)
@@ -256,11 +286,26 @@ const getMarkupDiscountRule = async (req, res, next) => {
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routes.routeFrom", "portName code country")
-      .populate("routes.routeTo", "portName code country")
-      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
+      .populate({
+        path: "routes.routeFrom",
+        select: "portName code country",
+      })
+      .populate({
+        path: "routes.routeTo",
+        select: "portName code country",
+      })
+      .populate({
+        path: "serviceDetails.passenger.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.cargo.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.cabinId",
+        select: "cabinName cabinCode",
+      })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
       .lean()
@@ -395,11 +440,26 @@ const updateMarkupDiscountRule = async (req, res, next) => {
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routes.routeFrom", "portName code country")
-      .populate("routes.routeTo", "portName code country")
-      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
+      .populate({
+        path: "routes.routeFrom",
+        select: "portName code country",
+      })
+      .populate({
+        path: "routes.routeTo",
+        select: "portName code country",
+      })
+      .populate({
+        path: "serviceDetails.passenger.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.cargo.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.cabinId",
+        select: "cabinName cabinCode",
+      })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
       .lean()
