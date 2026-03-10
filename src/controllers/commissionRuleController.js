@@ -122,10 +122,15 @@ const listCommissionRules = async (req, res, next) => {
     const skip = (page - 1) * limit
     const filter = {
       company: companyId,
-      isActive: true,
       isDeleted: false,
-      $or: [{ expiryDate: null }, { expiryDate: { $gte: new Date() } }],
     }
+
+    console.log("[v0] Debug - companyId from req:", companyId)
+    console.log("[v0] Debug - Filter before queries:", filter)
+
+    // Check what's in database
+    const allRules = await CommissionRule.find({ company: companyId }).lean()
+    console.log("[v0] Debug - All rules for company:", allRules.length)
 
     // Apply filters
     if (search && search.trim().length > 0) {
@@ -143,6 +148,8 @@ const listCommissionRules = async (req, res, next) => {
     if (partnerScope) {
       filter.partnerScope = partnerScope
     }
+
+    console.log("[v0] Debug - Final filter:", JSON.stringify(filter))
 
     const rules = await CommissionRule.find(filter)
       .populate("providerCompany", "companyName")
