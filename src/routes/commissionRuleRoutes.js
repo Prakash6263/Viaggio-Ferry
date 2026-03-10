@@ -1,6 +1,14 @@
 const express = require("express")
 const router = express.Router()
-const commissionRuleController = require("../controllers/commissionRuleController")
+const {
+  createCommissionRule,
+  listCommissionRules,
+  getCommissionRule,
+  updateCommissionRule,
+  deleteCommissionRule,
+  activateCommissionRule,
+  getCommissionHistory,
+} = require("../controllers/commissionRuleController")
 const { verifyToken, extractCompanyId, extractUserId } = require("../middleware/authMiddleware")
 const { checkPermission } = require("../middleware/permissionMiddleware")
 const { validateCommissionRule } = require("../middleware/validateCommissionRule")
@@ -19,7 +27,7 @@ router.post(
   "/",
   checkPermission("partners-management", "commission-board", "write"),
   validateCommissionRule,
-  commissionRuleController.createCommissionRule
+  createCommissionRule
 )
 
 /**
@@ -31,7 +39,7 @@ router.post(
 router.get(
   "/",
   checkPermission("partners-management", "commission-board", "read"),
-  commissionRuleController.listCommissionRules
+  listCommissionRules
 )
 
 /**
@@ -43,7 +51,7 @@ router.get(
 router.get(
   "/history",
   checkPermission("partners-management", "commission-board", "read"),
-  commissionRuleController.getCommissionHistory
+  getCommissionHistory
 )
 
 /**
@@ -54,7 +62,7 @@ router.get(
 router.get(
   "/:id",
   checkPermission("partners-management", "commission-board", "read"),
-  commissionRuleController.getCommissionRule
+  getCommissionRule
 )
 
 /**
@@ -66,7 +74,7 @@ router.put(
   "/:id",
   checkPermission("partners-management", "commission-board", "edit"),
   validateCommissionRule,
-  commissionRuleController.updateCommissionRule
+  updateCommissionRule
 )
 
 /**
@@ -77,7 +85,7 @@ router.put(
 router.patch(
   "/:id/activate",
   checkPermission("partners-management", "commission-board", "edit"),
-  commissionRuleController.activateCommissionRule
+  activateCommissionRule
 )
 
 /**
@@ -88,7 +96,7 @@ router.patch(
 router.delete(
   "/:id",
   checkPermission("partners-management", "commission-board", "delete"),
-  commissionRuleController.deleteCommissionRule
+  deleteCommissionRule
 )
 
 module.exports = router
