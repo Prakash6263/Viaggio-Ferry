@@ -35,6 +35,19 @@ router.get(
 )
 
 /**
+ * GET /api/markup-discounts/history
+ * Get history of markup/discount rule actions
+ * Supports filters: ruleId, actionType, dateRange (last7days, last30days, last90days)
+ * Permission: partners-management > markup-discounts > read
+ * NOTE: This must come before /:id route to avoid being caught by it
+ */
+router.get(
+  "/history",
+  checkPermission("partners-management", "markup-discounts", "read"),
+  markupDiscountController.getMarkupDiscountHistory
+)
+
+/**
  * GET /api/markup-discounts/:id
  * Get a specific markup/discount rule
  * Permission: partners-management > markup-discounts > read
@@ -66,18 +79,6 @@ router.delete(
   "/:id",
   checkPermission("partners-management", "markup-discounts", "delete"),
   markupDiscountController.deleteMarkupDiscountRule
-)
-
-/**
- * GET /api/markup-discounts/history
- * Get history of markup/discount rule actions
- * Supports filters: ruleId, actionType, dateRange (last7days, last30days, last90days)
- * Permission: partners-management > markup-discounts > read
- */
-router.get(
-  "/history",
-  checkPermission("partners-management", "markup-discounts", "read"),
-  markupDiscountController.getMarkupDiscountHistory
 )
 
 module.exports = router
