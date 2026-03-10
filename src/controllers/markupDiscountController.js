@@ -118,12 +118,17 @@ const createMarkupDiscountRule = async (req, res, next) => {
 
     // Populate references for response
     const populatedRule = await MarkupDiscountRule.findById(rule._id)
+      .populate("company", "companyName")
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routes.routeFrom", "portName")
-      .populate("routes.routeTo", "portName")
+      .populate("routes.routeFrom", "portName code country")
+      .populate("routes.routeTo", "portName code country")
+      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
       .populate("createdBy", "email name")
+      .populate("updatedBy", "email name")
       .lean()
 
     res.status(201).json({
@@ -197,12 +202,17 @@ const listMarkupDiscountRules = async (req, res, next) => {
     }
 
     const rules = await MarkupDiscountRule.find(filter)
+      .populate("company", "companyName")
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routes.routeFrom", "portName")
-      .populate("routes.routeTo", "portName")
+      .populate("routes.routeFrom", "portName code country")
+      .populate("routes.routeTo", "portName code country")
+      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
       .populate("createdBy", "email name")
+      .populate("updatedBy", "email name")
       .skip(skip)
       .limit(Number.parseInt(limit))
       .sort({ priority: -1, effectiveDate: -1 })
@@ -242,12 +252,17 @@ const getMarkupDiscountRule = async (req, res, next) => {
       isActive: true,
       isDeleted: false,
     })
+      .populate("company", "companyName")
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routes.routeFrom", "portName")
-      .populate("routes.routeTo", "portName")
+      .populate("routes.routeFrom", "portName code country")
+      .populate("routes.routeTo", "portName code country")
+      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
       .populate("createdBy", "email name")
+      .populate("updatedBy", "email name")
       .lean()
 
     if (!rule) {
@@ -376,12 +391,17 @@ const updateMarkupDiscountRule = async (req, res, next) => {
     await rule.save()
 
     const populatedRule = await MarkupDiscountRule.findById(rule._id)
+      .populate("company", "companyName")
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routes.routeFrom", "portName")
-      .populate("routes.routeTo", "portName")
+      .populate("routes.routeFrom", "portName code country")
+      .populate("routes.routeTo", "portName code country")
+      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
+      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
       .populate("createdBy", "email name")
+      .populate("updatedBy", "email name")
       .lean()
 
     res.json({
