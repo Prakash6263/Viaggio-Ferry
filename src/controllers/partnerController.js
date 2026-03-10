@@ -1214,6 +1214,138 @@ const getAllPartnersByAllLayers = async (req, res, next) => {
   }
 }
 
+/**
+ * GET /api/partners/children
+ * Get all direct child partners based on the authenticated user's layer.
+ * Hierarchy: Company → Marine Agents → Commercial Agents → Selling Agents
+ * 
+ * Company user → returns all Marine Agents under that company
+ * Marine Agent → returns all Commercial Agents under that Marine Agent
+ * Commercial Agent → returns all Selling Agents under that Commercial Agent
+ * Selling Agent → returns empty list (no children)
+ * 
+ * Query params: ?status=Active&page=1&limit=10
+ */
+const getChildPartnersByLayer = async (req, res, next) => {
+  try {
+    const userRole = req.user?.role
+    const companyId = req.user?.companyId || req.user?.id
+    const userLayer = req.user?.layer
+    const userId = req.user?.id
+
+    // Only company and partner users can access child partners
+    if (userRole !== "company" && userRole !== "partner" && userRole !== "user") {
+      throw createHttpError(403, "Only company or partner accounts can access child partners")
+    }
+
+    const { status = "Active", page = 1, limit = 10 } = req.query
+    const skip = (parseInt(page) - 1) * parseInt(limit)
+
+    let childFilter = {
+      isDeleted: false,
+      disabled: false,
+      partnerStatus: status,
+    }
+
+    let responseMetadata = {
+      userRole,
+      userLayer,
+    }
+
+    // CASE 1: Company user - return all Marine Agents
+    if (userRole === "company") {
+      childFilter.company = companyId
+      childFilter.layer = "Marine"
+      responseMetadata.parentType = "Company"
+      responseMetadata.parentId = companyId
+      responseMetadata.childLayer = "Marine"
+    }
+    // CASE 2: Partner/User - determine layer and return appropriate children
+    else {
+      if (!userLayer) {
+        throw createHttpError(400, "User layer information not found in token")
+      }
+
+      // Find the partner account associated with this user
+      const userPartner = await Partner.findOne({
+        users: userId,
+        isDeleted: false,
+      }).select("_id layer company parentAccount parentCompany")
+
+      if (!userPartner) {
+        throw createHttpError(404, "Partner account not found for this user")
+      }
+
+      childFilter.company = userPartner.company
+
+      // Normalize layer name to match Partner model (e.g., "marine-agent" → "Marine")
+      const normalizedLayer = userLayer
+        .split("-")[0]
+        .charAt(0)
+        .toUpperCase() + userLayer.split("-")[0].slice(1)
+
+      responseMetadata.parentId = userPartner._id
+      responseMetadata.parentLayer = userPartner.layer
+      responseMetadata.parentType = "Partner"
+
+      // MARINE AGENT: return Commercial Agents
+      if (normalizedLayer === "Marine") {
+        childFilter.layer = "Commercial"
+        childFilter.parentAccount = userPartner._id
+        responseMetadata.childLayer = "Commercial"
+      }
+      // COMMERCIAL AGENT: return Selling Agents
+      else if (normalizedLayer === "Commercial") {
+        childFilter.layer = "Selling"
+        childFilter.parentAccount = userPartner._id
+        responseMetadata.childLayer = "Selling"
+      }
+      // SELLING AGENT: no children
+      else if (normalizedLayer === "Selling") {
+        return res.json({
+          success: true,
+          message: "Selling agents have no child partners",
+          ...responseMetadata,
+          count: 0,
+          total: 0,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: 0,
+          data: [],
+        })
+      }
+      // UNKNOWN LAYER: error
+      else {
+        throw createHttpError(400, `Unknown user layer: ${userLayer}`)
+      }
+    }
+
+    // Execute query
+    const total = await Partner.countDocuments(childFilter)
+    const childPartners = await Partner.find(childFilter)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate("company", "name email")
+      .populate("parentAccount", "name layer")
+      .populate("parentCompany", "name email")
+      .populate("users", "fullName email position layer")
+      .sort({ createdAt: -1 })
+
+    res.json({
+      success: true,
+      ...responseMetadata,
+      count: childPartners.length,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      pages: Math.ceil(total / parseInt(limit)),
+      data: childPartners,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 module.exports = {
   createPartner,
   listPartners,
@@ -1224,4 +1356,5 @@ module.exports = {
   getParentPartnersByLayer,
   getPartnersByLayer,
   getAllPartnersByAllLayers,
+  getChildPartnersByLayer,
 }
