@@ -68,4 +68,16 @@ router.delete(
   markupDiscountController.deleteMarkupDiscountRule
 )
 
+/**
+ * GET /api/markup-discounts/history
+ * Get history of markup/discount rule actions
+ * Supports filters: ruleId, actionType, dateRange (last7days, last30days, last90days)
+ * Permission: partners-management > markup-discounts > read
+ */
+router.get(
+  "/history",
+  checkPermission("partners-management", "markup-discounts", "read"),
+  markupDiscountController.getMarkupDiscountHistory
+)
+
 module.exports = router

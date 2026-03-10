@@ -879,6 +879,165 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Markup/Discount Rules",
+      "item": [
+        {
+          "name": "Create Markup/Discount Rule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Markup for Standard Cabins - Port A to Port B\",\n  \"provider\": \"{{companyId}}\",\n  \"providerType\": \"Company\",\n  \"appliedLayer\": \"Marine Agent\",\n  \"partnerScope\": \"AllChildPartners\",\n  \"ruleType\": \"Markup\",\n  \"ruleValue\": 10,\n  \"valueType\": \"percentage\",\n  \"serviceDetails\": {\n    \"passenger\": [\n      {\n        \"cabinId\": \"{{cabinId}}\"\n      }\n    ],\n    \"cargo\": [],\n    \"vehicle\": []\n  },\n  \"routeFrom\": \"{{portFromId}}\",\n  \"routeTo\": \"{{portToId}}\",\n  \"visaType\": null,\n  \"effectiveDate\": \"2024-03-10\",\n  \"expiryDate\": \"2025-03-10\",\n  \"priority\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/markup-discounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markup-discounts"]
+            },
+            "description": "Create a new markup/discount rule with provider and service details"
+          },
+          "response": []
+        },
+        {
+          "name": "List Markup/Discount Rules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/markup-discounts?page=1&limit=10&layer=Marine Agent",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markup-discounts"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "layer",
+                  "value": "Marine Agent"
+                }
+              ]
+            },
+            "description": "List all markup/discount rules with pagination and optional filters"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Markup/Discount Rule",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/markup-discounts/{{ruleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markup-discounts", "{{ruleId}}"]
+            },
+            "description": "Get details of a specific markup/discount rule"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Markup/Discount Rule",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruleName\": \"Updated Markup for Standard Cabins - Port A to Port B\",\n  \"provider\": \"{{companyId}}\",\n  \"providerType\": \"Company\",\n  \"appliedLayer\": \"Marine Agent\",\n  \"partnerScope\": \"AllChildPartners\",\n  \"ruleType\": \"Markup\",\n  \"ruleValue\": 12,\n  \"valueType\": \"percentage\",\n  \"serviceDetails\": {\n    \"passenger\": [\n      {\n        \"cabinId\": \"{{cabinId}}\"\n      }\n    ],\n    \"cargo\": [],\n    \"vehicle\": []\n  },\n  \"routeFrom\": \"{{portFromId}}\",\n  \"routeTo\": \"{{portToId}}\",\n  \"visaType\": null,\n  \"effectiveDate\": \"2024-03-10\",\n  \"expiryDate\": \"2025-03-10\",\n  \"priority\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/markup-discounts/{{ruleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markup-discounts", "{{ruleId}}"]
+            },
+            "description": "Update an existing markup/discount rule"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Markup/Discount Rule",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/markup-discounts/{{ruleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markup-discounts", "{{ruleId}}"]
+            },
+            "description": "Soft delete a markup/discount rule"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Markup/Discount History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/markup-discounts/history?dateRange=last7days&actionType=Created",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markup-discounts", "history"],
+              "query": [
+                {
+                  "key": "dateRange",
+                  "value": "last7days"
+                },
+                {
+                  "key": "actionType",
+                  "value": "Created"
+                }
+              ]
+            },
+            "description": "Get history of markup/discount rule actions with optional filters"
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [
