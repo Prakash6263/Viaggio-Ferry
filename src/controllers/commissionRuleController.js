@@ -19,14 +19,46 @@ const createCommissionRule = async (req, res, next) => {
       commissionValue,
       serviceDetails,
       visaType,
-      routeFrom,
-      routeTo,
+      routes,
       effectiveDate,
       expiryDate,
       priority,
     } = req.body
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
+
+    // Validate required fields
+    if (!ruleName || ruleName.trim().length === 0)
+      throw createHttpError(400, "ruleName is required")
+    if (!provider) throw createHttpError(400, "provider is required")
+    if (!providerType) throw createHttpError(400, "providerType is required")
+    if (!appliedLayer) throw createHttpError(400, "appliedLayer is required")
+    if (!partnerScope) throw createHttpError(400, "partnerScope is required")
+    if (!commissionType) throw createHttpError(400, "commissionType is required")
+    if (commissionValue === undefined || commissionValue === null)
+      throw createHttpError(400, "commissionValue is required")
+    if (commissionValue < 0) throw createHttpError(400, "commissionValue must be positive")
+    if (!effectiveDate) throw createHttpError(400, "effectiveDate is required")
+
+    // Validate routes array
+    if (!routes || !Array.isArray(routes) || routes.length === 0) {
+      throw createHttpError(400, "At least one route is required")
+    }
+
+    // Validate each route
+    routes.forEach((route, index) => {
+      if (!route.routeFrom || !route.routeTo) {
+        throw createHttpError(400, `Route ${index + 1}: Both routeFrom and routeTo are required`)
+      }
+      if (route.routeFrom === route.routeTo) {
+        throw createHttpError(400, `Route ${index + 1}: routeFrom and routeTo must be different ports`)
+      }
+    })
+
+    // For specific partner scope, partner is required
+    if (partnerScope === "SpecificPartner" && !partner) {
+      throw createHttpError(400, "partner is required when partnerScope is SpecificPartner")
+    }
 
     // Set provider fields based on providerType
     let providerCompany = null
@@ -39,22 +71,23 @@ const createCommissionRule = async (req, res, next) => {
     }
 
     // Check for duplicate rules before creating
+    // Duplicate check: same company, provider, layer, and any overlapping routes
     const duplicateRule = await CommissionRule.findOne({
       company: companyId,
-      providerType,
       providerCompany,
       providerPartner,
       appliedLayer,
       partnerScope,
       partner: partnerScope === "SpecificPartner" ? partner : null,
-      routeFrom,
-      routeTo,
+      serviceDetails,
       visaType: visaType || null,
+      "routes.routeFrom": { $in: routes.map(r => r.routeFrom) },
+      "routes.routeTo": { $in: routes.map(r => r.routeTo) },
       isDeleted: false,
     })
 
     if (duplicateRule) {
-      throw createHttpError(400, "Duplicate rule already exists for this configuration")
+      throw createHttpError(400, "Duplicate rule already exists for one or more of these routes")
     }
 
     const rule = new CommissionRule({
@@ -70,8 +103,7 @@ const createCommissionRule = async (req, res, next) => {
       commissionValue,
       serviceDetails,
       visaType: visaType || null,
-      routeFrom,
-      routeTo,
+      routes,
       effectiveDate: new Date(effectiveDate),
       expiryDate: expiryDate ? new Date(expiryDate) : null,
       priority: priority || 1,
@@ -83,15 +115,32 @@ const createCommissionRule = async (req, res, next) => {
 
     // Populate references for response
     const populatedRule = await CommissionRule.findById(rule._id)
+      .populate("company", "companyName")
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName code")
-      .populate("routeTo", "portName code")
+      .populate({
+        path: "routes.routeFrom",
+        select: "portName code country",
+      })
+      .populate({
+        path: "routes.routeTo",
+        select: "portName code country",
+      })
+      .populate({
+        path: "serviceDetails.passenger.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.cargo.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.cabinId",
+        select: "cabinName cabinCode",
+      })
       .populate("createdBy", "email name")
-      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
+      .populate("updatedBy", "email name")
       .lean()
 
     res.status(201).json({
@@ -117,6 +166,7 @@ const listCommissionRules = async (req, res, next) => {
       search,
       layer,
       routeFrom,
+      routeTo,
       partnerScope,
     } = req.query
 
@@ -125,10 +175,18 @@ const listCommissionRules = async (req, res, next) => {
     const skip = (page - 1) * limit
     const filter = {
       company: companyId,
+      isActive: true,
       isDeleted: false,
     }
 
-    // Apply filters
+    // Build $or array for expiry date and route filtering
+    const orConditions = []
+
+    // Expiry date conditions
+    orConditions.push({ expiryDate: null })
+    orConditions.push({ expiryDate: { $gte: new Date() } })
+
+    // Apply additional filters
     if (search && search.trim().length > 0) {
       filter.ruleName = { $regex: search.trim(), $options: "i" }
     }
@@ -137,24 +195,51 @@ const listCommissionRules = async (req, res, next) => {
       filter.appliedLayer = layer
     }
 
+    // Filter by routes
     if (routeFrom) {
-      filter.routeFrom = routeFrom
+      filter["routes.routeFrom"] = routeFrom
+    }
+
+    if (routeTo) {
+      filter["routes.routeTo"] = routeTo
     }
 
     if (partnerScope) {
       filter.partnerScope = partnerScope
     }
 
+    // Apply the $or condition only for expiry date
+    if (orConditions.length > 0) {
+      filter.$or = orConditions
+    }
+
     const rules = await CommissionRule.find(filter)
+      .populate("company", "companyName")
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName code")
-      .populate("routeTo", "portName code")
+      .populate({
+        path: "routes.routeFrom",
+        select: "portName code country",
+      })
+      .populate({
+        path: "routes.routeTo",
+        select: "portName code country",
+      })
+      .populate({
+        path: "serviceDetails.passenger.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.cargo.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.cabinId",
+        select: "cabinName cabinCode",
+      })
       .populate("createdBy", "email name")
-      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
+      .populate("updatedBy", "email name")
       .skip(skip)
       .limit(Number.parseInt(limit))
       .sort({ priority: -1, effectiveDate: -1 })
@@ -194,16 +279,32 @@ const getCommissionRule = async (req, res, next) => {
       isActive: true,
       isDeleted: false,
     })
+      .populate("company", "companyName")
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName code")
-      .populate("routeTo", "portName code")
+      .populate({
+        path: "routes.routeFrom",
+        select: "portName code country",
+      })
+      .populate({
+        path: "routes.routeTo",
+        select: "portName code country",
+      })
+      .populate({
+        path: "serviceDetails.passenger.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.cargo.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.cabinId",
+        select: "cabinName cabinCode",
+      })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
-      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
       .lean()
 
     if (!rule) {
@@ -238,8 +339,7 @@ const updateCommissionRule = async (req, res, next) => {
       commissionValue,
       serviceDetails,
       visaType,
-      routeFrom,
-      routeTo,
+      routes,
       effectiveDate,
       expiryDate,
       priority,
@@ -302,8 +402,26 @@ const updateCommissionRule = async (req, res, next) => {
     }
 
     if (visaType !== undefined) rule.visaType = visaType || null
-    if (routeFrom !== undefined) rule.routeFrom = routeFrom
-    if (routeTo !== undefined) rule.routeTo = routeTo
+    
+    // Handle routes array update
+    if (routes !== undefined) {
+      if (!Array.isArray(routes) || routes.length === 0) {
+        throw createHttpError(400, "At least one route is required")
+      }
+      
+      // Validate each route
+      routes.forEach((route, index) => {
+        if (!route.routeFrom || !route.routeTo) {
+          throw createHttpError(400, `Route ${index + 1}: Both routeFrom and routeTo are required`)
+        }
+        if (route.routeFrom === route.routeTo) {
+          throw createHttpError(400, `Route ${index + 1}: routeFrom and routeTo must be different ports`)
+        }
+      })
+      
+      rule.routes = routes
+    }
+    
     if (effectiveDate !== undefined) rule.effectiveDate = new Date(effectiveDate)
     if (expiryDate !== undefined) rule.expiryDate = expiryDate ? new Date(expiryDate) : null
     if (priority !== undefined) rule.priority = priority
@@ -313,16 +431,32 @@ const updateCommissionRule = async (req, res, next) => {
     await rule.save()
 
     const populatedRule = await CommissionRule.findById(rule._id)
+      .populate("company", "companyName")
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName code")
-      .populate("routeTo", "portName code")
+      .populate({
+        path: "routes.routeFrom",
+        select: "portName code country",
+      })
+      .populate({
+        path: "routes.routeTo",
+        select: "portName code country",
+      })
+      .populate({
+        path: "serviceDetails.passenger.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.cargo.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.cabinId",
+        select: "cabinName cabinCode",
+      })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
-      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
       .lean()
 
     res.json({
@@ -400,16 +534,32 @@ const activateCommissionRule = async (req, res, next) => {
     await rule.save()
 
     const populatedRule = await CommissionRule.findById(rule._id)
+      .populate("company", "companyName")
       .populate("providerCompany", "companyName")
       .populate("providerPartner", "name partnerName")
       .populate("partner", "name partnerName")
-      .populate("routeFrom", "portName code")
-      .populate("routeTo", "portName code")
+      .populate({
+        path: "routes.routeFrom",
+        select: "portName code country",
+      })
+      .populate({
+        path: "routes.routeTo",
+        select: "portName code country",
+      })
+      .populate({
+        path: "serviceDetails.passenger.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.cargo.cabinId",
+        select: "cabinName cabinCode",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.cabinId",
+        select: "cabinName cabinCode",
+      })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
-      .populate("serviceDetails.passenger.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.cargo.cabinId", "cabinName cabinCode")
-      .populate("serviceDetails.vehicle.cabinId", "cabinName cabinCode")
       .lean()
 
     res.json({
