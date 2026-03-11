@@ -132,12 +132,24 @@ const createCommissionRule = async (req, res, next) => {
         select: "name type description",
       })
       .populate({
+        path: "serviceDetails.passenger.payloadTypeId",
+        select: "name code category",
+      })
+      .populate({
         path: "serviceDetails.cargo.cabinId",
         select: "name type description",
       })
       .populate({
+        path: "serviceDetails.cargo.payloadTypeId",
+        select: "name code category",
+      })
+      .populate({
         path: "serviceDetails.vehicle.cabinId",
         select: "name type description",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.payloadTypeId",
+        select: "name code category",
       })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
@@ -220,12 +232,24 @@ const listCommissionRules = async (req, res, next) => {
         select: "name type description",
       })
       .populate({
+        path: "serviceDetails.passenger.payloadTypeId",
+        select: "name code category",
+      })
+      .populate({
         path: "serviceDetails.cargo.cabinId",
         select: "name type description",
       })
       .populate({
+        path: "serviceDetails.cargo.payloadTypeId",
+        select: "name code category",
+      })
+      .populate({
         path: "serviceDetails.vehicle.cabinId",
         select: "name type description",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.payloadTypeId",
+        select: "name code category",
       })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
@@ -285,12 +309,24 @@ const getCommissionRule = async (req, res, next) => {
         select: "name type description",
       })
       .populate({
+        path: "serviceDetails.passenger.payloadTypeId",
+        select: "name code category",
+      })
+      .populate({
         path: "serviceDetails.cargo.cabinId",
         select: "name type description",
       })
       .populate({
+        path: "serviceDetails.cargo.payloadTypeId",
+        select: "name code category",
+      })
+      .populate({
         path: "serviceDetails.vehicle.cabinId",
         select: "name type description",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.payloadTypeId",
+        select: "name code category",
       })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
@@ -437,12 +473,24 @@ const updateCommissionRule = async (req, res, next) => {
         select: "name type description",
       })
       .populate({
+        path: "serviceDetails.passenger.payloadTypeId",
+        select: "name code category",
+      })
+      .populate({
         path: "serviceDetails.cargo.cabinId",
         select: "name type description",
       })
       .populate({
+        path: "serviceDetails.cargo.payloadTypeId",
+        select: "name code category",
+      })
+      .populate({
         path: "serviceDetails.vehicle.cabinId",
         select: "name type description",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.payloadTypeId",
+        select: "name code category",
       })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
@@ -540,12 +588,24 @@ const activateCommissionRule = async (req, res, next) => {
         select: "name type description",
       })
       .populate({
+        path: "serviceDetails.passenger.payloadTypeId",
+        select: "name code category",
+      })
+      .populate({
         path: "serviceDetails.cargo.cabinId",
         select: "name type description",
       })
       .populate({
+        path: "serviceDetails.cargo.payloadTypeId",
+        select: "name code category",
+      })
+      .populate({
         path: "serviceDetails.vehicle.cabinId",
         select: "name type description",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.payloadTypeId",
+        select: "name code category",
       })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")

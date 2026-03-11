@@ -34,6 +34,10 @@ const CommissionRuleSchema = new mongoose.Schema(
     serviceDetails: {
       passenger: [
         {
+          payloadTypeId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "PayloadType",
+          },
           cabinId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Cabin",
@@ -42,6 +46,10 @@ const CommissionRuleSchema = new mongoose.Schema(
       ],
       cargo: [
         {
+          payloadTypeId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "PayloadType",
+          },
           cabinId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Cabin",
@@ -50,6 +58,10 @@ const CommissionRuleSchema = new mongoose.Schema(
       ],
       vehicle: [
         {
+          payloadTypeId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "PayloadType",
+          },
           cabinId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Cabin",

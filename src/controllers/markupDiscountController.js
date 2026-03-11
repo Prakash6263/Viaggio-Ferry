@@ -135,12 +135,24 @@ const createMarkupDiscountRule = async (req, res, next) => {
         select: "name type description",
       })
       .populate({
+        path: "serviceDetails.passenger.payloadTypeId",
+        select: "name code category",
+      })
+      .populate({
         path: "serviceDetails.cargo.cabinId",
         select: "name type description",
       })
       .populate({
+        path: "serviceDetails.cargo.payloadTypeId",
+        select: "name code category",
+      })
+      .populate({
         path: "serviceDetails.vehicle.cabinId",
         select: "name type description",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.payloadTypeId",
+        select: "name code category",
       })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
@@ -234,12 +246,24 @@ const listMarkupDiscountRules = async (req, res, next) => {
         select: "name type description",
       })
       .populate({
+        path: "serviceDetails.passenger.payloadTypeId",
+        select: "name code category",
+      })
+      .populate({
         path: "serviceDetails.cargo.cabinId",
         select: "name type description",
       })
       .populate({
+        path: "serviceDetails.cargo.payloadTypeId",
+        select: "name code category",
+      })
+      .populate({
         path: "serviceDetails.vehicle.cabinId",
         select: "name type description",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.payloadTypeId",
+        select: "name code category",
       })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
@@ -299,12 +323,24 @@ const getMarkupDiscountRule = async (req, res, next) => {
         select: "name type description",
       })
       .populate({
+        path: "serviceDetails.passenger.payloadTypeId",
+        select: "name code category",
+      })
+      .populate({
         path: "serviceDetails.cargo.cabinId",
         select: "name type description",
       })
       .populate({
+        path: "serviceDetails.cargo.payloadTypeId",
+        select: "name code category",
+      })
+      .populate({
         path: "serviceDetails.vehicle.cabinId",
         select: "name type description",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.payloadTypeId",
+        select: "name code category",
       })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
@@ -453,12 +489,24 @@ const updateMarkupDiscountRule = async (req, res, next) => {
         select: "name type description",
       })
       .populate({
+        path: "serviceDetails.passenger.payloadTypeId",
+        select: "name code category",
+      })
+      .populate({
         path: "serviceDetails.cargo.cabinId",
         select: "name type description",
       })
       .populate({
+        path: "serviceDetails.cargo.payloadTypeId",
+        select: "name code category",
+      })
+      .populate({
         path: "serviceDetails.vehicle.cabinId",
         select: "name type description",
+      })
+      .populate({
+        path: "serviceDetails.vehicle.payloadTypeId",
+        select: "name code category",
       })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
