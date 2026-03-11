@@ -132,15 +132,15 @@ const createMarkupDiscountRule = async (req, res, next) => {
       })
       .populate({
         path: "serviceDetails.passenger.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate({
         path: "serviceDetails.cargo.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate({
         path: "serviceDetails.vehicle.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
@@ -231,15 +231,15 @@ const listMarkupDiscountRules = async (req, res, next) => {
       })
       .populate({
         path: "serviceDetails.passenger.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate({
         path: "serviceDetails.cargo.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate({
         path: "serviceDetails.vehicle.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
@@ -296,15 +296,15 @@ const getMarkupDiscountRule = async (req, res, next) => {
       })
       .populate({
         path: "serviceDetails.passenger.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate({
         path: "serviceDetails.cargo.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate({
         path: "serviceDetails.vehicle.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
@@ -450,15 +450,15 @@ const updateMarkupDiscountRule = async (req, res, next) => {
       })
       .populate({
         path: "serviceDetails.passenger.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate({
         path: "serviceDetails.cargo.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate({
         path: "serviceDetails.vehicle.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")

@@ -129,15 +129,15 @@ const createCommissionRule = async (req, res, next) => {
       })
       .populate({
         path: "serviceDetails.passenger.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate({
         path: "serviceDetails.cargo.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate({
         path: "serviceDetails.vehicle.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
@@ -217,15 +217,15 @@ const listCommissionRules = async (req, res, next) => {
       })
       .populate({
         path: "serviceDetails.passenger.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate({
         path: "serviceDetails.cargo.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate({
         path: "serviceDetails.vehicle.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
@@ -282,15 +282,15 @@ const getCommissionRule = async (req, res, next) => {
       })
       .populate({
         path: "serviceDetails.passenger.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate({
         path: "serviceDetails.cargo.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate({
         path: "serviceDetails.vehicle.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
@@ -434,15 +434,15 @@ const updateCommissionRule = async (req, res, next) => {
       })
       .populate({
         path: "serviceDetails.passenger.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate({
         path: "serviceDetails.cargo.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate({
         path: "serviceDetails.vehicle.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
@@ -537,15 +537,15 @@ const activateCommissionRule = async (req, res, next) => {
       })
       .populate({
         path: "serviceDetails.passenger.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate({
         path: "serviceDetails.cargo.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate({
         path: "serviceDetails.vehicle.cabinId",
-        select: "cabinName cabinCode",
+        select: "name type description",
       })
       .populate("createdBy", "email name")
       .populate("updatedBy", "email name")
