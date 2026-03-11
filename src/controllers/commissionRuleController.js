@@ -177,14 +177,8 @@ const listCommissionRules = async (req, res, next) => {
       company: companyId,
       isActive: true,
       isDeleted: false,
+      $or: [{ expiryDate: null }, { expiryDate: { $gte: new Date() } }],
     }
-
-    // Build $or array for expiry date and route filtering
-    const orConditions = []
-
-    // Expiry date conditions
-    orConditions.push({ expiryDate: null })
-    orConditions.push({ expiryDate: { $gte: new Date() } })
 
     // Apply additional filters
     if (search && search.trim().length > 0) {
@@ -206,11 +200,6 @@ const listCommissionRules = async (req, res, next) => {
 
     if (partnerScope) {
       filter.partnerScope = partnerScope
-    }
-
-    // Apply the $or condition only for expiry date
-    if (orConditions.length > 0) {
-      filter.$or = orConditions
     }
 
     const rules = await CommissionRule.find(filter)
