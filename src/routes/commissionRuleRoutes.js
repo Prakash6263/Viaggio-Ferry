@@ -39,6 +39,7 @@ router.get(
  * Get history of commission rule actions
  * Supports filters: ruleId, actionType, dateRange
  * Permission: partners-management > commission-board > read
+ * NOTE: This must come before /:id route to avoid being caught by it
  */
 router.get(
   "/history",
