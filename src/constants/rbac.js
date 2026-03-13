@@ -138,7 +138,7 @@ const MODULE_SUBMODULES = {
         allowedPermissions: ["read", "write", "edit", "delete"],
     },
     {
-      code: "commission-board",
+      code: "commissions",
       label: "Commission Board",
       allowedPermissions: ["read", "write", "edit", "delete"],
     },
