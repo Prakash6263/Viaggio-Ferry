@@ -133,9 +133,9 @@ const MODULE_SUBMODULES = {
       allowedPermissions: ["read", "write", "edit", "delete"],
     },
     {
-      code: "markup-discount-board",
-      label: "Markup & Discount Board",
-      allowedPermissions: ["read", "write", "edit", "delete"],
+        code: "markup-discounts",
+        label: "Markup & Discount Board",
+        allowedPermissions: ["read", "write", "edit", "delete"],
     },
     {
       code: "commission-board",
