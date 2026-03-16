@@ -90,16 +90,23 @@ const priceListDetailSchema = new mongoose.Schema(
 
 // Compound index for unique pricing rows
 priceListDetailSchema.index(
-  {
-    priceList: 1,
-    passengerType: 1,
-    ticketType: 1,
-    cabin: 1,
-    originPort: 1,
-    destinationPort: 1,
-    visaType: 1,
-  },
-  { unique: true, sparse: true },
+{
+  priceList: 1,
+  passengerType: 1,
+  ticketType: 1,
+  cabin: 1,
+  originPort: 1,
+  destinationPort: 1,
+  visaType: 1,
+  taxForm: 1
+},
+{
+  unique: true,
+  partialFilterExpression: {
+    isDisabled: false,
+    isDeleted: false
+  }
+}
 )
 
 module.exports = {

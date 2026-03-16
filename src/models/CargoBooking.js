@@ -191,6 +191,50 @@ const cargoBookingSchema = new mongoose.Schema(
     },
     remarks: String,
 
+    // Applied Rules (optional, for tracking which rules were applied)
+    appliedRules: [
+      {
+        ruleId: {
+          type: mongoose.Schema.Types.ObjectId,
+          default: null,
+        },
+        ruleType: {
+          type: String,
+          enum: ["Markup", "Discount", "Commission"],
+          default: null,
+        },
+        priority: {
+          type: Number,
+          default: 1,
+        },
+        appliedLayer: {
+          type: String,
+          enum: ["Company", "Marine Agent", "Commercial Agent", "Selling Agent"],
+          default: null,
+        },
+        specificityScore: {
+          type: Number,
+          min: 0,
+          max: 5,
+          default: 0,
+        },
+        ruleValue: {
+          type: Number,
+          default: 0,
+        },
+        valueType: {
+          type: String,
+          enum: ["percentage", "fixed"],
+          default: "percentage",
+        },
+        appliedAmount: {
+          type: Number,
+          default: 0,
+        },
+        _id: false,
+      },
+    ],
+
     // Audit
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
