@@ -566,24 +566,8 @@ const addPriceListDetail = async (req, res, next) => {
       throw createHttpError(400, `Invalid tax form. Allowed: ${TAX_FORM_OPTIONS.join(", ")}`)
     }
 
-    // Check for existing enabled detail with same combination (excluding disabled ones)
-    // This check respects the unique index which only applies to enabled records
-    const existingDetail = await PriceListDetail.findOne({
-      priceList: priceList._id,
-      passengerType,
-      ticketType,
-      cabin,
-      originPort,
-      destinationPort,
-      visaType: visaType || null,
-      taxForm: taxForm || "refundable",
-      isDisabled: false, // Only check against enabled records
-      isDeleted: false,
-    })
-
-    if (existingDetail) {
-      throw createHttpError(409, `A Price List with this combination of Price List, Passenger Type, Ticket Type, Cabin, Origin Port, Destination Port, and Visa Type already exists.`)
-    }
+    // MongoDB's unique index handles duplicate prevention
+    // The index only applies to enabled records, allowing duplicates when existing records are disabled
 
     // Calculate total price
     const detailTaxIds = taxIds && Array.isArray(taxIds) ? taxIds : []
