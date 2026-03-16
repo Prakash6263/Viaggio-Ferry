@@ -54,21 +54,6 @@ const createMarkupDiscountRule = async (req, res, next) => {
       throw createHttpError(400, "At least one of Passenger, Cargo, or Vehicle must be selected")
     }
 
-    // Validate routes array
-    if (!routes || !Array.isArray(routes) || routes.length === 0) {
-      throw createHttpError(400, "At least one route is required")
-    }
-
-    // Validate each route
-    routes.forEach((route, index) => {
-      if (!route.routeFrom || !route.routeTo) {
-        throw createHttpError(400, `Route ${index + 1}: Both routeFrom and routeTo are required`)
-      }
-      if (route.routeFrom === route.routeTo) {
-        throw createHttpError(400, `Route ${index + 1}: routeFrom and routeTo must be different ports`)
-      }
-    })
-
     // For specific partner scope, partner is required
     if (partnerScope === "SpecificPartner" && !partner) {
       throw createHttpError(400, "partner is required when partnerScope is SpecificPartner")
