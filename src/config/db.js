@@ -16,6 +16,9 @@ module.exports = async function connectDB() {
   })
   isConnected = true
 
+  // Sync indexes with database - removes old indexes and creates new ones
+  await mongoose.connection.syncIndexes()
+
   mongoose.connection.on("error", (err) => {
     console.error("Mongo connection error:", err)
   })
