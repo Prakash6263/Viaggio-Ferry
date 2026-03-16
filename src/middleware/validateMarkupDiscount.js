@@ -45,40 +45,42 @@ const validateMarkupDiscount = async (req, res, next) => {
       errors.push("ruleName must not exceed 200 characters")
     }
 
-    // Validate provider (optional)
-    if (provider) {
-      if (typeof provider !== "string") {
-        errors.push("provider must be a valid ObjectId string")
-      } else if (!mongoose.Types.ObjectId.isValid(provider)) {
-        errors.push("provider must be a valid ObjectId")
-      } else {
-        // Validate provider based on providerType if both provided
-        if (providerType) {
-          try {
-            if (providerType === "Company") {
-              if (provider !== companyId) {
-                errors.push("provider must match companyId when providerType is Company")
-              }
-            } else if (providerType === "Partner") {
-              const partnerExists = await Partner.exists({
-                _id: provider,
-                company: companyId,
-                isDeleted: false,
-              })
-              if (!partnerExists) {
-                errors.push("provider does not exist or does not belong to this company")
-              }
+    // Validate provider (MANDATORY)
+    if (!provider) {
+      errors.push("provider is required")
+    } else if (typeof provider !== "string") {
+      errors.push("provider must be a valid ObjectId string")
+    } else if (!mongoose.Types.ObjectId.isValid(provider)) {
+      errors.push("provider must be a valid ObjectId")
+    } else {
+      // Validate provider based on providerType if both provided
+      if (providerType) {
+        try {
+          if (providerType === "Company") {
+            if (provider !== companyId) {
+              errors.push("provider must match companyId when providerType is Company")
             }
-          } catch (err) {
-            console.error("[v0] Error validating provider:", err)
-            errors.push("Error validating provider")
+          } else if (providerType === "Partner") {
+            const partnerExists = await Partner.exists({
+              _id: provider,
+              company: companyId,
+              isDeleted: false,
+            })
+            if (!partnerExists) {
+              errors.push("provider does not exist or does not belong to this company")
+            }
           }
+        } catch (err) {
+          console.error("[v0] Error validating provider:", err)
+          errors.push("Error validating provider")
         }
       }
     }
 
-    // Validate providerType (optional)
-    if (providerType && !VALID_PROVIDER_TYPES.includes(providerType)) {
+    // Validate providerType (MANDATORY)
+    if (!providerType) {
+      errors.push("providerType is required")
+    } else if (!VALID_PROVIDER_TYPES.includes(providerType)) {
       errors.push(`providerType must be one of: ${VALID_PROVIDER_TYPES.join(", ")}`)
     }
 
@@ -106,13 +108,13 @@ const validateMarkupDiscount = async (req, res, next) => {
       errors.push(`ruleType must be one of: ${VALID_RULE_TYPES.join(", ")}`)
     }
 
-    // Validate ruleValue (optional)
-    if (ruleValue !== undefined && ruleValue !== null) {
-      if (typeof ruleValue !== "number") {
-        errors.push("ruleValue must be a number")
-      } else if (ruleValue < 0) {
-        errors.push("ruleValue must be positive or zero")
-      }
+    // Validate ruleValue (MANDATORY - Commission Value)
+    if (ruleValue === undefined || ruleValue === null) {
+      errors.push("ruleValue (Commission Value) is required")
+    } else if (typeof ruleValue !== "number") {
+      errors.push("ruleValue must be a number")
+    } else if (ruleValue < 0) {
+      errors.push("ruleValue must be positive or zero")
     }
 
     // Validate valueType (optional)
@@ -256,8 +258,10 @@ const validateMarkupDiscount = async (req, res, next) => {
       }
     }
 
-    // Validate expiryDate (optional, but validate if provided)
-    if (expiryDate !== undefined && expiryDate !== null && expiryDate !== "") {
+    // Validate expiryDate (MANDATORY)
+    if (!expiryDate) {
+      errors.push("expiryDate is required")
+    } else {
       const expDate = new Date(expiryDate)
       if (isNaN(expDate.getTime())) {
         errors.push("expiryDate must be a valid ISO date string")

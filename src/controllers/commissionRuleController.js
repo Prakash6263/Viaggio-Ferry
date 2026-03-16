@@ -27,33 +27,31 @@ const createCommissionRule = async (req, res, next) => {
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
 
-    // Validate required fields
+    // Validate required fields (Mandatory: Rule Name, Rule Type, Provider, Applied to Layer, Commission Value, Effective Date, Expiry Date, at least one service type)
     if (!ruleName || ruleName.trim().length === 0)
       throw createHttpError(400, "ruleName is required")
+    if (!commissionType) throw createHttpError(400, "commissionType (Rule Type) is required")
     if (!provider) throw createHttpError(400, "provider is required")
     if (!providerType) throw createHttpError(400, "providerType is required")
     if (!appliedLayer) throw createHttpError(400, "appliedLayer is required")
-    if (!partnerScope) throw createHttpError(400, "partnerScope is required")
-    if (!commissionType) throw createHttpError(400, "commissionType is required")
     if (commissionValue === undefined || commissionValue === null)
-      throw createHttpError(400, "commissionValue is required")
+      throw createHttpError(400, "commissionValue (Commission Value) is required")
     if (commissionValue < 0) throw createHttpError(400, "commissionValue must be positive")
     if (!effectiveDate) throw createHttpError(400, "effectiveDate is required")
-
-    // Validate routes array
-    if (!routes || !Array.isArray(routes) || routes.length === 0) {
-      throw createHttpError(400, "At least one route is required")
+    if (!expiryDate) throw createHttpError(400, "expiryDate is required")
+    
+    // Validate at least one service type is selected (Passenger, Cargo, or Vehicle)
+    if (!serviceDetails || typeof serviceDetails !== "object") {
+      throw createHttpError(400, "serviceDetails is required")
     }
-
-    // Validate each route
-    routes.forEach((route, index) => {
-      if (!route.routeFrom || !route.routeTo) {
-        throw createHttpError(400, `Route ${index + 1}: Both routeFrom and routeTo are required`)
-      }
-      if (route.routeFrom === route.routeTo) {
-        throw createHttpError(400, `Route ${index + 1}: routeFrom and routeTo must be different ports`)
-      }
-    })
+    const { passenger = [], cargo = [], vehicle = [] } = serviceDetails
+    const hasServiceDetails =
+      (Array.isArray(passenger) && passenger.length > 0) ||
+      (Array.isArray(cargo) && cargo.length > 0) ||
+      (Array.isArray(vehicle) && vehicle.length > 0)
+    if (!hasServiceDetails) {
+      throw createHttpError(400, "At least one of Passenger, Cargo, or Vehicle must be selected")
+    }
 
     // For specific partner scope, partner is required
     if (partnerScope === "SpecificPartner" && !partner) {
@@ -105,7 +103,7 @@ const createCommissionRule = async (req, res, next) => {
       visaType: visaType || null,
       routes,
       effectiveDate: new Date(effectiveDate),
-      expiryDate: expiryDate ? new Date(expiryDate) : null,
+      expiryDate: new Date(expiryDate),
       priority: priority || 1,
       isActive: true,
       createdBy: userId,
@@ -428,27 +426,15 @@ const updateCommissionRule = async (req, res, next) => {
 
     if (visaType !== undefined) rule.visaType = visaType || null
     
-    // Handle routes array update
-    if (routes !== undefined) {
-      if (!Array.isArray(routes) || routes.length === 0) {
-        throw createHttpError(400, "At least one route is required")
-      }
-      
-      // Validate each route
-      routes.forEach((route, index) => {
-        if (!route.routeFrom || !route.routeTo) {
-          throw createHttpError(400, `Route ${index + 1}: Both routeFrom and routeTo are required`)
-        }
-        if (route.routeFrom === route.routeTo) {
-          throw createHttpError(400, `Route ${index + 1}: routeFrom and routeTo must be different ports`)
-        }
-      })
-      
-      rule.routes = routes
-    }
+    if (routes !== undefined) rule.routes = routes
     
     if (effectiveDate !== undefined) rule.effectiveDate = new Date(effectiveDate)
-    if (expiryDate !== undefined) rule.expiryDate = expiryDate ? new Date(expiryDate) : null
+    if (expiryDate !== undefined) {
+      if (!expiryDate) {
+        throw createHttpError(400, "expiryDate cannot be empty or null")
+      }
+      rule.expiryDate = new Date(expiryDate)
+    }
     if (priority !== undefined) rule.priority = priority
     if (isActive !== undefined) rule.isActive = isActive
 
