@@ -17,17 +17,17 @@ const CommissionRuleSchema = new mongoose.Schema(
     ruleName: { type: String, required: true, trim: true, maxlength: 200 },
 
     // Provider configuration
-    providerType: { type: String, enum: PROVIDER_TYPES, required: true },
+    providerType: { type: String, enum: PROVIDER_TYPES, default: null },
     providerCompany: { type: mongoose.Schema.Types.ObjectId, ref: "Company", default: null },
     providerPartner: { type: mongoose.Schema.Types.ObjectId, ref: "Partner", default: null },
 
     // Commission configuration
-    commissionType: { type: String, enum: COMMISSION_TYPES, required: true },
-    commissionValue: { type: Number, required: true },
+    commissionType: { type: String, enum: COMMISSION_TYPES, default: "percentage" },
+    commissionValue: { type: Number, default: null },
 
     // Applied layer and partner scope
     appliedLayer: { type: String, enum: APPLIED_LAYERS, required: true },
-    partnerScope: { type: String, enum: PARTNER_SCOPES, required: true },
+    partnerScope: { type: String, enum: PARTNER_SCOPES, default: null },
     partner: { type: mongoose.Schema.Types.ObjectId, ref: "Partner", default: null },
 
     // Service details
@@ -70,19 +70,17 @@ const CommissionRuleSchema = new mongoose.Schema(
       ],
     },
 
-    // Route and visa - Support multiple routes per rule
+    // Route and visa - Support multiple routes per rule (optional field)
     visaType: { type: String, trim: true, default: null },
     routes: [
       {
         routeFrom: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "Port",
-          required: true,
         },
         routeTo: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "Port",
-          required: true,
         },
         _id: false,
       },

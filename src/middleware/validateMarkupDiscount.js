@@ -45,43 +45,41 @@ const validateMarkupDiscount = async (req, res, next) => {
       errors.push("ruleName must not exceed 200 characters")
     }
 
-    // Validate provider
-    if (!provider) {
-      errors.push("provider is required")
-    } else if (typeof provider !== "string") {
-      errors.push("provider must be a valid ObjectId string")
-    } else if (!mongoose.Types.ObjectId.isValid(provider)) {
-      errors.push("provider must be a valid ObjectId")
-    }
-
-    // Validate providerType
-    if (!providerType) {
-      errors.push("providerType is required")
-    } else if (!VALID_PROVIDER_TYPES.includes(providerType)) {
-      errors.push(`providerType must be one of: ${VALID_PROVIDER_TYPES.join(", ")}`)
-    }
-
-    // Validate provider based on providerType
-    if (errors.length === 0 && provider && providerType) {
-      try {
-        if (providerType === "Company") {
-          if (provider !== companyId) {
-            errors.push("provider must match companyId when providerType is Company")
-          }
-        } else if (providerType === "Partner") {
-          const partnerExists = await Partner.exists({
-            _id: provider,
-            company: companyId,
-            isDeleted: false,
-          })
-          if (!partnerExists) {
-            errors.push("provider does not exist or does not belong to this company")
+    // Validate provider (optional)
+    if (provider) {
+      if (typeof provider !== "string") {
+        errors.push("provider must be a valid ObjectId string")
+      } else if (!mongoose.Types.ObjectId.isValid(provider)) {
+        errors.push("provider must be a valid ObjectId")
+      } else {
+        // Validate provider based on providerType if both provided
+        if (providerType) {
+          try {
+            if (providerType === "Company") {
+              if (provider !== companyId) {
+                errors.push("provider must match companyId when providerType is Company")
+              }
+            } else if (providerType === "Partner") {
+              const partnerExists = await Partner.exists({
+                _id: provider,
+                company: companyId,
+                isDeleted: false,
+              })
+              if (!partnerExists) {
+                errors.push("provider does not exist or does not belong to this company")
+              }
+            }
+          } catch (err) {
+            console.error("[v0] Error validating provider:", err)
+            errors.push("Error validating provider")
           }
         }
-      } catch (err) {
-        console.error("[v0] Error validating provider:", err)
-        errors.push("Error validating provider")
       }
+    }
+
+    // Validate providerType (optional)
+    if (providerType && !VALID_PROVIDER_TYPES.includes(providerType)) {
+      errors.push(`providerType must be one of: ${VALID_PROVIDER_TYPES.join(", ")}`)
     }
 
     // Validate appliedLayer
@@ -91,17 +89,13 @@ const validateMarkupDiscount = async (req, res, next) => {
       errors.push(`appliedLayer must be one of: ${VALID_APPLIED_LAYERS.join(", ")}`)
     }
 
-    // Validate partnerScope
-    if (!partnerScope) {
-      errors.push("partnerScope is required")
-    } else if (!VALID_PARTNER_SCOPES.includes(partnerScope)) {
+    // Validate partnerScope (optional)
+    if (partnerScope && !VALID_PARTNER_SCOPES.includes(partnerScope)) {
       errors.push(`partnerScope must be one of: ${VALID_PARTNER_SCOPES.join(", ")}`)
     }
 
-    // Validate partner (required if partnerScope is SpecificPartner)
-    if (partnerScope === "SpecificPartner" && !partner) {
-      errors.push("partner is required when partnerScope is SpecificPartner")
-    } else if (partner && typeof partner !== "string") {
+    // Validate partner (optional)
+    if (partner && typeof partner !== "string") {
       errors.push("partner must be a valid ObjectId string")
     }
 
@@ -112,36 +106,34 @@ const validateMarkupDiscount = async (req, res, next) => {
       errors.push(`ruleType must be one of: ${VALID_RULE_TYPES.join(", ")}`)
     }
 
-    // Validate ruleValue
-    if (ruleValue === undefined || ruleValue === null) {
-      errors.push("ruleValue is required")
-    } else if (typeof ruleValue !== "number") {
-      errors.push("ruleValue must be a number")
-    } else if (ruleValue < 0) {
-      errors.push("ruleValue must be positive or zero")
+    // Validate ruleValue (optional)
+    if (ruleValue !== undefined && ruleValue !== null) {
+      if (typeof ruleValue !== "number") {
+        errors.push("ruleValue must be a number")
+      } else if (ruleValue < 0) {
+        errors.push("ruleValue must be positive or zero")
+      }
     }
 
-    // Validate valueType
-    if (!valueType) {
-      errors.push("valueType is required")
-    } else if (!VALID_VALUE_TYPES.includes(valueType)) {
+    // Validate valueType (optional)
+    if (valueType && !VALID_VALUE_TYPES.includes(valueType)) {
       errors.push(`valueType must be one of: ${VALID_VALUE_TYPES.join(", ")}`)
     }
 
-    // Validate serviceDetails
+    // Validate serviceDetails (MANDATORY: at least one checkbox required)
     if (!serviceDetails || typeof serviceDetails !== "object") {
       errors.push("serviceDetails is required and must be an object")
     } else {
       const { passenger = [], cargo = [], vehicle = [] } = serviceDetails
 
-      // Check if at least one service type exists
+      // Check if at least one service type exists (Passenger, Cargo, or Vehicle)
       const hasServiceDetails =
         (Array.isArray(passenger) && passenger.length > 0) ||
         (Array.isArray(cargo) && cargo.length > 0) ||
         (Array.isArray(vehicle) && vehicle.length > 0)
 
       if (!hasServiceDetails) {
-        errors.push("serviceDetails must contain at least one service type (passenger, cargo, or vehicle)")
+        errors.push("At least one of Passenger, Cargo, or Vehicle must be selected")
       }
 
       // Validate passenger service
@@ -211,47 +203,45 @@ const validateMarkupDiscount = async (req, res, next) => {
       }
     }
 
-    // Validate routes array
+    // Validate routes array (optional)
     const { routes } = req.body
-    if (!routes) {
-      errors.push("routes array is required")
-    } else if (!Array.isArray(routes)) {
-      errors.push("routes must be an array")
-    } else if (routes.length === 0) {
-      errors.push("At least one route is required")
-    } else {
-      // Validate each route in the array
-      for (let i = 0; i < routes.length; i++) {
-        const route = routes[i]
-        
-        if (!route || typeof route !== "object") {
-          errors.push(`Route ${i + 1}: must be an object with routeFrom and routeTo`)
-          break
-        }
-        
-        if (!route.routeFrom) {
-          errors.push(`Route ${i + 1}: routeFrom is required`)
-          break
-        }
-        
-        if (!route.routeTo) {
-          errors.push(`Route ${i + 1}: routeTo is required`)
-          break
-        }
-        
-        if (typeof route.routeFrom !== "string" || !mongoose.Types.ObjectId.isValid(route.routeFrom)) {
-          errors.push(`Route ${i + 1}: routeFrom must be a valid ObjectId`)
-          break
-        }
-        
-        if (typeof route.routeTo !== "string" || !mongoose.Types.ObjectId.isValid(route.routeTo)) {
-          errors.push(`Route ${i + 1}: routeTo must be a valid ObjectId`)
-          break
-        }
-        
-        if (route.routeFrom === route.routeTo) {
-          errors.push(`Route ${i + 1}: routeFrom and routeTo must be different ports`)
-          break
+    if (routes) {
+      if (!Array.isArray(routes)) {
+        errors.push("routes must be an array")
+      } else if (routes.length > 0) {
+        // Validate each route in the array only if provided
+        for (let i = 0; i < routes.length; i++) {
+          const route = routes[i]
+          
+          if (!route || typeof route !== "object") {
+            errors.push(`Route ${i + 1}: must be an object with routeFrom and routeTo`)
+            break
+          }
+          
+          if (!route.routeFrom) {
+            errors.push(`Route ${i + 1}: routeFrom is required`)
+            break
+          }
+          
+          if (!route.routeTo) {
+            errors.push(`Route ${i + 1}: routeTo is required`)
+            break
+          }
+          
+          if (typeof route.routeFrom !== "string" || !mongoose.Types.ObjectId.isValid(route.routeFrom)) {
+            errors.push(`Route ${i + 1}: routeFrom must be a valid ObjectId`)
+            break
+          }
+          
+          if (typeof route.routeTo !== "string" || !mongoose.Types.ObjectId.isValid(route.routeTo)) {
+            errors.push(`Route ${i + 1}: routeTo must be a valid ObjectId`)
+            break
+          }
+          
+          if (route.routeFrom === route.routeTo) {
+            errors.push(`Route ${i + 1}: routeFrom and routeTo must be different ports`)
+            break
+          }
         }
       }
     }

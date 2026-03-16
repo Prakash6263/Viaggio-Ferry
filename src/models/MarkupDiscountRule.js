@@ -16,13 +16,13 @@ const MarkupDiscountRuleSchema = new mongoose.Schema(
     ruleName: { type: String, required: true, trim: true, maxlength: 200 },
     ruleType: { type: String, enum: RULE_TYPES, required: true },
     valueType: { type: String, enum: VALUE_TYPES, default: "percentage" },
-    ruleValue: { type: Number, required: true, min: 0 },
+    ruleValue: { type: Number, default: null, min: 0 },
 
-    providerType: { type: String, enum: ["Company", "Partner"], required: true },
+    providerType: { type: String, enum: ["Company", "Partner"], default: null },
     providerCompany: { type: mongoose.Schema.Types.ObjectId, ref: "Company", default: null },
     providerPartner: { type: mongoose.Schema.Types.ObjectId, ref: "Partner", default: null },
     appliedLayer: { type: String, enum: APPLIED_LAYERS, required: true },
-    partnerScope: { type: String, enum: ["AllChildPartners", "SpecificPartner"], required: true },
+    partnerScope: { type: String, enum: ["AllChildPartners", "SpecificPartner"], default: null },
     partner: { type: mongoose.Schema.Types.ObjectId, ref: "Partner", default: null },
 
     serviceDetails: {
@@ -66,18 +66,16 @@ const MarkupDiscountRuleSchema = new mongoose.Schema(
 
     visaType: { type: String, trim: true, default: null },
     
-    // Support multiple routes per rule
+    // Support multiple routes per rule - optional field
     routes: [
       {
         routeFrom: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "Port",
-          required: true,
         },
         routeTo: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "Port",
-          required: true,
         },
         _id: false,
       },
