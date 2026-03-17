@@ -261,7 +261,7 @@ const deletePromotion = async (req, res, next) => {
 
 /**
  * GET /api/promotions/active/list
- * Get active promotions (considering date range and status)
+ * Get active promotions (status = Active, no date range filter)
  */
 const getActivePromotions = async (req, res, next) => {
   try {
@@ -271,19 +271,71 @@ const getActivePromotions = async (req, res, next) => {
     if (!companyId) throw createHttpError(400, "Company ID is required")
 
     const skip = (page - 1) * limit
-    const currentDate = new Date()
 
     const filter = {
       company: companyId,
       isDeleted: false,
       status: "Active",
-      startDate: { $lte: currentDate },
-      endDate: { $gte: currentDate },
     }
 
     const promotions = await Promotion.find(filter)
       .populate("company", "companyName")
       .populate("trip", "tripName tripNumber")
+      .populate("createdBy", "email name")
+      .populate("updatedBy", "email name")
+      .skip(skip)
+      .limit(Number.parseInt(limit))
+      .sort({ createdAt: -1 })
+      .lean()
+
+    const total = await Promotion.countDocuments(filter)
+
+    res.json({
+      success: true,
+      data: promotions,
+      pagination: {
+        page: Number.parseInt(page),
+        limit: Number.parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * GET /api/promotions/trip/:tripId
+ * Get promotions for a specific trip
+ */
+const getPromotionsByTripId = async (req, res, next) => {
+  try {
+    const { tripId } = req.params
+    const { companyId } = req
+    const { page = 1, limit = 10, status } = req.query
+
+    if (!companyId) throw createHttpError(400, "Company ID is required")
+    if (!tripId) throw createHttpError(400, "Trip ID is required")
+
+    const skip = (page - 1) * limit
+
+    const filter = {
+      company: companyId,
+      trip: tripId,
+      isDeleted: false,
+    }
+
+    // Optionally filter by status
+    if (status) {
+      filter.status = status
+    }
+
+    const promotions = await Promotion.find(filter)
+      .populate("company", "companyName")
+      .populate("trip", "tripName tripNumber")
+      .populate("createdBy", "email name")
+      .populate("updatedBy", "email name")
       .skip(skip)
       .limit(Number.parseInt(limit))
       .sort({ createdAt: -1 })
@@ -313,4 +365,5 @@ module.exports = {
   updatePromotion,
   deletePromotion,
   getActivePromotions,
+  getPromotionsByTripId,
 }

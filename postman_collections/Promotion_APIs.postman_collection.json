@@ -171,6 +171,39 @@
           }
         },
         {
+          "name": "Get Promotions by Trip ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/promotions/trip/TRIP_ID_HERE?page=1&limit=10&status=Active",
+              "host": ["{{baseUrl}}"],
+              "path": ["promotions", "trip", "TRIP_ID_HERE"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "Active",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
           "name": "Get Promotion By ID",
           "request": {
             "method": "GET",

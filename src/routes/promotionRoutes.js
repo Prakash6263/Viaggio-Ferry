@@ -46,6 +46,18 @@ router.get(
 )
 
 /**
+ * GET /api/promotions/trip/:tripId
+ * Get promotions for a specific trip
+ * NOTE: Must come before /:id route
+ * Permission: partners_management > promotion > read
+ */
+router.get(
+  "/trip/:tripId",
+  checkPermission("partners_management", "promotion", "read"),
+  promotionController.getPromotionsByTripId,
+)
+
+/**
  * GET /api/promotions/:id
  * Get a specific promotion
  * Permission: partners_management > promotion > read
