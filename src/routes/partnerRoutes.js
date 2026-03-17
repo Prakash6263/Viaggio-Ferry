@@ -63,7 +63,7 @@ router.get(
  */
 router.get(
   "/children",
-  checkPermission("partners-management", "business-partners", "read"),
+  // checkPermission("partners-management", "business-partners", "read"),
   partnerController.getChildPartnersByLayer
 )
 

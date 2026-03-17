@@ -1234,7 +1234,7 @@ const getChildPartnersByLayer = async (req, res, next) => {
     const userId = req.user?.id
 
     // Only company and partner users can access child partners
-    if (userRole !== "company" && userRole !== "partner" && userRole !== "user") {
+    if (userRole !== "company" && userRole !== "user") {
       throw createHttpError(403, "Only company or partner accounts can access child partners")
     }
 
