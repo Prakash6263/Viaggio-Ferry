@@ -1,0 +1,239 @@
+{
+  "info": {
+    "name": "Promotion APIs",
+    "description": "Promotion Management APIs for Partner Management Module",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001/api",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Promotions",
+      "item": [
+        {
+          "name": "Create Promotion - Period Based",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.environment.set('promotionId', pm.response.json().data._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"promotionName\": \"Summer Offer 2026\",\n  \"description\": \"Discount for all trips during summer season\",\n  \"promotionBasis\": \"Period\",\n  \"startDate\": \"2026-06-01T00:00:00Z\",\n  \"endDate\": \"2026-08-31T23:59:59Z\",\n  \"status\": \"Active\",\n  \"passengerBenefit\": {\n    \"isEnabled\": true,\n    \"valueType\": \"percentage\",\n    \"value\": 10\n  },\n  \"cargoBenefit\": {\n    \"isEnabled\": false\n  },\n  \"vehicleBenefit\": {\n    \"isEnabled\": false\n  },\n  \"serviceBenefits\": [\n    {\n      \"title\": \"Free Meal\",\n      \"valueType\": \"fixed\",\n      \"value\": 50\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions",
+              "host": ["{{baseUrl}}"],
+              "path": ["promotions"]
+            }
+          }
+        },
+        {
+          "name": "Create Promotion - Trip Based",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.environment.set('promotionId', pm.response.json().data._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"promotionName\": \"Morning Express Offer\",\n  \"description\": \"Special discount for morning express trips\",\n  \"promotionBasis\": \"Trip\",\n  \"trip\": \"TRIP_ID_HERE\",\n  \"startDate\": \"2026-06-01T00:00:00Z\",\n  \"endDate\": \"2026-06-30T23:59:59Z\",\n  \"status\": \"Active\",\n  \"passengerBenefit\": {\n    \"isEnabled\": true,\n    \"valueType\": \"percentage\",\n    \"value\": 15\n  },\n  \"cargoBenefit\": {\n    \"isEnabled\": true,\n    \"valueType\": \"fixed\",\n    \"value\": 100\n  },\n  \"vehicleBenefit\": {\n    \"isEnabled\": false\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions",
+              "host": ["{{baseUrl}}"],
+              "path": ["promotions"]
+            }
+          }
+        },
+        {
+          "name": "List All Promotions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/promotions?page=1&limit=10&status=Active&basis=Period",
+              "host": ["{{baseUrl}}"],
+              "path": ["promotions"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "Active",
+                  "disabled": true
+                },
+                {
+                  "key": "basis",
+                  "value": "Period",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "Summer",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Active Promotions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/promotions/active/list?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["promotions", "active", "list"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Promotion By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/promotions/{{promotionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["promotions", "{{promotionId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Promotion",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"promotionName\": \"Summer Offer 2026 - Updated\",\n  \"description\": \"Updated discount for all trips during summer season\",\n  \"status\": \"Active\",\n  \"passengerBenefit\": {\n    \"isEnabled\": true,\n    \"valueType\": \"percentage\",\n    \"value\": 12\n  },\n  \"cargoBenefit\": {\n    \"isEnabled\": true,\n    \"valueType\": \"fixed\",\n    \"value\": 75\n  },\n  \"serviceBenefits\": [\n    {\n      \"title\": \"Free Meal\",\n      \"valueType\": \"fixed\",\n      \"value\": 50\n    },\n    {\n      \"title\": \"Priority Boarding\",\n      \"valueType\": \"percentage\",\n      \"value\": 0\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/promotions/{{promotionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["promotions", "{{promotionId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Promotion",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/promotions/{{promotionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["promotions", "{{promotionId}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

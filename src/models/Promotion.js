@@ -1,94 +1,23 @@
 const mongoose = require("mongoose")
 
 const PROMOTION_STATUS = ["Active", "Inactive"]
-const PROMOTION_BASIS = ["PERIOD", "TRIP"]
-const RULE_TYPE = ["QUANTITY", "TOTAL_VALUE"]
-const DISCOUNT_TYPE = ["PERCENT", "AMOUNT"]
-const PASSENGER_TYPES = ["Adult", "Child", "Senior", "Student"]
-const CABIN_CLASSES = ["Economy", "Business", "Suite"]
-const CARGO_TYPES = ["General Goods", "Hazardous", "Refrigerated", "Oversized"]
-const VEHICLE_TYPES = ["Car", "Motorcycle", "RV", "Truck"]
+const PROMOTION_BASIS = ["Period", "Trip"]
+const VALUE_TYPES = ["percentage", "fixed"]
 
-const DiscountSchema = new mongoose.Schema(
+const BenefitSchema = new mongoose.Schema(
   {
-    type: { type: String, enum: DISCOUNT_TYPE, required: true },
+    isEnabled: { type: Boolean, default: false },
+    valueType: { type: String, enum: VALUE_TYPES, default: "percentage" },
+    value: { type: Number, default: 0, min: 0 },
+  },
+  { _id: false },
+)
+
+const ServiceBenefitSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true, trim: true },
+    valueType: { type: String, enum: VALUE_TYPES, required: true },
     value: { type: Number, required: true, min: 0 },
-  },
-  { _id: false },
-)
-
-const PassengerQuantityRuleSchema = new mongoose.Schema(
-  {
-    buyX: { type: Number, required: true, min: 1 },
-    getY: { type: Number, required: true, min: 1 },
-  },
-  { _id: false },
-)
-
-const PassengerTotalValueRuleSchema = new mongoose.Schema(
-  {
-    minAmount: { type: Number, required: true, min: 0 },
-    discount: { type: DiscountSchema, required: true },
-  },
-  { _id: false },
-)
-
-const PassengerTicketsSchema = new mongoose.Schema(
-  {
-    enabled: { type: Boolean, default: false },
-    ruleType: { type: String, enum: RULE_TYPE },
-    quantityRule: { type: PassengerQuantityRuleSchema, default: undefined },
-    totalValueRule: { type: PassengerTotalValueRuleSchema, default: undefined },
-  },
-  { _id: false },
-)
-
-const CargoTicketsSchema = new mongoose.Schema(
-  {
-    enabled: { type: Boolean, default: false },
-    ruleType: { type: String, enum: RULE_TYPE },
-    quantityRule: { type: PassengerQuantityRuleSchema, default: undefined },
-    totalValueRule: { type: PassengerTotalValueRuleSchema, default: undefined },
-  },
-  { _id: false },
-)
-
-const VehicleTicketsSchema = new mongoose.Schema(
-  {
-    enabled: { type: Boolean, default: false },
-    ruleType: { type: String, enum: RULE_TYPE },
-    quantityRule: { type: PassengerQuantityRuleSchema, default: undefined },
-    totalValueRule: { type: PassengerTotalValueRuleSchema, default: undefined },
-  },
-  { _id: false },
-)
-
-const EligibilityConditionSchema = new mongoose.Schema(
-  {
-    passengerType: { type: String, enum: PASSENGER_TYPES, required: true },
-    cabinClass: { type: String, enum: CABIN_CLASSES, required: true },
-  },
-  { _id: false },
-)
-
-const CargoEligibilityConditionSchema = new mongoose.Schema(
-  {
-    cargoType: { type: String, enum: CARGO_TYPES, required: true },
-  },
-  { _id: false },
-)
-
-const VehicleEligibilityConditionSchema = new mongoose.Schema(
-  {
-    vehicleType: { type: String, enum: VEHICLE_TYPES, required: true },
-  },
-  { _id: false },
-)
-
-const PeriodSchema = new mongoose.Schema(
-  {
-    startAt: { type: Date, required: true },
-    endAt: { type: Date, required: true },
   },
   { _id: false },
 )
@@ -101,39 +30,43 @@ const PromotionSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    name: { type: String, required: true, trim: true, maxlength: 100 },
-    description: { type: String, trim: true, maxlength: 1000 },
+    promotionName: { type: String, required: true, trim: true, maxlength: 200 },
+    description: { type: String, trim: true, default: "" },
+    promotionBasis: { type: String, enum: PROMOTION_BASIS, required: true },
+
+    trip: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Trip",
+      default: null,
+    },
+
+    startDate: { type: Date, required: true },
+    endDate: { type: Date, required: true },
+
     status: { type: String, enum: PROMOTION_STATUS, default: "Active" },
-    basis: { type: String, enum: PROMOTION_BASIS, required: true },
 
-    period: { type: PeriodSchema, default: undefined },
-    tripId: { type: mongoose.Schema.Types.ObjectId, ref: "Trip", default: undefined },
+    passengerBenefit: { type: BenefitSchema, default: { isEnabled: false } },
+    cargoBenefit: { type: BenefitSchema, default: { isEnabled: false } },
+    vehicleBenefit: { type: BenefitSchema, default: { isEnabled: false } },
 
-    passengerTickets: { type: PassengerTicketsSchema, default: { enabled: false } },
-    eligibilityConditions: { type: [EligibilityConditionSchema], default: [] },
-    cargoTickets: { type: CargoTicketsSchema, default: { enabled: false } },
-    cargoEligibilityConditions: { type: [CargoEligibilityConditionSchema], default: [] },
-    vehicleTickets: { type: VehicleTicketsSchema, default: { enabled: false } },
-    vehicleEligibilityConditions: { type: [VehicleEligibilityConditionSchema], default: [] },
+    serviceBenefits: [ServiceBenefitSchema],
 
     isDeleted: { type: Boolean, default: false },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   },
   { timestamps: true },
 )
 
-PromotionSchema.index({ company: 1, status: 1, isDeleted: 1 })
-PromotionSchema.index({ company: 1, basis: 1, "period.startAt": 1, "period.endAt": 1 })
-PromotionSchema.index({ company: 1, tripId: 1 })
-PromotionSchema.index({ company: 1, name: "text", description: "text" })
+// Indexes as per requirement
+PromotionSchema.index({ company: 1, status: 1 })
+PromotionSchema.index({ company: 1, startDate: 1, endDate: 1 })
+PromotionSchema.index({ company: 1, isDeleted: 1 })
+PromotionSchema.index({ company: 1, trip: 1 })
 
 module.exports = {
   PROMOTION_STATUS,
   PROMOTION_BASIS,
-  RULE_TYPE,
-  DISCOUNT_TYPE,
-  PASSENGER_TYPES,
-  CABIN_CLASSES,
-  CARGO_TYPES,
-  VEHICLE_TYPES,
+  VALUE_TYPES,
   Promotion: mongoose.model("Promotion", PromotionSchema),
 }
