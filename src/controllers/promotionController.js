@@ -7,7 +7,7 @@ const { Promotion } = require("../models/Promotion")
  */
 const createPromotion = async (req, res, next) => {
   try {
-    const { companyId, userId } = req
+    const { companyId } = req
     const {
       promotionName,
       description,
@@ -23,6 +23,9 @@ const createPromotion = async (req, res, next) => {
     } = req.body
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
+
+    // Get userId from req.user.id (works for both user and company roles)
+    const userId = req.user?.id
 
     const promotion = new Promotion({
       company: companyId,
@@ -159,7 +162,7 @@ const getPromotionById = async (req, res, next) => {
 const updatePromotion = async (req, res, next) => {
   try {
     const { id } = req.params
-    const { companyId, userId } = req
+    const { companyId } = req
     const {
       promotionName,
       description,
@@ -175,6 +178,9 @@ const updatePromotion = async (req, res, next) => {
     } = req.body
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
+
+    // Get userId from req.user.id (works for both user and company roles)
+    const userId = req.user?.id
 
     const promotion = await Promotion.findOne({
       _id: id,
