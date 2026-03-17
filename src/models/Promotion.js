@@ -22,6 +22,15 @@ const ServiceBenefitSchema = new mongoose.Schema(
   { _id: false },
 )
 
+const AuditTrailSchema = new mongoose.Schema(
+  {
+    id: { type: mongoose.Schema.Types.ObjectId, required: true },
+    name: { type: String, required: true },
+    type: { type: String, enum: ["user", "company"], required: true },
+  },
+  { _id: false },
+)
+
 const PromotionSchema = new mongoose.Schema(
   {
     company: {
@@ -52,8 +61,8 @@ const PromotionSchema = new mongoose.Schema(
     serviceBenefits: [ServiceBenefitSchema],
 
     isDeleted: { type: Boolean, default: false },
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
-    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    createdBy: { type: AuditTrailSchema, default: null },
+    updatedBy: { type: AuditTrailSchema, default: null },
   },
   { timestamps: true },
 )

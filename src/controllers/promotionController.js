@@ -24,8 +24,14 @@ const createPromotion = async (req, res, next) => {
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
 
-    // Get userId from req.user.id (works for both user and company roles)
-    const userId = req.user?.id
+    // Determine createdBy info based on role
+    // If role is "company", createdBy references company schema
+    // If role is "user", createdBy references user schema
+    const createdByInfo = {
+      id: req.user?.id,
+      name: req.user?.email,
+      type: req.user?.role === "company" ? "company" : "user",
+    }
 
     const promotion = new Promotion({
       company: companyId,
@@ -40,17 +46,15 @@ const createPromotion = async (req, res, next) => {
       cargoBenefit: cargoBenefit || { isEnabled: false },
       vehicleBenefit: vehicleBenefit || { isEnabled: false },
       serviceBenefits: serviceBenefits || [],
-      createdBy: userId,
+      createdBy: createdByInfo,
     })
 
     await promotion.save()
 
-    // Populate references for response
+    // Return the created promotion as is (createdBy is now a nested object)
     const populatedPromotion = await Promotion.findById(promotion._id)
       .populate("company", "companyName")
       .populate("trip", "tripName tripNumber")
-      .populate("createdBy", "email name")
-      .populate("updatedBy", "email name")
       .lean()
 
     res.status(201).json({
@@ -96,8 +100,6 @@ const listPromotions = async (req, res, next) => {
     const promotions = await Promotion.find(filter)
       .populate("company", "companyName")
       .populate("trip", "tripName tripNumber")
-      .populate("createdBy", "email name")
-      .populate("updatedBy", "email name")
       .skip(skip)
       .limit(Number.parseInt(limit))
       .sort({ createdAt: -1 })
@@ -138,8 +140,6 @@ const getPromotionById = async (req, res, next) => {
     })
       .populate("company", "companyName")
       .populate("trip", "tripName tripNumber")
-      .populate("createdBy", "email name")
-      .populate("updatedBy", "email name")
       .lean()
 
     if (!promotion) {
@@ -179,8 +179,12 @@ const updatePromotion = async (req, res, next) => {
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
 
-    // Get userId from req.user.id (works for both user and company roles)
-    const userId = req.user?.id
+    // Determine updatedBy info based on role
+    const updatedByInfo = {
+      id: req.user?.id,
+      name: req.user?.email,
+      type: req.user?.role === "company" ? "company" : "user",
+    }
 
     const promotion = await Promotion.findOne({
       _id: id,
@@ -211,14 +215,12 @@ const updatePromotion = async (req, res, next) => {
     if (vehicleBenefit !== undefined) promotion.vehicleBenefit = vehicleBenefit
     if (serviceBenefits !== undefined) promotion.serviceBenefits = serviceBenefits
 
-    promotion.updatedBy = userId
+    promotion.updatedBy = updatedByInfo
     await promotion.save()
 
     const populatedPromotion = await Promotion.findById(promotion._id)
       .populate("company", "companyName")
       .populate("trip", "tripName tripNumber")
-      .populate("createdBy", "email name")
-      .populate("updatedBy", "email name")
       .lean()
 
     res.json({
@@ -238,9 +240,16 @@ const updatePromotion = async (req, res, next) => {
 const deletePromotion = async (req, res, next) => {
   try {
     const { id } = req.params
-    const { companyId, userId } = req
+    const { companyId } = req
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
+
+    // Determine updatedBy info based on role
+    const updatedByInfo = {
+      id: req.user?.id,
+      name: req.user?.email,
+      type: req.user?.role === "company" ? "company" : "user",
+    }
 
     const promotion = await Promotion.findOne({
       _id: id,
@@ -253,7 +262,7 @@ const deletePromotion = async (req, res, next) => {
 
     // Soft delete
     promotion.isDeleted = true
-    promotion.updatedBy = userId
+    promotion.updatedBy = updatedByInfo
     await promotion.save()
 
     res.json({
@@ -287,8 +296,6 @@ const getActivePromotions = async (req, res, next) => {
     const promotions = await Promotion.find(filter)
       .populate("company", "companyName")
       .populate("trip", "tripName tripNumber")
-      .populate("createdBy", "email name")
-      .populate("updatedBy", "email name")
       .skip(skip)
       .limit(Number.parseInt(limit))
       .sort({ createdAt: -1 })
@@ -340,8 +347,6 @@ const getPromotionsByTripId = async (req, res, next) => {
     const promotions = await Promotion.find(filter)
       .populate("company", "companyName")
       .populate("trip", "tripName tripNumber")
-      .populate("createdBy", "email name")
-      .populate("updatedBy", "email name")
       .skip(skip)
       .limit(Number.parseInt(limit))
       .sort({ createdAt: -1 })
