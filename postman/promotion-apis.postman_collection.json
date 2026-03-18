@@ -1,0 +1,321 @@
+{
+  "info": {
+    "_postman_id": "promotion-apis-collection",
+    "name": "Promotion APIs",
+    "description": "Complete API collection for Rule-Based Promotion Management under Partner Management",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create Promotion - Passenger Quantity (Buy 2 Get 1)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"promotionName\": \"Buy 2 Get 1\",\n  \"description\": \"Buy 2 passenger tickets, get 1 free\",\n  \"promotionBasis\": \"Trip\",\n  \"trip\": \"{{tripId}}\",\n  \"startDate\": \"2026-06-01\",\n  \"endDate\": \"2026-06-30\",\n  \"servicePromotions\": {\n    \"passenger\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"quantity\",\n      \"buyX\": 2,\n      \"getY\": 1,\n      \"eligibility\": [\n        {\n          \"passengerTypeId\": \"{{passengerTypeId}}\",\n          \"cabinId\": \"{{cabinId}}\"\n        }\n      ]\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/promotions",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "promotions"]
+        },
+        "description": "Create a quantity-based passenger promotion: Buy 2 Get 1 free for a specific trip."
+      },
+      "response": []
+    },
+    {
+      "name": "Create Promotion - Passenger Value Discount",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"promotionName\": \"Passenger 10% Off\",\n  \"description\": \"10% discount when passenger value exceeds 100\",\n  \"promotionBasis\": \"Period\",\n  \"startDate\": \"2026-06-01\",\n  \"endDate\": \"2026-06-30\",\n  \"servicePromotions\": {\n    \"passenger\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"value\",\n      \"minValue\": 100,\n      \"discountType\": \"percentage\",\n      \"discountValue\": 10,\n      \"eligibility\": [\n        {\n          \"passengerTypeId\": \"{{passengerTypeId}}\",\n          \"cabinId\": \"{{cabinId}}\"\n        }\n      ]\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/promotions",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "promotions"]
+        },
+        "description": "Create a value-based passenger promotion: 10% off when minimum value is met."
+      },
+      "response": []
+    },
+    {
+      "name": "Create Promotion - Cargo Value Discount",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"promotionName\": \"Cargo Discount\",\n  \"description\": \"10% cargo discount when value exceeds 100\",\n  \"promotionBasis\": \"Period\",\n  \"startDate\": \"2026-06-01\",\n  \"endDate\": \"2026-06-30\",\n  \"servicePromotions\": {\n    \"cargo\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"value\",\n      \"minValue\": 100,\n      \"discountType\": \"percentage\",\n      \"discountValue\": 10\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/promotions",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "promotions"]
+        },
+        "description": "Create a value-based cargo promotion: 10% off when cargo value exceeds 100."
+      },
+      "response": []
+    },
+    {
+      "name": "Create Promotion - Vehicle Quantity",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"promotionName\": \"Vehicle Buy 3 Get 1\",\n  \"description\": \"Buy 3 vehicle slots, get 1 free\",\n  \"promotionBasis\": \"Trip\",\n  \"trip\": \"{{tripId}}\",\n  \"startDate\": \"2026-07-01\",\n  \"endDate\": \"2026-07-31\",\n  \"servicePromotions\": {\n    \"vehicle\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"quantity\",\n      \"buyX\": 3,\n      \"getY\": 1\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/promotions",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "promotions"]
+        },
+        "description": "Create a quantity-based vehicle promotion: Buy 3 Get 1 free."
+      },
+      "response": []
+    },
+    {
+      "name": "Create Promotion - Multi-Service",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"promotionName\": \"Summer Multi-Service Promo\",\n  \"description\": \"Discounts across passenger, cargo, and vehicle\",\n  \"promotionBasis\": \"Period\",\n  \"startDate\": \"2026-06-01\",\n  \"endDate\": \"2026-08-31\",\n  \"servicePromotions\": {\n    \"passenger\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"quantity\",\n      \"buyX\": 2,\n      \"getY\": 1,\n      \"eligibility\": [\n        {\n          \"passengerTypeId\": \"{{passengerTypeId}}\",\n          \"cabinId\": \"{{cabinId}}\"\n        }\n      ]\n    },\n    \"cargo\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"value\",\n      \"minValue\": 200,\n      \"discountType\": \"fixed\",\n      \"discountValue\": 50\n    },\n    \"vehicle\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"value\",\n      \"minValue\": 500,\n      \"discountType\": \"percentage\",\n      \"discountValue\": 15\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/promotions",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "promotions"]
+        },
+        "description": "Create a promotion with all three services enabled using different calculation types."
+      },
+      "response": []
+    },
+    {
+      "name": "Get All Promotions",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/promotions?page=1&limit=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "promotions"],
+          "query": [
+            { "key": "page", "value": "1" },
+            { "key": "limit", "value": "10" },
+            { "key": "search", "value": "", "disabled": true },
+            { "key": "status", "value": "Active", "disabled": true },
+            { "key": "basis", "value": "Trip", "disabled": true }
+          ]
+        },
+        "description": "List all promotions with optional filters: search, status, basis, and pagination."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Promotion By ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/promotions/{{promotionId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "promotions", "{{promotionId}}"]
+        },
+        "description": "Get a single promotion by its ID."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Active Promotions",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/promotions/active/list?page=1&limit=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "promotions", "active", "list"],
+          "query": [
+            { "key": "page", "value": "1" },
+            { "key": "limit", "value": "10" }
+          ]
+        },
+        "description": "Get promotions that are Active and currently valid by date."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Promotions By Trip",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/promotions/trip/{{tripId}}?page=1&limit=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "promotions", "trip", "{{tripId}}"],
+          "query": [
+            { "key": "page", "value": "1" },
+            { "key": "limit", "value": "10" },
+            { "key": "status", "value": "Active", "disabled": true }
+          ]
+        },
+        "description": "Get all promotions linked to a specific trip."
+      },
+      "response": []
+    },
+    {
+      "name": "Update Promotion",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"promotionName\": \"Updated Promotion Name\",\n  \"description\": \"Updated description\",\n  \"promotionBasis\": \"Period\",\n  \"startDate\": \"2026-07-01\",\n  \"endDate\": \"2026-09-30\",\n  \"status\": \"Active\",\n  \"servicePromotions\": {\n    \"passenger\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"value\",\n      \"minValue\": 150,\n      \"discountType\": \"percentage\",\n      \"discountValue\": 20,\n      \"eligibility\": [\n        {\n          \"passengerTypeId\": \"{{passengerTypeId}}\",\n          \"cabinId\": \"{{cabinId}}\"\n        }\n      ]\n    },\n    \"cargo\": {\n      \"isEnabled\": false\n    },\n    \"vehicle\": {\n      \"isEnabled\": false\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/promotions/{{promotionId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "promotions", "{{promotionId}}"]
+        },
+        "description": "Update an existing promotion by ID."
+      },
+      "response": []
+    },
+    {
+      "name": "Delete Promotion",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/promotions/{{promotionId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "promotions", "{{promotionId}}"]
+        },
+        "description": "Soft delete a promotion by ID."
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001",
+      "type": "string",
+      "description": "API base URL"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string",
+      "description": "JWT Bearer token from login"
+    },
+    {
+      "key": "promotionId",
+      "value": "",
+      "type": "string",
+      "description": "Promotion document ID"
+    },
+    {
+      "key": "tripId",
+      "value": "",
+      "type": "string",
+      "description": "Trip document ID"
+    },
+    {
+      "key": "passengerTypeId",
+      "value": "",
+      "type": "string",
+      "description": "PayloadType ID for passenger type"
+    },
+    {
+      "key": "cabinId",
+      "value": "",
+      "type": "string",
+      "description": "Cabin ID for eligibility"
+    }
+  ]
+}

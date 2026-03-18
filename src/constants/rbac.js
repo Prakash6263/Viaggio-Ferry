@@ -142,6 +142,11 @@ const MODULE_SUBMODULES = {
       label: "Commission Board",
       allowedPermissions: ["read", "write", "edit", "delete"],
     },
+    {
+      code: "promotions",
+      label: "Promotions",
+      allowedPermissions: ["read", "write", "edit", "delete"],
+    },
   ],
 
   "sales-bookings": [
