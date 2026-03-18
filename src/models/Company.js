@@ -79,7 +79,6 @@ const CompanySchema = new mongoose.Schema(
 // Indexes for query optimization
 CompanySchema.index({ companyName: 1 })
 CompanySchema.index({ status: 1 })
-CompanySchema.index({ loginEmail: 1 })
 
 async function generateRegistrationNumber() {
   const lastCompany = await mongoose

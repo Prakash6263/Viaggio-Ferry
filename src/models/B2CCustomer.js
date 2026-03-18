@@ -8,10 +8,9 @@ const b2cCustomerSchema = new mongoose.Schema(
       ref: "Company",
       required: false,
       default: null,
-      index: true,
     },
     name: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     phone: { type: String, required: true, trim: true },
     password: { type: String, required: true },
     partner: { type: mongoose.Schema.Types.ObjectId, ref: "Partner", default: null },
@@ -46,7 +45,6 @@ const b2cCustomerSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-b2cCustomerSchema.index({ email: 1 }, { unique: true })
 b2cCustomerSchema.index({ company: 1, email: 1 }, { sparse: true })
 b2cCustomerSchema.index({ name: "text", whatsappNumber: "text", "address.street": "text" })
 b2cCustomerSchema.index({ status: 1 })

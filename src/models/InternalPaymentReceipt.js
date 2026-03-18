@@ -7,7 +7,6 @@ const internalPaymentReceiptSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
       required: true,
-      index: true,
     },
 
     // Transaction Identifiers
@@ -15,7 +14,6 @@ const internalPaymentReceiptSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      index: true,
       // Format: IE-XXXXXXX (Incoming) or OI-XXXXXXX (Outgoing)
     },
     transactionDate: {
