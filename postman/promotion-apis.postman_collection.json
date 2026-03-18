@@ -76,7 +76,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"promotionName\": \"Cargo Discount\",\n  \"description\": \"10% cargo discount when value exceeds 100\",\n  \"promotionBasis\": \"Period\",\n  \"startDate\": \"2026-06-01\",\n  \"endDate\": \"2026-06-30\",\n  \"servicePromotions\": {\n    \"cargo\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"value\",\n      \"minValue\": 100,\n      \"discountType\": \"percentage\",\n      \"discountValue\": 10\n    }\n  }\n}"
+          "raw": "{\n  \"promotionName\": \"Cargo Discount\",\n  \"description\": \"10% cargo discount when value exceeds 100\",\n  \"promotionBasis\": \"Period\",\n  \"startDate\": \"2026-06-01\",\n  \"endDate\": \"2026-06-30\",\n  \"servicePromotions\": {\n    \"cargo\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"value\",\n      \"minValue\": 100,\n      \"discountType\": \"percentage\",\n      \"discountValue\": 10,\n      \"eligibility\": [\n        {\n          \"payloadId\": \"{{cargoPayloadId}}\"\n        }\n      ]\n    }\n  }\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/promotions",
@@ -84,6 +84,60 @@
           "path": ["api", "promotions"]
         },
         "description": "Create a value-based cargo promotion: 10% off when cargo value exceeds 100."
+      },
+      "response": []
+    },
+    {
+      "name": "Create Promotion - Cargo Quantity",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"promotionName\": \"Cargo Buy 2 Get 1\",\n  \"description\": \"Buy 2 cargo tickets, get 1 free\",\n  \"promotionBasis\": \"Trip\",\n  \"trip\": \"{{tripId}}\",\n  \"servicePromotions\": {\n    \"cargo\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"quantity\",\n      \"buyX\": 2,\n      \"getY\": 1,\n      \"eligibility\": [\n        {\n          \"payloadId\": \"{{cargoPayloadId}}\"\n        }\n      ]\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/promotions",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "promotions"]
+        },
+        "description": "Create a quantity-based cargo promotion: Buy 2 Get 1 free."
+      },
+      "response": []
+    },
+    {
+      "name": "Create Promotion - Vehicle Value Discount",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"promotionName\": \"Vehicle 15% Off\",\n  \"description\": \"15% discount when vehicle value exceeds 200\",\n  \"promotionBasis\": \"Period\",\n  \"startDate\": \"2026-06-01\",\n  \"endDate\": \"2026-06-30\",\n  \"servicePromotions\": {\n    \"vehicle\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"value\",\n      \"minValue\": 200,\n      \"discountType\": \"percentage\",\n      \"discountValue\": 15,\n      \"eligibility\": [\n        {\n          \"payloadId\": \"{{vehiclePayloadId}}\"\n        }\n      ]\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/promotions",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "promotions"]
+        },
+        "description": "Create a value-based vehicle promotion: 15% off when minimum value is met."
       },
       "response": []
     },
@@ -103,7 +157,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"promotionName\": \"Vehicle Buy 3 Get 1\",\n  \"description\": \"Buy 3 vehicle slots, get 1 free\",\n  \"promotionBasis\": \"Trip\",\n  \"trip\": \"{{tripId}}\",\n  \"servicePromotions\": {\n    \"vehicle\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"quantity\",\n      \"buyX\": 3,\n      \"getY\": 1\n    }\n  }\n}"
+          "raw": "{\n  \"promotionName\": \"Vehicle Buy 3 Get 1\",\n  \"description\": \"Buy 3 vehicle slots, get 1 free\",\n  \"promotionBasis\": \"Trip\",\n  \"trip\": \"{{tripId}}\",\n  \"servicePromotions\": {\n    \"vehicle\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"quantity\",\n      \"buyX\": 3,\n      \"getY\": 1,\n      \"eligibility\": [\n        {\n          \"payloadId\": \"{{vehiclePayloadId}}\"\n        }\n      ]\n    }\n  }\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/promotions",
@@ -130,7 +184,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"promotionName\": \"Summer Multi-Service Promo\",\n  \"description\": \"Discounts across passenger, cargo, and vehicle\",\n  \"promotionBasis\": \"Period\",\n  \"startDate\": \"2026-06-01\",\n  \"endDate\": \"2026-08-31\",\n  \"servicePromotions\": {\n    \"passenger\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"quantity\",\n      \"buyX\": 2,\n      \"getY\": 1,\n      \"eligibility\": [\n        {\n          \"passengerTypeId\": \"{{passengerTypeId}}\",\n          \"cabinId\": \"{{cabinId}}\"\n        }\n      ]\n    },\n    \"cargo\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"value\",\n      \"minValue\": 200,\n      \"discountType\": \"fixed\",\n      \"discountValue\": 50\n    },\n    \"vehicle\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"value\",\n      \"minValue\": 500,\n      \"discountType\": \"percentage\",\n      \"discountValue\": 15\n    }\n  }\n}"
+          "raw": "{\n  \"promotionName\": \"Summer Multi-Service Promo\",\n  \"description\": \"Discounts across passenger, cargo, and vehicle\",\n  \"promotionBasis\": \"Period\",\n  \"startDate\": \"2026-06-01\",\n  \"endDate\": \"2026-08-31\",\n  \"servicePromotions\": {\n    \"passenger\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"quantity\",\n      \"buyX\": 2,\n      \"getY\": 1,\n      \"eligibility\": [\n        {\n          \"passengerTypeId\": \"{{passengerTypeId}}\",\n          \"cabinId\": \"{{cabinId}}\"\n        }\n      ]\n    },\n    \"cargo\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"value\",\n      \"minValue\": 200,\n      \"discountType\": \"fixed\",\n      \"discountValue\": 50,\n      \"eligibility\": [\n        {\n          \"payloadId\": \"{{cargoPayloadId}}\"\n        }\n      ]\n    },\n    \"vehicle\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"value\",\n      \"minValue\": 500,\n      \"discountType\": \"percentage\",\n      \"discountValue\": 15,\n      \"eligibility\": [\n        {\n          \"payloadId\": \"{{vehiclePayloadId}}\"\n        }\n      ]\n    }\n  }\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/promotions",
@@ -315,7 +369,19 @@
       "key": "cabinId",
       "value": "",
       "type": "string",
-      "description": "Cabin ID for eligibility"
+      "description": "Cabin ID for passenger eligibility"
+    },
+    {
+      "key": "cargoPayloadId",
+      "value": "",
+      "type": "string",
+      "description": "PayloadType ID for cargo eligibility (e.g., General Goods)"
+    },
+    {
+      "key": "vehiclePayloadId",
+      "value": "",
+      "type": "string",
+      "description": "PayloadType ID for vehicle eligibility (e.g., Car)"
     }
   ]
 }

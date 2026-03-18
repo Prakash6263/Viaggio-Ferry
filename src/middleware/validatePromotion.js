@@ -55,6 +55,20 @@ function validateServiceBlock(service, serviceName, errors) {
       errors.push(`servicePromotions.${serviceName}.discountType is required when calculationType is value`)
     }
   }
+
+  // Eligibility required for cargo/vehicle (payloadId)
+  if (!service.eligibility || !Array.isArray(service.eligibility) || service.eligibility.length === 0) {
+    errors.push(`servicePromotions.${serviceName}.eligibility is required with at least one entry when ${serviceName} is enabled`)
+  } else {
+    for (let i = 0; i < service.eligibility.length; i++) {
+      const entry = service.eligibility[i]
+      if (!entry.payloadId) {
+        errors.push(`servicePromotions.${serviceName}.eligibility[${i}].payloadId is required`)
+      } else if (!mongoose.Types.ObjectId.isValid(entry.payloadId)) {
+        errors.push(`servicePromotions.${serviceName}.eligibility[${i}].payloadId must be a valid ObjectId`)
+      }
+    }
+  }
 }
 
 /**

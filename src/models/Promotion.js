@@ -5,8 +5,8 @@ const PROMOTION_BASIS = ["Period", "Trip"]
 const CALCULATION_TYPES = ["quantity", "value"]
 const DISCOUNT_TYPES = ["percentage", "fixed"]
 
-// Eligibility sub-schema (passenger only)
-const EligibilitySchema = new mongoose.Schema(
+// Passenger eligibility sub-schema (passengerTypeId + cabinId)
+const PassengerEligibilitySchema = new mongoose.Schema(
   {
     passengerTypeId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -16,6 +16,18 @@ const EligibilitySchema = new mongoose.Schema(
     cabinId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Cabin",
+      required: true,
+    },
+  },
+  { _id: false },
+)
+
+// Cargo/Vehicle eligibility sub-schema (payloadId only)
+const PayloadEligibilitySchema = new mongoose.Schema(
+  {
+    payloadId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "PayloadType",
       required: true,
     },
   },
@@ -46,8 +58,8 @@ const PassengerPromotionSchema = new mongoose.Schema(
     },
     discountValue: { type: Number, default: null, min: 0 },
 
-    // Passenger-specific eligibility
-    eligibility: [EligibilitySchema],
+    // Passenger eligibility (passengerTypeId + cabinId)
+    eligibility: [PassengerEligibilitySchema],
   },
   { _id: false },
 )
@@ -75,6 +87,9 @@ const CargoPromotionSchema = new mongoose.Schema(
       default: null,
     },
     discountValue: { type: Number, default: null, min: 0 },
+
+    // Cargo eligibility (payloadId only)
+    eligibility: [PayloadEligibilitySchema],
   },
   { _id: false },
 )
@@ -102,6 +117,9 @@ const VehiclePromotionSchema = new mongoose.Schema(
       default: null,
     },
     discountValue: { type: Number, default: null, min: 0 },
+
+    // Vehicle eligibility (payloadId only)
+    eligibility: [PayloadEligibilitySchema],
   },
   { _id: false },
 )

@@ -8,6 +8,7 @@ function buildPopulate(query) {
   return query
     .populate("company", "companyName")
     .populate("trip", "tripName tripNumber")
+    // Passenger eligibility: passengerTypeId + cabinId
     .populate({
       path: "servicePromotions.passenger.eligibility.passengerTypeId",
       select: "name code category",
@@ -15,6 +16,16 @@ function buildPopulate(query) {
     .populate({
       path: "servicePromotions.passenger.eligibility.cabinId",
       select: "name type description",
+    })
+    // Cargo eligibility: payloadId
+    .populate({
+      path: "servicePromotions.cargo.eligibility.payloadId",
+      select: "name code category",
+    })
+    // Vehicle eligibility: payloadId
+    .populate({
+      path: "servicePromotions.vehicle.eligibility.payloadId",
+      select: "name code category",
     })
 }
 
