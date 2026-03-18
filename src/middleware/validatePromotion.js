@@ -98,26 +98,27 @@ const validatePromotion = async (req, res, next) => {
       errors.push(`promotionBasis must be one of: ${VALID_PROMOTION_BASIS.join(", ")}`)
     }
 
-    // ---- startDate ----
-    if (!startDate) {
-      errors.push("startDate is required")
-    } else if (isNaN(new Date(startDate).getTime())) {
-      errors.push("startDate must be a valid date")
-    }
+    // ---- startDate / endDate (only required for Period basis) ----
+    if (promotionBasis === "Period") {
+      if (!startDate) {
+        errors.push("startDate is required when promotionBasis is Period")
+      } else if (isNaN(new Date(startDate).getTime())) {
+        errors.push("startDate must be a valid date")
+      }
 
-    // ---- endDate ----
-    if (!endDate) {
-      errors.push("endDate is required")
-    } else if (isNaN(new Date(endDate).getTime())) {
-      errors.push("endDate must be a valid date")
-    }
+      if (!endDate) {
+        errors.push("endDate is required when promotionBasis is Period")
+      } else if (isNaN(new Date(endDate).getTime())) {
+        errors.push("endDate must be a valid date")
+      }
 
-    // ---- startDate < endDate ----
-    if (startDate && endDate) {
-      const start = new Date(startDate)
-      const end = new Date(endDate)
-      if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end <= start) {
-        errors.push("endDate must be greater than startDate")
+      // startDate < endDate
+      if (startDate && endDate) {
+        const start = new Date(startDate)
+        const end = new Date(endDate)
+        if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end <= start) {
+          errors.push("endDate must be greater than startDate")
+        }
       }
     }
 

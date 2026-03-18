@@ -55,8 +55,9 @@ const createPromotion = async (req, res, next) => {
       description: description || "",
       promotionBasis,
       trip: promotionBasis === "Trip" ? trip : null,
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
+      // startDate/endDate only for Period-based promotions
+      startDate: promotionBasis === "Period" && startDate ? new Date(startDate) : null,
+      endDate: promotionBasis === "Period" && endDate ? new Date(endDate) : null,
       status: status || "Active",
       servicePromotions: servicePromotions || {},
       createdBy: buildAuditTrail(req),
@@ -241,12 +242,24 @@ const getActivePromotions = async (req, res, next) => {
 
     const now = new Date()
     const skip = (page - 1) * limit
+
+    // Active promotions are either:
+    // 1. Trip-based: status is Active (validity tied to trip)
+    // 2. Period-based: status is Active AND current date is within startDate/endDate
     const filter = {
       company: companyId,
       isDeleted: false,
       status: "Active",
-      startDate: { $lte: now },
-      endDate: { $gte: now },
+      $or: [
+        // Trip-based promotions (no date constraints)
+        { promotionBasis: "Trip" },
+        // Period-based promotions (date must be within range)
+        {
+          promotionBasis: "Period",
+          startDate: { $lte: now },
+          endDate: { $gte: now },
+        },
+      ],
     }
 
     const promotions = await buildPopulate(Promotion.find(filter))

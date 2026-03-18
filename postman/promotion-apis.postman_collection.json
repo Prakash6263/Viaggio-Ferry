@@ -22,7 +22,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"promotionName\": \"Buy 2 Get 1\",\n  \"description\": \"Buy 2 passenger tickets, get 1 free\",\n  \"promotionBasis\": \"Trip\",\n  \"trip\": \"{{tripId}}\",\n  \"startDate\": \"2026-06-01\",\n  \"endDate\": \"2026-06-30\",\n  \"servicePromotions\": {\n    \"passenger\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"quantity\",\n      \"buyX\": 2,\n      \"getY\": 1,\n      \"eligibility\": [\n        {\n          \"passengerTypeId\": \"{{passengerTypeId}}\",\n          \"cabinId\": \"{{cabinId}}\"\n        }\n      ]\n    }\n  }\n}"
+          "raw": "{\n  \"promotionName\": \"Buy 2 Get 1\",\n  \"description\": \"Buy 2 passenger tickets, get 1 free\",\n  \"promotionBasis\": \"Trip\",\n  \"trip\": \"{{tripId}}\",\n  \"servicePromotions\": {\n    \"passenger\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"quantity\",\n      \"buyX\": 2,\n      \"getY\": 1,\n      \"eligibility\": [\n        {\n          \"passengerTypeId\": \"{{passengerTypeId}}\",\n          \"cabinId\": \"{{cabinId}}\"\n        }\n      ]\n    }\n  }\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/promotions",
@@ -103,7 +103,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"promotionName\": \"Vehicle Buy 3 Get 1\",\n  \"description\": \"Buy 3 vehicle slots, get 1 free\",\n  \"promotionBasis\": \"Trip\",\n  \"trip\": \"{{tripId}}\",\n  \"startDate\": \"2026-07-01\",\n  \"endDate\": \"2026-07-31\",\n  \"servicePromotions\": {\n    \"vehicle\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"quantity\",\n      \"buyX\": 3,\n      \"getY\": 1\n    }\n  }\n}"
+          "raw": "{\n  \"promotionName\": \"Vehicle Buy 3 Get 1\",\n  \"description\": \"Buy 3 vehicle slots, get 1 free\",\n  \"promotionBasis\": \"Trip\",\n  \"trip\": \"{{tripId}}\",\n  \"servicePromotions\": {\n    \"vehicle\": {\n      \"isEnabled\": true,\n      \"calculationType\": \"quantity\",\n      \"buyX\": 3,\n      \"getY\": 1\n    }\n  }\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/promotions",

@@ -147,8 +147,9 @@ const PromotionSchema = new mongoose.Schema(
       default: null,
     },
 
-    startDate: { type: Date, required: true },
-    endDate: { type: Date, required: true },
+    // Only required when promotionBasis is "Period"
+    startDate: { type: Date, default: null },
+    endDate: { type: Date, default: null },
 
     // Service promotions - core logic
     servicePromotions: {
