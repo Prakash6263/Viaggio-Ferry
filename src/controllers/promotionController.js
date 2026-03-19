@@ -2,8 +2,47 @@ const createHttpError = require("http-errors")
 const { Promotion } = require("../models/Promotion")
 
 /**
+ * Helper: build populate chain used by all queries
+ */
+function buildPopulate(query) {
+  return query
+    .populate("company", "companyName")
+    .populate("trip", "tripName tripNumber")
+    // Passenger eligibility: passengerTypeId + cabinId
+    .populate({
+      path: "servicePromotions.passenger.eligibility.passengerTypeId",
+      select: "name code category",
+    })
+    .populate({
+      path: "servicePromotions.passenger.eligibility.cabinId",
+      select: "name type description",
+    })
+    // Cargo eligibility: payloadId
+    .populate({
+      path: "servicePromotions.cargo.eligibility.payloadId",
+      select: "name code category",
+    })
+    // Vehicle eligibility: payloadId
+    .populate({
+      path: "servicePromotions.vehicle.eligibility.payloadId",
+      select: "name code category",
+    })
+}
+
+/**
+ * Helper: build audit trail object
+ */
+function buildAuditTrail(req) {
+  return {
+    id: req.user?.id,
+    name: req.user?.email,
+    type: req.user?.role === "company" ? "company" : "user",
+  }
+}
+
+// ─── CREATE ───────────────────────────────────────────────────────────
+/**
  * POST /api/promotions
- * Create a new promotion
  */
 const createPromotion = async (req, res, next) => {
   try {
@@ -16,22 +55,10 @@ const createPromotion = async (req, res, next) => {
       startDate,
       endDate,
       status,
-      passengerBenefit,
-      cargoBenefit,
-      vehicleBenefit,
-      serviceBenefits,
+      servicePromotions,
     } = req.body
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
-
-    // Determine createdBy info based on role
-    // If role is "company", createdBy references company schema
-    // If role is "user", createdBy references user schema
-    const createdByInfo = {
-      id: req.user?.id,
-      name: req.user?.email,
-      type: req.user?.role === "company" ? "company" : "user",
-    }
 
     const promotion = new Promotion({
       company: companyId,
@@ -39,37 +66,33 @@ const createPromotion = async (req, res, next) => {
       description: description || "",
       promotionBasis,
       trip: promotionBasis === "Trip" ? trip : null,
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
+      // startDate/endDate only for Period-based promotions
+      startDate: promotionBasis === "Period" && startDate ? new Date(startDate) : null,
+      endDate: promotionBasis === "Period" && endDate ? new Date(endDate) : null,
       status: status || "Active",
-      passengerBenefit: passengerBenefit || { isEnabled: false },
-      cargoBenefit: cargoBenefit || { isEnabled: false },
-      vehicleBenefit: vehicleBenefit || { isEnabled: false },
-      serviceBenefits: serviceBenefits || [],
-      createdBy: createdByInfo,
+      servicePromotions: servicePromotions || {},
+      createdBy: buildAuditTrail(req),
     })
 
     await promotion.save()
 
-    // Return the created promotion as is (createdBy is now a nested object)
-    const populatedPromotion = await Promotion.findById(promotion._id)
-      .populate("company", "companyName")
-      .populate("trip", "tripName tripNumber")
-      .lean()
+    const populated = await buildPopulate(
+      Promotion.findById(promotion._id),
+    ).lean()
 
     res.status(201).json({
       success: true,
       message: "Promotion created successfully",
-      data: populatedPromotion,
+      data: populated,
     })
   } catch (error) {
     next(error)
   }
 }
 
+// ─── LIST ─────────────────────────────────────────────────────────────
 /**
  * GET /api/promotions
- * List all promotions for the company
  */
 const listPromotions = async (req, res, next) => {
   try {
@@ -79,27 +102,15 @@ const listPromotions = async (req, res, next) => {
     if (!companyId) throw createHttpError(400, "Company ID is required")
 
     const skip = (page - 1) * limit
-    const filter = {
-      company: companyId,
-      isDeleted: false,
-    }
+    const filter = { company: companyId, isDeleted: false }
 
-    // Apply filters
     if (search && search.trim().length > 0) {
       filter.promotionName = { $regex: search.trim(), $options: "i" }
     }
+    if (status) filter.status = status
+    if (basis) filter.promotionBasis = basis
 
-    if (status) {
-      filter.status = status
-    }
-
-    if (basis) {
-      filter.promotionBasis = basis
-    }
-
-    const promotions = await Promotion.find(filter)
-      .populate("company", "companyName")
-      .populate("trip", "tripName tripNumber")
+    const promotions = await buildPopulate(Promotion.find(filter))
       .skip(skip)
       .limit(Number.parseInt(limit))
       .sort({ createdAt: -1 })
@@ -122,9 +133,9 @@ const listPromotions = async (req, res, next) => {
   }
 }
 
+// ─── GET BY ID ────────────────────────────────────────────────────────
 /**
  * GET /api/promotions/:id
- * Get a specific promotion
  */
 const getPromotionById = async (req, res, next) => {
   try {
@@ -133,31 +144,21 @@ const getPromotionById = async (req, res, next) => {
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
 
-    const promotion = await Promotion.findOne({
-      _id: id,
-      company: companyId,
-      isDeleted: false,
-    })
-      .populate("company", "companyName")
-      .populate("trip", "tripName tripNumber")
-      .lean()
+    const promotion = await buildPopulate(
+      Promotion.findOne({ _id: id, company: companyId, isDeleted: false }),
+    ).lean()
 
-    if (!promotion) {
-      throw createHttpError(404, "Promotion not found")
-    }
+    if (!promotion) throw createHttpError(404, "Promotion not found")
 
-    res.json({
-      success: true,
-      data: promotion,
-    })
+    res.json({ success: true, data: promotion })
   } catch (error) {
     next(error)
   }
 }
 
+// ─── UPDATE ───────────────────────────────────────────────────────────
 /**
  * PUT /api/promotions/:id
- * Update a promotion
  */
 const updatePromotion = async (req, res, next) => {
   try {
@@ -171,71 +172,53 @@ const updatePromotion = async (req, res, next) => {
       startDate,
       endDate,
       status,
-      passengerBenefit,
-      cargoBenefit,
-      vehicleBenefit,
-      serviceBenefits,
+      servicePromotions,
     } = req.body
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
 
-    // Determine updatedBy info based on role
-    const updatedByInfo = {
-      id: req.user?.id,
-      name: req.user?.email,
-      type: req.user?.role === "company" ? "company" : "user",
-    }
+    const promotion = await Promotion.findOne({ _id: id, company: companyId })
+    if (!promotion) throw createHttpError(404, "Promotion not found")
 
-    const promotion = await Promotion.findOne({
-      _id: id,
-      company: companyId,
-    })
-
-    if (!promotion) {
-      throw createHttpError(404, "Promotion not found")
-    }
-
-    // Update fields if provided
+    // Update scalar fields when provided
     if (promotionName !== undefined) {
       if (promotionName.trim().length === 0) throw createHttpError(400, "promotionName cannot be empty")
       promotion.promotionName = promotionName.trim()
     }
-
     if (description !== undefined) promotion.description = description || ""
     if (promotionBasis !== undefined) promotion.promotionBasis = promotionBasis
     if (trip !== undefined) {
-      promotion.trip = promotionBasis === "Trip" ? trip : null
+      promotion.trip = (promotionBasis || promotion.promotionBasis) === "Trip" ? trip : null
     }
     if (startDate !== undefined) promotion.startDate = new Date(startDate)
     if (endDate !== undefined) promotion.endDate = new Date(endDate)
     if (status !== undefined) promotion.status = status
 
-    if (passengerBenefit !== undefined) promotion.passengerBenefit = passengerBenefit
-    if (cargoBenefit !== undefined) promotion.cargoBenefit = cargoBenefit
-    if (vehicleBenefit !== undefined) promotion.vehicleBenefit = vehicleBenefit
-    if (serviceBenefits !== undefined) promotion.serviceBenefits = serviceBenefits
+    // Update service promotions
+    if (servicePromotions !== undefined) {
+      promotion.servicePromotions = servicePromotions
+    }
 
-    promotion.updatedBy = updatedByInfo
+    promotion.updatedBy = buildAuditTrail(req)
     await promotion.save()
 
-    const populatedPromotion = await Promotion.findById(promotion._id)
-      .populate("company", "companyName")
-      .populate("trip", "tripName tripNumber")
-      .lean()
+    const populated = await buildPopulate(
+      Promotion.findById(promotion._id),
+    ).lean()
 
     res.json({
       success: true,
       message: "Promotion updated successfully",
-      data: populatedPromotion,
+      data: populated,
     })
   } catch (error) {
     next(error)
   }
 }
 
+// ─── DELETE (soft) ────────────────────────────────────────────────────
 /**
  * DELETE /api/promotions/:id
- * Soft delete a promotion
  */
 const deletePromotion = async (req, res, next) => {
   try {
@@ -244,39 +227,22 @@ const deletePromotion = async (req, res, next) => {
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
 
-    // Determine updatedBy info based on role
-    const updatedByInfo = {
-      id: req.user?.id,
-      name: req.user?.email,
-      type: req.user?.role === "company" ? "company" : "user",
-    }
+    const promotion = await Promotion.findOne({ _id: id, company: companyId })
+    if (!promotion) throw createHttpError(404, "Promotion not found")
 
-    const promotion = await Promotion.findOne({
-      _id: id,
-      company: companyId,
-    })
-
-    if (!promotion) {
-      throw createHttpError(404, "Promotion not found")
-    }
-
-    // Soft delete
     promotion.isDeleted = true
-    promotion.updatedBy = updatedByInfo
+    promotion.updatedBy = buildAuditTrail(req)
     await promotion.save()
 
-    res.json({
-      success: true,
-      message: "Promotion deleted successfully",
-    })
+    res.json({ success: true, message: "Promotion deleted successfully" })
   } catch (error) {
     next(error)
   }
 }
 
+// ─── ACTIVE LIST ──────────────────────────────────────────────────────
 /**
  * GET /api/promotions/active/list
- * Get active promotions (status = Active, no date range filter)
  */
 const getActivePromotions = async (req, res, next) => {
   try {
@@ -285,17 +251,29 @@ const getActivePromotions = async (req, res, next) => {
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
 
+    const now = new Date()
     const skip = (page - 1) * limit
 
+    // Active promotions are either:
+    // 1. Trip-based: status is Active (validity tied to trip)
+    // 2. Period-based: status is Active AND current date is within startDate/endDate
     const filter = {
       company: companyId,
       isDeleted: false,
       status: "Active",
+      $or: [
+        // Trip-based promotions (no date constraints)
+        { promotionBasis: "Trip" },
+        // Period-based promotions (date must be within range)
+        {
+          promotionBasis: "Period",
+          startDate: { $lte: now },
+          endDate: { $gte: now },
+        },
+      ],
     }
 
-    const promotions = await Promotion.find(filter)
-      .populate("company", "companyName")
-      .populate("trip", "tripName tripNumber")
+    const promotions = await buildPopulate(Promotion.find(filter))
       .skip(skip)
       .limit(Number.parseInt(limit))
       .sort({ createdAt: -1 })
@@ -318,9 +296,9 @@ const getActivePromotions = async (req, res, next) => {
   }
 }
 
+// ─── BY TRIP ──────────────────────────────────────────────────────────
 /**
  * GET /api/promotions/trip/:tripId
- * Get promotions for a specific trip
  */
 const getPromotionsByTripId = async (req, res, next) => {
   try {
@@ -332,21 +310,10 @@ const getPromotionsByTripId = async (req, res, next) => {
     if (!tripId) throw createHttpError(400, "Trip ID is required")
 
     const skip = (page - 1) * limit
+    const filter = { company: companyId, trip: tripId, isDeleted: false }
+    if (status) filter.status = status
 
-    const filter = {
-      company: companyId,
-      trip: tripId,
-      isDeleted: false,
-    }
-
-    // Optionally filter by status
-    if (status) {
-      filter.status = status
-    }
-
-    const promotions = await Promotion.find(filter)
-      .populate("company", "companyName")
-      .populate("trip", "tripName tripNumber")
+    const promotions = await buildPopulate(Promotion.find(filter))
       .skip(skip)
       .limit(Number.parseInt(limit))
       .sort({ createdAt: -1 })

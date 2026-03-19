@@ -13,11 +13,11 @@ router.use(extractUserId)
 /**
  * POST /api/promotions
  * Create a new promotion
- * Permission: partners_management > promotion > write
+ * Permission: partners-management > promotions > write
  */
 router.post(
   "/",
-  checkPermission("partners_management", "promotion", "write"),
+  checkPermission("partners-management", "promotions", "write"),
   validatePromotion,
   promotionController.createPromotion,
 )
@@ -25,23 +25,23 @@ router.post(
 /**
  * GET /api/promotions
  * List all promotions for the company
- * Permission: partners_management > promotion > read
+ * Permission: partners-management > promotions > read
  */
 router.get(
   "/",
-  checkPermission("partners_management", "promotion", "read"),
+  checkPermission("partners-management", "promotions", "read"),
   promotionController.listPromotions,
 )
 
 /**
  * GET /api/promotions/active/list
- * Get active promotions (date and status filtered)
+ * Get currently active promotions (status = Active AND within date range)
  * NOTE: Must come before /:id route
- * Permission: partners_management > promotion > read
+ * Permission: partners-management > promotions > read
  */
 router.get(
   "/active/list",
-  checkPermission("partners_management", "promotion", "read"),
+  checkPermission("partners-management", "promotions", "read"),
   promotionController.getActivePromotions,
 )
 
@@ -49,33 +49,33 @@ router.get(
  * GET /api/promotions/trip/:tripId
  * Get promotions for a specific trip
  * NOTE: Must come before /:id route
- * Permission: partners_management > promotion > read
+ * Permission: partners-management > promotions > read
  */
 router.get(
   "/trip/:tripId",
-  checkPermission("partners_management", "promotion", "read"),
+  checkPermission("partners-management", "promotions", "read"),
   promotionController.getPromotionsByTripId,
 )
 
 /**
  * GET /api/promotions/:id
  * Get a specific promotion
- * Permission: partners_management > promotion > read
+ * Permission: partners-management > promotions > read
  */
 router.get(
   "/:id",
-  checkPermission("partners_management", "promotion", "read"),
+  checkPermission("partners-management", "promotions", "read"),
   promotionController.getPromotionById,
 )
 
 /**
  * PUT /api/promotions/:id
  * Update a promotion
- * Permission: partners_management > promotion > edit
+ * Permission: partners-management > promotions > edit
  */
 router.put(
   "/:id",
-  checkPermission("partners_management", "promotion", "edit"),
+  checkPermission("partners-management", "promotions", "edit"),
   validatePromotion,
   promotionController.updatePromotion,
 )
@@ -83,11 +83,11 @@ router.put(
 /**
  * DELETE /api/promotions/:id
  * Soft delete a promotion
- * Permission: partners_management > promotion > delete
+ * Permission: partners-management > promotions > delete
  */
 router.delete(
   "/:id",
-  checkPermission("partners_management", "promotion", "delete"),
+  checkPermission("partners-management", "promotions", "delete"),
   promotionController.deletePromotion,
 )
 
