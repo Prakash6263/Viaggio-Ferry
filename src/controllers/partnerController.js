@@ -1233,26 +1233,20 @@ const getChildPartnersByLayer = async (req, res, next) => {
     const userLayer = req.user?.layer
     const userId = req.user?.id
 
-    // Only company and partner users can access child partners
+    // Only company and user (agent) roles can access child partners
     if (userRole !== "company" && userRole !== "user") {
-      throw createHttpError(403, "Only company or partner accounts can access child partners")
+      throw createHttpError(403, "Only company or agent accounts can access child partners")
     }
 
-    const { status = "Active", page = 1, limit = 10 } = req.query
+    const { status, page = 1, limit = 10 } = req.query
     const skip = (parseInt(page) - 1) * parseInt(limit)
 
-    let childFilter = {
-      isDeleted: false,
-      disabled: false,
-      partnerStatus: status,
-    }
+    const childFilter = { isDeleted: false }
+    if (status) childFilter.partnerStatus = status
 
-    let responseMetadata = {
-      userRole,
-      userLayer,
-    }
+    const responseMetadata = { userRole, userLayer }
 
-    // CASE 1: Company user - return all Marine Agents
+    // CASE 1: Company user → return all Marine partners under this company
     if (userRole === "company") {
       childFilter.company = companyId
       childFilter.layer = "Marine"
@@ -1260,48 +1254,15 @@ const getChildPartnersByLayer = async (req, res, next) => {
       responseMetadata.parentId = companyId
       responseMetadata.childLayer = "Marine"
     }
-    // CASE 2: Partner/User - determine layer and return appropriate children
+
+    // CASE 2: Agent user → use user.agent (partnerId) to determine children
     else {
       if (!userLayer) {
         throw createHttpError(400, "User layer information not found in token")
       }
 
-      // Find the partner account associated with this user
-      const userPartner = await Partner.findOne({
-        users: userId,
-        isDeleted: false,
-      }).select("_id layer company parentAccount parentCompany")
-
-      if (!userPartner) {
-        throw createHttpError(404, "Partner account not found for this user")
-      }
-
-      childFilter.company = userPartner.company
-
-      // Normalize layer name to match Partner model (e.g., "marine-agent" → "Marine")
-      const normalizedLayer = userLayer
-        .split("-")[0]
-        .charAt(0)
-        .toUpperCase() + userLayer.split("-")[0].slice(1)
-
-      responseMetadata.parentId = userPartner._id
-      responseMetadata.parentLayer = userPartner.layer
-      responseMetadata.parentType = "Partner"
-
-      // MARINE AGENT: return Commercial Agents
-      if (normalizedLayer === "Marine") {
-        childFilter.layer = "Commercial"
-        childFilter.parentAccount = userPartner._id
-        responseMetadata.childLayer = "Commercial"
-      }
-      // COMMERCIAL AGENT: return Selling Agents
-      else if (normalizedLayer === "Commercial") {
-        childFilter.layer = "Selling"
-        childFilter.parentAccount = userPartner._id
-        responseMetadata.childLayer = "Selling"
-      }
-      // SELLING AGENT: no children
-      else if (normalizedLayer === "Selling") {
+      // Selling agents have no children — return early
+      if (userLayer === "selling-agent") {
         return res.json({
           success: true,
           message: "Selling agents have no child partners",
@@ -1314,21 +1275,62 @@ const getChildPartnersByLayer = async (req, res, next) => {
           data: [],
         })
       }
-      // UNKNOWN LAYER: error
+
+      // Look up the User record to get user.agent (the partner ObjectId)
+      const User = require("../models/User")
+      const userRecord = await User.findOne({
+        _id: userId,
+        isDeleted: false,
+      }).select("agent company layer")
+
+      if (!userRecord) {
+        throw createHttpError(404, "User not found")
+      }
+
+      if (!userRecord.agent) {
+        throw createHttpError(400, "No partner (agent) linked to this user")
+      }
+
+      // Verify the partner exists
+      const userPartner = await Partner.findOne({
+        _id: userRecord.agent,
+        isDeleted: false,
+      }).select("_id layer company")
+
+      if (!userPartner) {
+        throw createHttpError(404, "Partner account not found for this user")
+      }
+
+      childFilter.company = userPartner.company
+      responseMetadata.parentId = userPartner._id
+      responseMetadata.parentLayer = userPartner.layer
+      responseMetadata.parentType = "Partner"
+
+      // marine-agent → children are Commercial partners
+      if (userLayer === "marine-agent") {
+        childFilter.layer = "Commercial"
+        childFilter.parentAccount = userPartner._id
+        responseMetadata.childLayer = "Commercial"
+      }
+      // commercial-agent → children are Selling partners
+      else if (userLayer === "commercial-agent") {
+        childFilter.layer = "Selling"
+        childFilter.parentAccount = userPartner._id
+        responseMetadata.childLayer = "Selling"
+      }
       else {
         throw createHttpError(400, `Unknown user layer: ${userLayer}`)
       }
     }
 
-    // Execute query
+    // Execute query with pagination
     const total = await Partner.countDocuments(childFilter)
     const childPartners = await Partner.find(childFilter)
       .skip(skip)
       .limit(parseInt(limit))
-      .populate("company", "name email")
+      .populate("company", "companyName email")
       .populate("parentAccount", "name layer")
-      .populate("parentCompany", "name email")
-      .populate("users", "fullName email position layer")
+      .populate("parentCompany", "companyName email")
       .sort({ createdAt: -1 })
 
     res.json({
