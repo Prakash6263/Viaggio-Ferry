@@ -15,13 +15,7 @@ const VALID_DISCOUNT_TYPES = ["percentage", "fixed"]
  * @param {string[]} errors - Array to collect error messages
  */
 function validateServiceBlock(service, serviceName, errors) {
-  console.log(`[v0] validateServiceBlock - ${serviceName}:`, JSON.stringify(service, null, 2))
-  console.log(`[v0] validateServiceBlock - ${serviceName}.isEnabled:`, service?.isEnabled, "type:", typeof service?.isEnabled)
-  
-  if (!service || !service.isEnabled) {
-    console.log(`[v0] validateServiceBlock - Skipping ${serviceName} (not enabled)`)
-    return
-  }
+  if (!service || !service.isEnabled) return
 
   // calculationType is required when enabled
   if (!service.calculationType) {
@@ -37,23 +31,19 @@ function validateServiceBlock(service, serviceName, errors) {
   }
 
   if (service.calculationType === "quantity") {
-    const buyX = Number(service.buyX)
-    const getY = Number(service.getY)
-    if (service.buyX === undefined || service.buyX === null || isNaN(buyX) || buyX <= 0) {
+    if (service.buyX === undefined || service.buyX === null || typeof service.buyX !== "number" || service.buyX <= 0) {
       errors.push(`servicePromotions.${serviceName}.buyX must be a number greater than 0 when calculationType is quantity`)
     }
-    if (service.getY === undefined || service.getY === null || isNaN(getY) || getY <= 0) {
+    if (service.getY === undefined || service.getY === null || typeof service.getY !== "number" || service.getY <= 0) {
       errors.push(`servicePromotions.${serviceName}.getY must be a number greater than 0 when calculationType is quantity`)
     }
   }
 
   if (service.calculationType === "value") {
-    const minValue = Number(service.minValue)
-    const discountValue = Number(service.discountValue)
-    if (service.minValue === undefined || service.minValue === null || isNaN(minValue) || minValue <= 0) {
+    if (service.minValue === undefined || service.minValue === null || typeof service.minValue !== "number" || service.minValue <= 0) {
       errors.push(`servicePromotions.${serviceName}.minValue must be a number greater than 0 when calculationType is value`)
     }
-    if (service.discountValue === undefined || service.discountValue === null || isNaN(discountValue) || discountValue <= 0) {
+    if (service.discountValue === undefined || service.discountValue === null || typeof service.discountValue !== "number" || service.discountValue <= 0) {
       errors.push(`servicePromotions.${serviceName}.discountValue must be a number greater than 0 when calculationType is value`)
     }
     if (service.discountType && !VALID_DISCOUNT_TYPES.includes(service.discountType)) {
@@ -103,9 +93,6 @@ const validatePromotion = async (req, res, next) => {
       status,
       servicePromotions,
     } = req.body
-
-    // Debug: Log the incoming servicePromotions to see exact structure
-    console.log("[v0] validatePromotion - servicePromotions:", JSON.stringify(servicePromotions, null, 2))
 
     const errors = []
 
@@ -207,23 +194,19 @@ const validatePromotion = async (req, res, next) => {
           )
         } else {
           if (passenger.calculationType === "quantity") {
-            const buyX = Number(passenger.buyX)
-            const getY = Number(passenger.getY)
-            if (passenger.buyX === undefined || passenger.buyX === null || isNaN(buyX) || buyX <= 0) {
+            if (passenger.buyX === undefined || passenger.buyX === null || typeof passenger.buyX !== "number" || passenger.buyX <= 0) {
               errors.push("servicePromotions.passenger.buyX must be a number greater than 0 when calculationType is quantity")
             }
-            if (passenger.getY === undefined || passenger.getY === null || isNaN(getY) || getY <= 0) {
+            if (passenger.getY === undefined || passenger.getY === null || typeof passenger.getY !== "number" || passenger.getY <= 0) {
               errors.push("servicePromotions.passenger.getY must be a number greater than 0 when calculationType is quantity")
             }
           }
 
           if (passenger.calculationType === "value") {
-            const minValue = Number(passenger.minValue)
-            const discountValue = Number(passenger.discountValue)
-            if (passenger.minValue === undefined || passenger.minValue === null || isNaN(minValue) || minValue <= 0) {
+            if (passenger.minValue === undefined || passenger.minValue === null || typeof passenger.minValue !== "number" || passenger.minValue <= 0) {
               errors.push("servicePromotions.passenger.minValue must be a number greater than 0 when calculationType is value")
             }
-            if (passenger.discountValue === undefined || passenger.discountValue === null || isNaN(discountValue) || discountValue <= 0) {
+            if (passenger.discountValue === undefined || passenger.discountValue === null || typeof passenger.discountValue !== "number" || passenger.discountValue <= 0) {
               errors.push("servicePromotions.passenger.discountValue must be a number greater than 0 when calculationType is value")
             }
             if (!passenger.discountType) {
