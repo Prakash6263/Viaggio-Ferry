@@ -60,6 +60,9 @@ const createPromotion = async (req, res, next) => {
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
 
+    // Debug: log incoming servicePromotions
+    console.log("[v0] createPromotion - incoming servicePromotions:", JSON.stringify(servicePromotions, null, 2))
+
     const promotion = new Promotion({
       company: companyId,
       promotionName: promotionName.trim(),
@@ -74,7 +77,13 @@ const createPromotion = async (req, res, next) => {
       createdBy: buildAuditTrail(req),
     })
 
+    // Debug: log promotion object before save
+    console.log("[v0] createPromotion - promotion.servicePromotions before save:", JSON.stringify(promotion.servicePromotions, null, 2))
+
     await promotion.save()
+
+    // Debug: log promotion object after save
+    console.log("[v0] createPromotion - promotion.servicePromotions after save:", JSON.stringify(promotion.servicePromotions, null, 2))
 
     const populated = await buildPopulate(
       Promotion.findById(promotion._id),
