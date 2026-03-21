@@ -1265,7 +1265,7 @@ const getChildPartnersByLayer = async (req, res, next) => {
       throw createHttpError(403, "Only company or agent accounts can access child partners")
     }
 
-    const { status, page = 1, limit = 10 } = req.query
+    const { status, page = 1, limit = 10, data: dataMode } = req.query
     const skip = (parseInt(page) - 1) * parseInt(limit)
 
     const childFilter = { isDeleted: false }
@@ -1348,6 +1348,19 @@ const getChildPartnersByLayer = async (req, res, next) => {
       else {
         throw createHttpError(400, `Unknown user layer: ${userLayer}`)
       }
+    }
+
+    // data=sort → return only _id and name (lightweight dropdown/select list)
+    if (dataMode === "sort") {
+      const sortList = await Partner.find(childFilter)
+        .select("_id name")
+        .sort({ name: 1 })
+
+      return res.json({
+        success: true,
+        count: sortList.length,
+        data: sortList,
+      })
     }
 
     // Execute query with pagination
