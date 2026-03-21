@@ -664,66 +664,137 @@ const listPartners = async (req, res, next) => {
   try {
     const userRole = req.user?.role
     const tokenCompanyId = req.user?.companyId || req.user?.id
+    const userId = req.user?.id
     const { layer, role, status, page = 1, limit = 10 } = req.query
-
-    const filter = { isDeleted: false }
-
-    // Always scope to the authenticated user's company
-    // Applies to both "company" role and "user" (agent) role
-    if (userRole === "company" || userRole === "user") {
-      if (tokenCompanyId) filter.company = tokenCompanyId
-    }
-
-    // Filter by layer if provided (e.g., layer=Marine)
-    if (layer) {
-      filter.layer = layer
-    }
-
-    // Filter by role if provided
-    if (role) {
-      filter.role = role
-    }
-
-    // Filter by partner status if provided
-    if (status) {
-      filter.partnerStatus = status
-    }
-
     const skip = (parseInt(page) - 1) * parseInt(limit)
-    const total = await Partner.countDocuments(filter)
-    const partners = await Partner.find(filter)
-      .skip(skip)
-      .limit(parseInt(limit))
-  .populate("company", "name email")
-  .populate("parentCompany", "companyName")
-  .populate("parentAccount", "name layer")
 
-      .sort({ createdAt: -1 })
+    // ── COMPANY ADMIN ──────────────────────────────────────────────────────────
+    // Company admin sees ALL partners under their company
+    if (userRole === "company") {
+      const filter = { isDeleted: false }
+      if (tokenCompanyId) filter.company = tokenCompanyId
+      if (layer)  filter.layer = layer
+      if (role)   filter.role = role
+      if (status) filter.partnerStatus = status
 
-    const transformedPartners = partners.map((partner) => {
-      const partnerObj = partner.toObject()
+      const total = await Partner.countDocuments(filter)
+      const partners = await Partner.find(filter)
+        .skip(skip)
+        .limit(parseInt(limit))
+        .populate("company", "name email")
+        .populate("parentCompany", "companyName")
+        .populate("parentAccount", "name layer")
+        .sort({ createdAt: -1 })
 
-      // if (partner.layer === "Marine" && partner.parentAccount) {
-      //   // For Marine layer, parentAccount is company ID, so populate with company data
-      //   partnerObj.parentAccount = {
-      //     _id: partner.parentAccount,
-      //     name: partner.company.name,
-      //     layer: "Company",
-      //     type: "company",
-      //   }
-      // }
+      const transformedPartners = partners.map((p) => p.toObject())
 
-      return partnerObj
-    })
+      return res.json({
+        success: true,
+        count: transformedPartners.length,
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit)),
+        data: transformedPartners,
+      })
+    }
 
-    res.json({
+    // ── AGENT USER (marine-agent / commercial-agent / selling-agent) ───────────
+    // Agent sees only their direct children AND grandchildren (child-of-child)
+    if (userRole === "user") {
+      // Look up the User record to get user.agent (partner ObjectId)
+      const UserModel = require("../models/User")
+      const userRecord = await UserModel.findOne({
+        _id: userId,
+        isDeleted: false,
+      }).select("agent")
+
+      if (!userRecord || !userRecord.agent) {
+        // No linked partner — return empty list (don't throw, keep response format)
+        return res.json({
+          success: true,
+          count: 0,
+          total: 0,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: 0,
+          data: [],
+        })
+      }
+
+      const ownPartnerId = userRecord.agent
+
+      // Step 1: find direct children
+      const directChildrenIds = await Partner.distinct("_id", {
+        parentAccount: ownPartnerId,
+        company: tokenCompanyId,
+        isDeleted: false,
+      })
+
+      // Step 2: find grandchildren (children of direct children)
+      const grandChildrenIds = directChildrenIds.length > 0
+        ? await Partner.distinct("_id", {
+            parentAccount: { $in: directChildrenIds },
+            company: tokenCompanyId,
+            isDeleted: false,
+          })
+        : []
+
+      // Union of direct children + grandchildren
+      const allVisibleIds = [...directChildrenIds, ...grandChildrenIds]
+
+      if (allVisibleIds.length === 0) {
+        return res.json({
+          success: true,
+          count: 0,
+          total: 0,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: 0,
+          data: [],
+        })
+      }
+
+      // Build filter on the visible partner IDs
+      const filter = {
+        _id: { $in: allVisibleIds },
+        isDeleted: false,
+      }
+      if (layer)  filter.layer = layer
+      if (role)   filter.role = role
+      if (status) filter.partnerStatus = status
+
+      const total = await Partner.countDocuments(filter)
+      const partners = await Partner.find(filter)
+        .skip(skip)
+        .limit(parseInt(limit))
+        .populate("company", "name email")
+        .populate("parentCompany", "companyName")
+        .populate("parentAccount", "name layer")
+        .sort({ createdAt: -1 })
+
+      const transformedPartners = partners.map((p) => p.toObject())
+
+      return res.json({
+        success: true,
+        count: transformedPartners.length,
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit)),
+        data: transformedPartners,
+      })
+    }
+
+    // ── FALLBACK: unknown role ─────────────────────────────────────────────────
+    return res.json({
       success: true,
-      count: transformedPartners.length,
-      total,
+      count: 0,
+      total: 0,
       page: parseInt(page),
       limit: parseInt(limit),
-      pages: Math.ceil(total / parseInt(limit)),
-      data: transformedPartners,
+      pages: 0,
+      data: [],
     })
   } catch (error) {
     next(error)
