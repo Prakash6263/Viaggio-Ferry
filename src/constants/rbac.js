@@ -147,6 +147,11 @@ const MODULE_SUBMODULES = {
       label: "Promotions",
       allowedPermissions: ["read", "write", "edit", "delete"],
     },
+    {
+      code: "allocation",
+      label: "Allocation",
+      allowedPermissions: ["read", "write", "edit", "delete"],
+    },
   ],
 
   "sales-bookings": [
