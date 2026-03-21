@@ -864,14 +864,6 @@ const getPartnerById = async (req, res, next) => {
     }
 
     const partnerObj = partner.toObject()
-    if (partner.layer === "Marine" && partner.parentAccount) {
-      partnerObj.parentAccount = {
-        _id: partner.parentAccount,
-        name: partner.company.name,
-        layer: "Company",
-        type: "company",
-      }
-    }
 
     res.json({
       success: true,
