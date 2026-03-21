@@ -781,13 +781,49 @@ const updatePartner = async (req, res, next) => {
       throw createHttpError(403, "Cannot update partners from other companies")
     }
 
-    const { name, phone, address, role, partnerStatus, priceList, creditLimit, contactInformation, notes } = req.body
+    const { name, phone, address, role, partnerStatus, priceList, creditLimit, contactInformation, notes, parentAccount, layer } = req.body
 
     // Prepare update object
     const updateData = {}
     if (name) updateData.name = name
     if (phone) updateData.phone = phone
     if (address) updateData.address = address
+
+    // Allow updating parentAccount with proper validation
+    if (parentAccount !== undefined) {
+      const currentLayer = layer || targetPartner.layer
+
+      if (currentLayer === "Marine") {
+        // Marine partners have parentCompany (company), not parentAccount
+        updateData.parentAccount = null
+      } else if (currentLayer === "Commercial") {
+        // Commercial requires Marine parent
+        if (parentAccount) {
+          const parentPartner = await Partner.findById(parentAccount)
+          if (!parentPartner || parentPartner.layer !== "Marine") {
+            throw createHttpError(400, "Commercial partner requires Marine partner as parent")
+          }
+          updateData.parentAccount = parentAccount
+        }
+      } else if (currentLayer === "Selling") {
+        // Selling requires Commercial parent
+        if (parentAccount) {
+          const parentPartner = await Partner.findById(parentAccount)
+          if (!parentPartner || parentPartner.layer !== "Commercial") {
+            throw createHttpError(400, "Selling partner requires Commercial partner as parent")
+          }
+          updateData.parentAccount = parentAccount
+        }
+      }
+    }
+
+    // Allow updating layer with proper validation
+    if (layer && layer !== targetPartner.layer) {
+      if (!["Marine", "Commercial", "Selling"].includes(layer)) {
+        throw createHttpError(400, "Invalid layer value")
+      }
+      updateData.layer = layer
+    }
     if (role) {
       if (
         ![
