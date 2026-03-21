@@ -668,8 +668,10 @@ const listPartners = async (req, res, next) => {
 
     const filter = { isDeleted: false }
 
-    if (userRole === "company") {
-      filter.company = tokenCompanyId
+    // Always scope to the authenticated user's company
+    // Applies to both "company" role and "user" (agent) role
+    if (userRole === "company" || userRole === "user") {
+      if (tokenCompanyId) filter.company = tokenCompanyId
     }
 
     // Filter by layer if provided (e.g., layer=Marine)
@@ -1118,18 +1120,15 @@ const getPartnersByLayer = async (req, res, next) => {
     const filter = { 
       layer, 
       isDeleted: false,
-      partnerStatus: "Active"
     }
 
-    // Company can see all their partners by layer
-    if (userRole === "company") {
-      filter.company = tokenCompanyId
+    // Always scope to the authenticated user's company
+    if (userRole === "company" || userRole === "user") {
+      if (tokenCompanyId) filter.company = tokenCompanyId
     }
 
-    // Filter by status if provided
-    if (status) {
-      filter.partnerStatus = status
-    }
+    // Filter by status if provided, default to Active
+    filter.partnerStatus = status || "Active"
 
     const skip = (parseInt(page) - 1) * parseInt(limit)
     const total = await Partner.countDocuments(filter)
@@ -1170,12 +1169,12 @@ const getAllPartnersByAllLayers = async (req, res, next) => {
 
     const filter = { 
       isDeleted: false,
-      partnerStatus: status || "Active"
+      partnerStatus: status || "Active",
     }
 
-    // Company can see all their partners across all layers
-    if (userRole === "company") {
-      filter.company = tokenCompanyId
+    // Always scope to the authenticated user's company
+    if (userRole === "company" || userRole === "user") {
+      if (tokenCompanyId) filter.company = tokenCompanyId
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit)
