@@ -173,6 +173,14 @@ const menuConfig = {
         actions: ["read", "write", "edit", "delete"],
         description: "Create and manage promotions",
       },
+      allocation: {
+        submoduleCode: "allocation",
+        label: "Allocation",
+        route: "/company/partner-management/allocation",
+        displayOrder: 7,
+        actions: ["read", "write", "edit", "delete"],
+        description: "Manage ticket and seat allocations for partners",
+      },
     },
   },
 
