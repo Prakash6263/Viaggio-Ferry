@@ -1744,6 +1744,48 @@ exports.updateAgentAllocation = async (req, res) => {
       allocation.updatedBy = buildActor(user)
       await allocation.save({ session })
 
+    // Reset all descendant allocations (grandchildren, great-grandchildren, etc.) to zero
+    // When company updates marine agent's allocation, all commercial/selling agents below must be reset
+    const resetDescendantAllocations = async (parentAgentId, tripId, companyId, sess) => {
+      // Find all allocations where this agent is the parent
+      const childAllocations = await AvailabilityAgentAllocation.find({
+        parentAgent: parentAgentId,
+        trip: tripId,
+        company: companyId,
+        isDeleted: false,
+      }).session(sess)
+
+      for (const childAlloc of childAllocations) {
+        // Reset all allocations to zero for this child - keep structure but set values to 0
+        const resetAllocations = childAlloc.allocations.map((alloc) => ({
+          type: alloc.type,
+          cabins: alloc.cabins.map((cabin) => ({
+            cabin: cabin.cabin,
+            allocatedSeats: 0,
+          })),
+          totalAllocatedSeats: 0,
+        }))
+
+        childAlloc.allocations = resetAllocations
+        childAlloc.updatedBy = buildActor(user)
+        await childAlloc.save({ session: sess })
+
+        console.log(`[v0] UPDATE: Reset descendant allocation ${childAlloc._id} for agent ${childAlloc.agent} to zero`)
+
+        // Recursively reset this child's children (grandchildren)
+        await resetDescendantAllocations(childAlloc.agent, tripId, companyId, sess)
+      }
+    }
+
+    // Reset all descendants of the marine agent whose allocation was just updated
+    await resetDescendantAllocations(
+      allocation.agent,
+      tripId,
+      companyId,
+      session
+    )
+    console.log(`[v0] UPDATE: Completed resetting all descendant allocations for agent ${allocation.agent}`)
+
     // Apply new allocations to availability (track seat allocation changes)
     console.log(`[v0] UPDATE: Applying new allocations for agent allocation ${allocationId}`)
     const newSeatMovements = []
@@ -1809,7 +1851,7 @@ exports.updateAgentAllocation = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Agent allocation updated successfully",
+      message: "Agent allocation updated successfully. All descendant allocations have been reset to zero.",
       data: {
         _id: updated._id,
         company: updated.company,
