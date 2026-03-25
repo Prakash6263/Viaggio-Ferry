@@ -686,12 +686,51 @@ const updateAllocation = async (req, res, next) => {
     existingAllocation.updatedBy = buildAuditTrail(req)
     await existingAllocation.save({ session })
 
+    // Reset all grandchild allocations to zero (recursive)
+    // When parent updates child allocation, all descendants (grandchildren, great-grandchildren, etc.) must be reset
+    const resetDescendantAllocations = async (parentAgentId, tripId, companyId, session) => {
+      // Find all allocations where this agent is the parent
+      const childAllocations = await AvailabilityAgentAllocation.find({
+        parentAgent: parentAgentId,
+        trip: tripId,
+        company: companyId,
+        isDeleted: false,
+      }).session(session)
+
+      for (const childAlloc of childAllocations) {
+        // Reset all allocations to zero for this child
+        const resetAllocations = childAlloc.allocations.map((alloc) => ({
+          type: alloc.type,
+          cabins: alloc.cabins.map((cabin) => ({
+            cabin: cabin.cabin,
+            allocatedSeats: 0,
+          })),
+          totalAllocatedSeats: 0,
+        }))
+
+        childAlloc.allocations = resetAllocations
+        childAlloc.updatedBy = buildAuditTrail(req)
+        await childAlloc.save({ session })
+
+        // Recursively reset this child's children (grandchildren)
+        await resetDescendantAllocations(childAlloc.agent, tripId, companyId, session)
+      }
+    }
+
+    // Reset all descendants of the child agent whose allocation was just updated
+    await resetDescendantAllocations(
+      existingAllocation.agent,
+      existingAllocation.trip,
+      companyId,
+      session
+    )
+
     await session.commitTransaction()
     session.endSession()
 
     res.json({
       success: true,
-      message: "Allocation updated successfully",
+      message: "Allocation updated successfully. All descendant allocations have been reset to zero.",
       data: existingAllocation,
     })
   } catch (error) {
