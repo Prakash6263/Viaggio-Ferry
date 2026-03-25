@@ -1141,7 +1141,7 @@ const buildActor = (user) => ({
   layer: user?.layer,
 })
 
-// GET - List all agent allocations for a trip
+// GET - List all agent allocations for a trip (Marine layer only - where company is parent)
 exports.listAgentAllocations = async (req, res) => {
   try {
     const { companyId } = req
@@ -1151,9 +1151,11 @@ exports.listAgentAllocations = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit)
     const limitNum = parseInt(limit)
 
+    // Only fetch Marine layer allocations where parentAgent is null (company is parent)
     const query = {
       company: companyId,
       trip: tripId,
+      parentAgent: null, // Marine layer agents have null parentAgent (company is their parent)
       isDeleted: false,
     }
 
@@ -1190,7 +1192,7 @@ exports.listAgentAllocations = async (req, res) => {
   }
 }
 
-// GET - List all agent allocations for a trip (without needing availability ID)
+// GET - List all agent allocations for a trip (without needing availability ID) - Marine layer only
 exports.listAgentAllocationsByTrip = async (req, res) => {
   try {
     const { companyId } = req
@@ -1200,9 +1202,11 @@ exports.listAgentAllocationsByTrip = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit)
     const limitNum = parseInt(limit)
 
+    // Only fetch Marine layer allocations where parentAgent is null (company is parent)
     const query = {
       company: companyId,
       trip: tripId,
+      parentAgent: null, // Marine layer agents have null parentAgent (company is their parent)
       isDeleted: false,
     }
 
