@@ -630,6 +630,14 @@ const searchTripsWithPricing = async (params) => {
         (!trip.bookingClosingDate || now <= trip.bookingClosingDate) &&
         (!trip.departureDateTime || now <= trip.departureDateTime)
 
+      // Calculate totalPrice as sum of all breakdown subtotals (including taxes)
+      const calculatedTotalPrice = pricingBreakdown.reduce((sum, item) => {
+        if (item.subtotal !== null && item.subtotal !== undefined) {
+          return sum + item.subtotal
+        }
+        return sum
+      }, 0)
+
       cabinOptions.push({
         cabin: cabinDetails,
         availability: {
@@ -645,9 +653,9 @@ const searchTripsWithPricing = async (params) => {
         },
         pricing: {
           breakdown: pricingBreakdown,
-          totalBasicPrice: hasMissingPrice ? null : Math.round(totalBasicPrice * 100) / 100,
-          totalTaxes: hasMissingPrice ? null : Math.round(totalTaxes * 100) / 100,
-          totalPrice: hasMissingPrice ? null : Math.round(totalPrice * 100) / 100,
+          totalBasicPrice: Math.round(totalBasicPrice * 100) / 100,
+          totalTaxes: Math.round(totalTaxes * 100) / 100,
+          totalPrice: Math.round(calculatedTotalPrice * 100) / 100,
           currency,
           priceListId,
           hasMissingPrice,
