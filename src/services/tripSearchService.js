@@ -589,13 +589,29 @@ const searchTripsWithPricing = async (params) => {
         }
       }
 
+      // Determine if booking is allowed for this cabin
+      const now = new Date()
+      const availableSeatsValue = availabilityResult.finalAvailableSeats ?? availabilityResult.availableSeats ?? 0
+      
+      // Booking is NOT allowed if:
+      // 1. No available seats
+      // 2. Price not found for any passenger type
+      // 3. Current date is after booking closing date
+      // 4. Trip has already departed
+      const bookingAllowed = 
+        availableSeatsValue > 0 &&
+        !hasMissingPrice &&
+        (!trip.bookingClosingDate || now <= trip.bookingClosingDate) &&
+        (!trip.departureDateTime || now <= trip.departureDateTime)
+
       cabinOptions.push({
         cabin: cabinDetails,
         availability: {
           totalSeats: availabilityResult.totalCapacity || cabinInfo.totalSeats,
-          availableSeats: availabilityResult.availableSeats,
-          finalAvailableSeats: availabilityResult.finalAvailableSeats || availabilityResult.availableSeats,
+          availableSeats: Math.max(0, availabilityResult.availableSeats),
+          finalAvailableSeats: Math.max(0, availableSeatsValue),
           availabilityBreakdown: availabilityResult.availabilityBreakdown || [],
+          bookingAllowed,
           ...(userType === "partner" && {
             agentAllocated: availabilityResult.agentAllocated,
             agentRemaining: availabilityResult.agentRemaining,
@@ -642,6 +658,21 @@ const searchTripsWithPricing = async (params) => {
 
     // Only include trips that have at least one cabin option
     if (cabinOptions.length > 0) {
+      // Calculate trip status flags
+      const now = new Date()
+      const tripStatusFlags = {
+        bookingOpen: 
+          (!trip.bookingOpeningDate || now >= trip.bookingOpeningDate) &&
+          (!trip.bookingClosingDate || now <= trip.bookingClosingDate),
+        checkInOpen:
+          (!trip.checkInOpeningDate || now >= trip.checkInOpeningDate) &&
+          (!trip.checkInClosingDate || now <= trip.checkInClosingDate),
+        boardingClosed:
+          trip.checkInClosingDate ? now > trip.checkInClosingDate : false,
+        departed:
+          trip.departureDateTime ? now > trip.departureDateTime : false,
+      }
+
       results.push({
         trip: {
           _id: trip._id,
@@ -657,6 +688,7 @@ const searchTripsWithPricing = async (params) => {
           bookingClosingDate: trip.bookingClosingDate,
           checkInOpeningDate: trip.checkInOpeningDate,
           checkInClosingDate: trip.checkInClosingDate,
+          tripStatusFlags,
         },
         ticketingRules,
         cabinOptions,
