@@ -112,6 +112,7 @@ const calculateAvailableSeats = async (params) => {
     const agentAllocated = cabinAlloc.allocatedSeats || 0
 
     // Get sum of child allocations (sub-agents allocated by this agent)
+    // agentRemaining = agentAllocated - SUM(childAllocations.quantity)
     const childAllocations = await AvailabilityAgentAllocation.aggregate([
       {
         $match: {
@@ -138,7 +139,7 @@ const calculateAvailableSeats = async (params) => {
     ])
 
     const totalChildAllocated = childAllocations[0]?.totalChildAllocated || 0
-    const agentRemaining = agentAllocated - totalChildAllocated
+    const agentRemaining = Math.max(0, agentAllocated - totalChildAllocated)
 
     // If agent has a parent, calculate parent remaining too
     let parentRemaining = Infinity
@@ -156,6 +157,7 @@ const calculateAvailableSeats = async (params) => {
     }
 
     // Final available = MIN(companyRemaining, parentRemaining, agentRemaining)
+    // Ensure no negative availability is returned
     const availableSeats = Math.max(
       0,
       Math.min(companyRemaining, parentRemaining, agentRemaining)
@@ -167,8 +169,8 @@ const calculateAvailableSeats = async (params) => {
       allocatedToAgents,
       companyRemaining: Math.max(0, companyRemaining),
       agentAllocated,
-      agentRemaining: Math.max(0, agentRemaining),
-      parentRemaining: parentRemaining === Infinity ? null : parentRemaining,
+      agentRemaining,
+      parentRemaining: parentRemaining === Infinity ? null : Math.max(0, parentRemaining),
     }
   }
 
@@ -177,12 +179,11 @@ const calculateAvailableSeats = async (params) => {
 
 /**
  * Find best matching price based on priority order:
- * 1. Trip + Partner + PayloadType (trip-specific partner price)
- * 2. Trip + PayloadType (trip-specific price)
- * 3. Route + Partner + PayloadType (route partner price)
- * 4. Route + PayloadType (route default price)
+ * 1. Route + Partner + PayloadType/Cabin + PassengerType + VisaType (partner-specific price)
+ * 2. Route + PayloadType/Cabin + PassengerType + VisaType (default price)
  * 
  * Each level sorted by effectiveDateTime descending
+ * Uses PriceListDetail lookup with route (originPort + destinationPort) + cabin + passengerType + visaType + partner + effectiveDate
  */
 const findBestPrice = async (params) => {
   const {
@@ -254,6 +255,7 @@ const findBestPrice = async (params) => {
   }
 
   // Priority 1: Partner-specific price (if partnerId provided)
+  // Look for a price list that includes this partner in the partners array
   if (partnerId) {
     const partnerPrice = await findPrice({
       partners: new mongoose.Types.ObjectId(partnerId),
