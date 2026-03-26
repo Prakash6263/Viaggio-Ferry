@@ -16,8 +16,9 @@ const connectDB = require("../config/db")
  *   departureDate: Date string (required)
  *   cabin: ObjectId (optional)
  *   visaType: String (optional)
- *   adults: Number (default: 1)
- *   children: Number (default: 0)
+ *   passengers: [
+ *     { payloadTypeId: ObjectId, quantity: Number }
+ *   ] (required - at least one passenger with payloadTypeId from PayloadType collection)
  * }
  * 
  * Response:
@@ -35,16 +36,17 @@ const connectDB = require("../config/db")
  *             cabin: { name, cabinCode },
  *             availability: { totalSeats, remainingSeats },
  *             pricing: {
- *               adultPrice: { basicPrice, totalPrice, taxes, passengerType, allowedLuggagePieces, allowedLuggageWeight },
- *               childPrice: { ... },
+ *               breakdown: [
+ *                 { payloadType: {...}, quantity, unitPrice, unitTotalPrice, subtotal, taxes, allowedLuggagePieces, allowedLuggageWeight }
+ *               ],
  *               totalPrice: Number,
- *               currency: { currencyCode, currencyName }
+ *               currency: { currencyCode, currencyName },
+ *               totalPassengers: Number
  *             }
  *           }
  *         ],
- *         totalPassengers: Number,
- *         adults: Number,
- *         children: Number
+ *         passengers: [{ payloadType: {...}, quantity }],
+ *         totalPassengers: Number
  *       }
  *     ]
  *   }
@@ -63,8 +65,7 @@ const searchTrips = async (req, res, next) => {
       departureDate,
       cabin,
       visaType,
-      adults,
-      children,
+      passengers,
     } = req.body
 
     // Validate required fields
@@ -88,6 +89,28 @@ const searchTrips = async (req, res, next) => {
       throw createHttpError(400, "Departure date is required")
     }
 
+    // Validate passengers array
+    if (!passengers || !Array.isArray(passengers) || passengers.length === 0) {
+      throw createHttpError(400, "Passengers array is required with at least one passenger object containing payloadTypeId and quantity")
+    }
+
+    // Validate each passenger entry
+    for (let i = 0; i < passengers.length; i++) {
+      const passenger = passengers[i]
+      
+      if (!passenger.payloadTypeId) {
+        throw createHttpError(400, `Passenger at index ${i} is missing payloadTypeId`)
+      }
+
+      if (!mongoose.Types.ObjectId.isValid(passenger.payloadTypeId)) {
+        throw createHttpError(400, `Passenger at index ${i} has invalid payloadTypeId format`)
+      }
+
+      if (!passenger.quantity || typeof passenger.quantity !== "number" || passenger.quantity < 1) {
+        throw createHttpError(400, `Passenger at index ${i} must have a quantity of at least 1`)
+      }
+    }
+
     // Validate ObjectIds
     if (!mongoose.Types.ObjectId.isValid(originPort)) {
       throw createHttpError(400, "Invalid origin port ID format")
@@ -113,22 +136,6 @@ const searchTrips = async (req, res, next) => {
       throw createHttpError(400, `Invalid trip type. Must be one of: one_way, return, round_trip`)
     }
 
-    // Validate adults and children
-    const adultsCount = parseInt(adults) || 1
-    const childrenCount = parseInt(children) || 0
-
-    if (adultsCount < 0) {
-      throw createHttpError(400, "Adults count cannot be negative")
-    }
-
-    if (childrenCount < 0) {
-      throw createHttpError(400, "Children count cannot be negative")
-    }
-
-    if (adultsCount === 0 && childrenCount === 0) {
-      throw createHttpError(400, "At least one passenger is required")
-    }
-
     // Validate departure date
     const parsedDate = new Date(departureDate)
     if (isNaN(parsedDate.getTime())) {
@@ -151,8 +158,7 @@ const searchTrips = async (req, res, next) => {
       departureDate: parsedDate,
       cabin,
       visaType,
-      adults: adultsCount,
-      children: childrenCount,
+      passengers,
       partnerId,
     })
 
@@ -165,7 +171,16 @@ const searchTrips = async (req, res, next) => {
 /**
  * GET /api/trip-search
  * Search for trips with pricing using query parameters
- * Same as POST but uses query params
+ * 
+ * Query Parameters:
+ *   category: "passenger" | "vehicle" | "cargo" (required)
+ *   tripType: "one_way" | "return" | "round_trip" (required)
+ *   originPort: ObjectId (required)
+ *   destinationPort: ObjectId (required)
+ *   departureDate: Date string (required)
+ *   cabin: ObjectId (optional)
+ *   visaType: String (optional)
+ *   passengers: JSON string of array, e.g. '[{"payloadTypeId":"xxx","quantity":2}]' (required)
  */
 const searchTripsGet = async (req, res, next) => {
   try {
@@ -180,8 +195,7 @@ const searchTripsGet = async (req, res, next) => {
       departureDate,
       cabin,
       visaType,
-      adults,
-      children,
+      passengers: passengersStr,
     } = req.query
 
     // Validate required fields
@@ -205,6 +219,39 @@ const searchTripsGet = async (req, res, next) => {
       throw createHttpError(400, "Departure date is required")
     }
 
+    // Parse passengers from JSON string
+    let passengers
+    if (!passengersStr) {
+      throw createHttpError(400, "Passengers query parameter is required (JSON array of {payloadTypeId, quantity})")
+    }
+
+    try {
+      passengers = JSON.parse(passengersStr)
+    } catch (e) {
+      throw createHttpError(400, "Invalid passengers format. Must be a valid JSON array")
+    }
+
+    if (!Array.isArray(passengers) || passengers.length === 0) {
+      throw createHttpError(400, "Passengers must be an array with at least one passenger object")
+    }
+
+    // Validate each passenger entry
+    for (let i = 0; i < passengers.length; i++) {
+      const passenger = passengers[i]
+      
+      if (!passenger.payloadTypeId) {
+        throw createHttpError(400, `Passenger at index ${i} is missing payloadTypeId`)
+      }
+
+      if (!mongoose.Types.ObjectId.isValid(passenger.payloadTypeId)) {
+        throw createHttpError(400, `Passenger at index ${i} has invalid payloadTypeId format`)
+      }
+
+      if (!passenger.quantity || typeof passenger.quantity !== "number" || passenger.quantity < 1) {
+        throw createHttpError(400, `Passenger at index ${i} must have a quantity of at least 1`)
+      }
+    }
+
     // Validate ObjectIds
     if (!mongoose.Types.ObjectId.isValid(originPort)) {
       throw createHttpError(400, "Invalid origin port ID format")
@@ -230,22 +277,6 @@ const searchTripsGet = async (req, res, next) => {
       throw createHttpError(400, `Invalid trip type. Must be one of: one_way, return, round_trip`)
     }
 
-    // Validate adults and children
-    const adultsCount = parseInt(adults) || 1
-    const childrenCount = parseInt(children) || 0
-
-    if (adultsCount < 0) {
-      throw createHttpError(400, "Adults count cannot be negative")
-    }
-
-    if (childrenCount < 0) {
-      throw createHttpError(400, "Children count cannot be negative")
-    }
-
-    if (adultsCount === 0 && childrenCount === 0) {
-      throw createHttpError(400, "At least one passenger is required")
-    }
-
     // Validate departure date
     const parsedDate = new Date(departureDate)
     if (isNaN(parsedDate.getTime())) {
@@ -268,8 +299,7 @@ const searchTripsGet = async (req, res, next) => {
       departureDate: parsedDate,
       cabin,
       visaType,
-      adults: adultsCount,
-      children: childrenCount,
+      passengers,
       partnerId,
     })
 
