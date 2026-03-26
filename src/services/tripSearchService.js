@@ -4,7 +4,6 @@ const { PriceList } = require("../models/PriceList")
 const { PriceListDetail } = require("../models/PriceListDetail")
 const { TripAvailability } = require("../models/TripAvailability")
 const AvailabilityAgentAllocation = require("../models/AvailabilityAgentAllocation")
-const { TripTicketRule } = require("../models/TripTicketRule")
 const { TicketingRule } = require("../models/TicketingRule")
 const { PayloadType } = require("../models/PayloadType")
 const { Cabin } = require("../models/Cabin")
@@ -574,35 +573,10 @@ const searchTripsWithPricing = async (params) => {
       })
     }
 
-    // ===== GET TICKETING RULES FROM TripTicketRule COLLECTION =====
+    // ===== GET TICKETING RULES FROM EMBEDDED Trip.ticketingRules =====
     const ticketingRules = {}
-    const tripTicketRules = await TripTicketRule.find({
-      company: new mongoose.Types.ObjectId(companyId),
-      trip: trip._id,
-      isActive: true,
-      isDeleted: false,
-    })
-      .populate({
-        path: "ticketingRule",
-        select: "ruleName ruleType restrictedWindowHours normalFee restrictedPenalty noShowPenalty conditions",
-      })
-      .lean()
-
-    for (const ttr of tripTicketRules) {
-      if (ttr.ticketingRule) {
-        ticketingRules[ttr.ruleType] = {
-          ruleName: ttr.ticketingRule.ruleName,
-          restrictedWindowHours: ttr.ticketingRule.restrictedWindowHours,
-          normalFee: ttr.ticketingRule.normalFee,
-          restrictedPenalty: ttr.ticketingRule.restrictedPenalty,
-          noShowPenalty: ttr.ticketingRule.noShowPenalty,
-          conditions: ttr.ticketingRule.conditions,
-        }
-      }
-    }
-
-    // Fallback to embedded ticketingRules if TripTicketRule collection is empty
-    if (Object.keys(ticketingRules).length === 0 && trip.ticketingRules && trip.ticketingRules.length > 0) {
+    
+    if (trip.ticketingRules && trip.ticketingRules.length > 0) {
       // Need to populate the embedded rules
       const tripWithRules = await Trip.findById(trip._id)
         .populate({
