@@ -4,6 +4,37 @@ const { searchTripsWithPricing } = require("../services/tripSearchService")
 const connectDB = require("../config/db")
 
 /**
+ * Helper to determine user type and partner ID from request
+ */
+const getUserTypeAndPartnerId = (req) => {
+  const { user } = req
+  
+  // Default to company
+  let userType = "company"
+  let partnerId = null
+
+  if (user) {
+    // Check if user is a company admin
+    if (user.role === "company") {
+      userType = "company"
+      partnerId = null
+    } 
+    // Check if user is a partner/agent (Marine layer users have partnerId)
+    else if (user.partnerId) {
+      userType = "partner"
+      partnerId = user.partnerId
+    }
+    // Regular company user (not a partner)
+    else {
+      userType = "company"
+      partnerId = null
+    }
+  }
+
+  return { userType, partnerId }
+}
+
+/**
  * POST /api/trip-search
  * Search for trips with pricing based on filter criteria
  * 
@@ -34,7 +65,7 @@ const connectDB = require("../config/db")
  *         cabinOptions: [
  *           {
  *             cabin: { name, cabinCode },
- *             availability: { totalSeats, remainingSeats },
+ *             availability: { totalSeats, availableSeats },
  *             pricing: {
  *               breakdown: [
  *                 { payloadType: {...}, quantity, unitPrice, unitTotalPrice, subtotal, taxes, allowedLuggagePieces, allowedLuggageWeight }
@@ -56,7 +87,7 @@ const searchTrips = async (req, res, next) => {
   try {
     await connectDB()
 
-    const { companyId, user } = req
+    const { companyId } = req
     const {
       category,
       tripType,
@@ -94,7 +125,7 @@ const searchTrips = async (req, res, next) => {
       throw createHttpError(400, "Passengers array is required with at least one passenger object containing payloadTypeId and quantity")
     }
 
-    // Validate each passenger entry
+    // Validate each passenger entry - allow quantity 0 for children/infants not traveling
     for (let i = 0; i < passengers.length; i++) {
       const passenger = passengers[i]
       
@@ -106,9 +137,15 @@ const searchTrips = async (req, res, next) => {
         throw createHttpError(400, `Passenger at index ${i} has invalid payloadTypeId format`)
       }
 
-      if (!passenger.quantity || typeof passenger.quantity !== "number" || passenger.quantity < 1) {
-        throw createHttpError(400, `Passenger at index ${i} must have a quantity of at least 1`)
+      if (passenger.quantity === undefined || passenger.quantity === null || typeof passenger.quantity !== "number" || passenger.quantity < 0) {
+        throw createHttpError(400, `Passenger at index ${i} must have a quantity of 0 or more`)
       }
+    }
+
+    // Ensure at least one passenger with quantity > 0
+    const totalQuantity = passengers.reduce((sum, p) => sum + (p.quantity || 0), 0)
+    if (totalQuantity < 1) {
+      throw createHttpError(400, "At least one passenger must have a quantity of 1 or more")
     }
 
     // Validate ObjectIds
@@ -142,15 +179,14 @@ const searchTrips = async (req, res, next) => {
       throw createHttpError(400, "Invalid departure date format")
     }
 
-    // Determine partnerId if the user is a partner/agent
-    let partnerId = null
-    if (user && user.layer === "Marine" && user.partnerId) {
-      partnerId = user.partnerId
-    }
+    // Get user type and partner ID from JWT
+    const { userType, partnerId } = getUserTypeAndPartnerId(req)
 
     // Perform search
     const result = await searchTripsWithPricing({
       companyId,
+      userType,
+      partnerId,
       category: category.toLowerCase(),
       tripType: tripType.toLowerCase(),
       originPort,
@@ -159,7 +195,6 @@ const searchTrips = async (req, res, next) => {
       cabin,
       visaType,
       passengers,
-      partnerId,
     })
 
     res.status(200).json(result)
@@ -186,7 +221,7 @@ const searchTripsGet = async (req, res, next) => {
   try {
     await connectDB()
 
-    const { companyId, user } = req
+    const { companyId } = req
     const {
       category,
       tripType,
@@ -235,7 +270,7 @@ const searchTripsGet = async (req, res, next) => {
       throw createHttpError(400, "Passengers must be an array with at least one passenger object")
     }
 
-    // Validate each passenger entry
+    // Validate each passenger entry - allow quantity 0 for children/infants not traveling
     for (let i = 0; i < passengers.length; i++) {
       const passenger = passengers[i]
       
@@ -247,9 +282,15 @@ const searchTripsGet = async (req, res, next) => {
         throw createHttpError(400, `Passenger at index ${i} has invalid payloadTypeId format`)
       }
 
-      if (!passenger.quantity || typeof passenger.quantity !== "number" || passenger.quantity < 1) {
-        throw createHttpError(400, `Passenger at index ${i} must have a quantity of at least 1`)
+      if (passenger.quantity === undefined || passenger.quantity === null || typeof passenger.quantity !== "number" || passenger.quantity < 0) {
+        throw createHttpError(400, `Passenger at index ${i} must have a quantity of 0 or more`)
       }
+    }
+
+    // Ensure at least one passenger with quantity > 0
+    const totalQuantity = passengers.reduce((sum, p) => sum + (p.quantity || 0), 0)
+    if (totalQuantity < 1) {
+      throw createHttpError(400, "At least one passenger must have a quantity of 1 or more")
     }
 
     // Validate ObjectIds
@@ -283,15 +324,14 @@ const searchTripsGet = async (req, res, next) => {
       throw createHttpError(400, "Invalid departure date format")
     }
 
-    // Determine partnerId if the user is a partner/agent
-    let partnerId = null
-    if (user && user.layer === "Marine" && user.partnerId) {
-      partnerId = user.partnerId
-    }
+    // Get user type and partner ID from JWT
+    const { userType, partnerId } = getUserTypeAndPartnerId(req)
 
     // Perform search
     const result = await searchTripsWithPricing({
       companyId,
+      userType,
+      partnerId,
       category: category.toLowerCase(),
       tripType: tripType.toLowerCase(),
       originPort,
@@ -300,7 +340,6 @@ const searchTripsGet = async (req, res, next) => {
       cabin,
       visaType,
       passengers,
-      partnerId,
     })
 
     res.status(200).json(result)
