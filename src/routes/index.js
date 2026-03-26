@@ -25,6 +25,7 @@ const markupDiscountRoutes = require("./markupDiscountRoutes")
 const commissionRuleRoutes = require("./commissionRuleRoutes")
 const promotionRoutes = require("./promotionRoutes")
 const allocationRoutes = require("./allocationRoutes")
+const tripSearchRoutes = require("./tripSearchRoutes")
 
 
 module.exports = (app) => {
@@ -55,4 +56,5 @@ module.exports = (app) => {
   app.use("/api/commission-rules", commissionRuleRoutes)
   app.use("/api/promotions", promotionRoutes)
   app.use("/api/allocations", allocationRoutes)
+  app.use("/api/trip-search", tripSearchRoutes)
 }
