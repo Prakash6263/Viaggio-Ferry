@@ -19,6 +19,8 @@ const { Partner } = require("../models/Partner")
  * For Agent Users:
  *   availableSeats = MIN(companyRemaining, parentRemaining, agentRemaining)
  *   where each level's remaining = allocated - SUM(child allocations)
+ *   
+ * Returns availabilityBreakdown array showing each hierarchy level
  */
 const calculateAvailableSeats = async (params) => {
   const {
@@ -67,19 +69,33 @@ const calculateAvailableSeats = async (params) => {
   // Company remaining = total capacity - allocated to agents
   const companyRemaining = totalCapacity - allocatedToAgents
 
+  // Build availability breakdown starting with company level
+  const availabilityBreakdown = [
+    {
+      level: "company",
+      entityId: companyId,
+      entityName: "Company",
+      allocated: totalCapacity,
+      usedByChildren: allocatedToAgents,
+      remaining: Math.max(0, companyRemaining),
+    },
+  ]
+
   // If user is company, return company remaining directly
   if (userType === "company") {
     return {
       availableSeats: Math.max(0, companyRemaining),
+      finalAvailableSeats: Math.max(0, companyRemaining),
       totalCapacity,
       allocatedToAgents,
       companyRemaining: Math.max(0, companyRemaining),
+      availabilityBreakdown,
     }
   }
 
   // For agent users, calculate based on allocation hierarchy
   if (userType === "partner" && partnerId) {
-    // Get the agent's allocation
+    // Get the agent's allocation with parent chain
     const agentAllocation = await AvailabilityAgentAllocation.findOne({
       company: companyId,
       trip: tripId,
@@ -141,8 +157,19 @@ const calculateAvailableSeats = async (params) => {
     const totalChildAllocated = childAllocations[0]?.totalChildAllocated || 0
     const agentRemaining = Math.max(0, agentAllocated - totalChildAllocated)
 
-    // If agent has a parent, calculate parent remaining too
-    let parentRemaining = Infinity
+    // Add current agent to breakdown
+    availabilityBreakdown.push({
+      level: "agent",
+      entityId: partnerId,
+      entityName: agentAllocation.agentName || "Agent",
+      allocated: agentAllocated,
+      usedByChildren: totalChildAllocated,
+      remaining: agentRemaining,
+    })
+
+    // If agent has a parent, recursively calculate parent hierarchy
+    let finalAvailableSeats = Math.min(companyRemaining, agentRemaining)
+    
     if (agentAllocation.parentAgent) {
       const parentResult = await calculateAvailableSeats({
         companyId,
@@ -153,24 +180,32 @@ const calculateAvailableSeats = async (params) => {
         userType: "partner",
         partnerId: agentAllocation.parentAgent,
       })
-      parentRemaining = parentResult.availableSeats
+      
+      // Extract parent breakdown and insert between company and current agent
+      if (parentResult.availabilityBreakdown && parentResult.availabilityBreakdown.length > 1) {
+        // Insert parent levels (skip company level which is already added)
+        parentResult.availabilityBreakdown.forEach((item, index) => {
+          if (index > 0) { // Skip company level
+            availabilityBreakdown.push(item)
+          }
+        })
+      }
+      
+      finalAvailableSeats = parentResult.finalAvailableSeats
     }
 
-    // Final available = MIN(companyRemaining, parentRemaining, agentRemaining)
-    // Ensure no negative availability is returned
-    const availableSeats = Math.max(
-      0,
-      Math.min(companyRemaining, parentRemaining, agentRemaining)
-    )
+    // Ensure no negative availability
+    finalAvailableSeats = Math.max(0, finalAvailableSeats)
 
     return {
-      availableSeats,
+      availableSeats: finalAvailableSeats,
+      finalAvailableSeats,
       totalCapacity,
       allocatedToAgents,
       companyRemaining: Math.max(0, companyRemaining),
       agentAllocated,
       agentRemaining,
-      parentRemaining: parentRemaining === Infinity ? null : Math.max(0, parentRemaining),
+      availabilityBreakdown,
     }
   }
 
@@ -559,6 +594,8 @@ const searchTripsWithPricing = async (params) => {
         availability: {
           totalSeats: availabilityResult.totalCapacity || cabinInfo.totalSeats,
           availableSeats: availabilityResult.availableSeats,
+          finalAvailableSeats: availabilityResult.finalAvailableSeats || availabilityResult.availableSeats,
+          availabilityBreakdown: availabilityResult.availabilityBreakdown || [],
           ...(userType === "partner" && {
             agentAllocated: availabilityResult.agentAllocated,
             agentRemaining: availabilityResult.agentRemaining,
