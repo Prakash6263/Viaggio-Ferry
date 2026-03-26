@@ -55,10 +55,19 @@ const searchTripsWithPricing = async (params) => {
     if (!passenger.payloadTypeId) {
       throw new Error("Each passenger must have a payloadTypeId")
     }
-    if (!passenger.quantity || passenger.quantity < 1) {
-      throw new Error("Each passenger must have a quantity of at least 1")
+    if (passenger.quantity === undefined || passenger.quantity === null || passenger.quantity < 0) {
+      throw new Error("Each passenger must have a quantity of 0 or more")
     }
   }
+
+  // Ensure at least one passenger has quantity > 0
+  const totalQuantity = passengers.reduce((sum, p) => sum + p.quantity, 0)
+  if (totalQuantity < 1) {
+    throw new Error("At least one passenger with quantity > 0 is required")
+  }
+
+  // Filter out passengers with quantity 0 for pricing calculations (but keep for response)
+  const activePassengers = passengers.filter((p) => p.quantity > 0)
 
   // Validate category
   const validCategories = ["passenger", "vehicle", "cargo"]
@@ -314,7 +323,10 @@ const searchTripsWithPricing = async (params) => {
           })
         } else {
           // No price found for this passenger type in this cabin
-          hasMissingPrice = true
+          // Only mark as missing if quantity > 0 (we need the price)
+          if (passenger.quantity > 0) {
+            hasMissingPrice = true
+          }
           pricingBreakdown.push({
             payloadType: {
               _id: payloadType._id,
@@ -325,9 +337,9 @@ const searchTripsWithPricing = async (params) => {
             quantity: passenger.quantity,
             unitPrice: null,
             unitTotalPrice: null,
-            subtotal: null,
+            subtotal: passenger.quantity === 0 ? 0 : null,
             taxes: [],
-            error: "No price found for this passenger type",
+            ...(passenger.quantity > 0 ? { error: "No price found for this passenger type" } : {}),
           })
         }
       }
