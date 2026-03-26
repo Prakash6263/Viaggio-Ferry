@@ -1,0 +1,723 @@
+{
+  "info": {
+    "_postman_id": "multi-tenant-auth-api",
+    "name": "Multi-Tenant Authentication API",
+    "description": "Complete API collection for Super Admin and Company authentication and management",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Super Admin",
+      "item": [
+        {
+          "name": "Register Super Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "form-data"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "Admin User",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "admin@example.com",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "SecurePassword123!",
+                  "type": "text"
+                },
+                {
+                  "key": "profileImage",
+                  "type": "file",
+                  "description": "Optional profile picture (JPG, PNG, max 5MB)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/register-super-admin",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "register-super-admin"]
+            },
+            "description": "Register the first super admin with optional profile image"
+          },
+          "response": []
+        },
+        {
+          "name": "Super Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"SecurePassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "login"]
+            },
+            "description": "Login as super admin and receive JWT token"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Admin Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "profile"]
+            },
+            "description": "Get authenticated admin's profile with profile image"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Admin Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "Updated Admin Name",
+                  "type": "text"
+                },
+                {
+                  "key": "profileImage",
+                  "type": "file",
+                  "description": "Optional new profile picture (JPG, PNG, max 5MB)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "profile"]
+            },
+            "description": "Update admin profile including name and optional profile image"
+          },
+          "response": []
+        },
+        {
+          "name": "List All Companies",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/companies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "companies"]
+            },
+            "description": "Get list of all companies (super admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Company Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/companies/{{companyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "companies", "{{companyId}}"]
+            },
+            "description": "Get details of a specific company"
+          },
+          "response": []
+        },
+{
+  "name": "Add Company (Admin) with Logo",
+  "request": {
+    "method": "POST",
+    "header": [
+      {
+        "key": "Authorization",
+        "value": "Bearer {{adminToken}}"
+      },
+      {
+        "key": "Content-Type",
+        "value": "multipart/form-data"
+      }
+    ],
+    "body": {
+      "mode": "formdata",
+      "formdata": [
+        {
+          "key": "companyName",
+          "value": "Admin Added Corp",
+          "type": "text"
+        },
+        {
+          "key": "loginEmail",
+          "value": "admin.added@corp.com",
+          "type": "text"
+        },
+        {
+          "key": "password",
+          "value": "AdminPass123!",
+          "type": "text"
+        },
+        {
+          "key": "logo",
+          "type": "file",
+          "description": "Company logo (JPG, PNG, max 5MB)"
+        },
+        {
+          "key": "dateEstablished",
+          "value": "2020-05-10",
+          "type": "text"
+        },
+        {
+          "key": "taxVatNumber",
+          "value": "VAT-OV123456",
+          "type": "text"
+        },
+        {
+          "key": "address",
+          "value": "789 Corporate Blvd",
+          "type": "text"
+        },
+        {
+          "key": "city",
+          "value": "Chicago",
+          "type": "text"
+        },
+        {
+          "key": "country",
+          "value": "USA",
+          "type": "text"
+        },
+        {
+          "key": "postalCode",
+          "value": "60601",
+          "type": "text"
+        },
+        {
+          "key": "mainPhoneNumber",
+          "value": "+1 555 123 456",
+          "type": "text"
+        },
+        {
+          "key": "emailAddress",
+          "value": "contact@admin-corp.com",
+          "type": "text"
+        },
+        {
+          "key": "website",
+          "value": "https://admin-corp.com",
+          "type": "text"
+        },
+        {
+          "key": "defaultCurrency",
+          "value": "USD",
+          "type": "text"
+        },
+        {
+          "key": "applicableTaxes",
+          "value": "[\"VAT\", \"Excise\"]",
+          "type": "text"
+        },
+        {
+          "key": "operatingPorts",
+          "value": "[\"Port A\", \"Port C\"]",
+          "type": "text"
+        },
+        {
+          "key": "operatingCountries",
+          "value": "[\"Sudan\", \"Saudi Arabia\"]",
+          "type": "text"
+        },
+        {
+          "key": "timeZone",
+          "value": "UTC +3",
+          "type": "text"
+        },
+        {
+          "key": "workingHours",
+          "value": "Mon-Fri, 9am-5pm",
+          "type": "text"
+        },
+        {
+          "key": "whoWeAre",
+          "value": "Enterprise solutions provider",
+          "type": "text"
+        },
+        {
+          "key": "vision",
+          "value": "Lead the industry with innovation",
+          "type": "text"
+        },
+        {
+          "key": "mission",
+          "value": "Deliver excellence",
+          "type": "text"
+        },
+        {
+          "key": "purpose",
+          "value": "Empower businesses globally",
+          "type": "text"
+        },
+        {
+          "key": "facebookUrl",
+          "value": "https://facebook.com/admincorp",
+          "type": "text"
+        },
+        {
+          "key": "instagramUrl",
+          "value": "https://instagram.com/admincorp",
+          "type": "text"
+        },
+        {
+          "key": "whatsappNumber",
+          "value": "+1 555 123 456",
+          "type": "text"
+        },
+        {
+          "key": "linkedinProfile",
+          "value": "https://linkedin.com/company/admin-corp",
+          "type": "text"
+        },
+        {
+          "key": "skypeId",
+          "value": "admin.corp",
+          "type": "text"
+        },
+        {
+          "key": "approveNow",
+          "value": "true",
+          "type": "text"
+        }
+      ]
+    },
+    "url": {
+      "raw": "{{baseUrl}}/api/companies/admin/add",
+      "host": ["{{baseUrl}}"],
+      "path": ["api", "companies", "admin", "add"]
+    },
+    "description": "Add a new company with logo upload. registrationNumber is auto-generated in backend (e.g. REG-1001). Set approveNow to true to approve immediately. Only super admin can use this endpoint."
+  },
+  "response": []
+},
+        {
+          "name": "Verify Company",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/companies/{{companyId}}/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "companies", "{{companyId}}", "verify"]
+            },
+            "description": "Verify and approve a company registration"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Company",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Incomplete business information\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/companies/{{companyId}}/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "companies", "{{companyId}}", "reject"]
+            },
+            "description": "Reject a company registration with reason"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Company",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/companies/{{companyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "companies", "{{companyId}}"]
+            },
+            "description": "Delete a company (soft delete)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Company Authentication",
+      "item": [
+{
+  "name": "Register Company with Logo",
+  "request": {
+    "method": "POST",
+    "header": [
+      {
+        "key": "Content-Type",
+        "value": "multipart/form-data"
+      }
+    ],
+    "body": {
+      "mode": "formdata",
+      "formdata": [
+        {
+          "key": "companyName",
+          "value": "Acme Corp",
+          "type": "text"
+        },
+        {
+          "key": "loginEmail",
+          "value": "company@acme.com",
+          "type": "text"
+        },
+        {
+          "key": "password",
+          "value": "CompanyPass123!",
+          "type": "text"
+        },
+        {
+          "key": "logo",
+          "type": "file",
+          "description": "Company logo (JPG, PNG, max 5MB)"
+        },
+        {
+          "key": "dateEstablished",
+          "value": "2015-01-15",
+          "type": "text"
+        },
+        {
+          "key": "taxVatNumber",
+          "value": "VAT-AC12345",
+          "type": "text"
+        },
+        {
+          "key": "address",
+          "value": "123 Business St",
+          "type": "text"
+        },
+        {
+          "key": "city",
+          "value": "New York",
+          "type": "text"
+        },
+        {
+          "key": "country",
+          "value": "USA",
+          "type": "text"
+        },
+        {
+          "key": "postalCode",
+          "value": "10001",
+          "type": "text"
+        },
+        {
+          "key": "mainPhoneNumber",
+          "value": "+1 234 567 890",
+          "type": "text"
+        },
+        {
+          "key": "emailAddress",
+          "value": "contact@acme.com",
+          "type": "text"
+        },
+        {
+          "key": "website",
+          "value": "https://acme.com",
+          "type": "text"
+        },
+        {
+          "key": "defaultCurrency",
+          "value": "USD",
+          "type": "text"
+        },
+        {
+          "key": "applicableTaxes",
+          "value": "[\"VAT\", \"Service Tax\"]",
+          "type": "text"
+        },
+        {
+          "key": "operatingPorts",
+          "value": "[\"Port A\", \"Port B\"]",
+          "type": "text"
+        },
+        {
+          "key": "operatingCountries",
+          "value": "[\"Sudan\", \"Saudi Arabia\"]",
+          "type": "text"
+        },
+        {
+          "key": "timeZone",
+          "value": "UTC +3",
+          "type": "text"
+        },
+        {
+          "key": "workingHours",
+          "value": "Mon-Fri, 9am-5pm",
+          "type": "text"
+        },
+        {
+          "key": "whoWeAre",
+          "value": "Leading tech solutions provider",
+          "type": "text"
+        },
+        {
+          "key": "vision",
+          "value": "To transform businesses through innovative technology",
+          "type": "text"
+        },
+        {
+          "key": "mission",
+          "value": "Deliver high-quality solutions that drive growth",
+          "type": "text"
+        },
+        {
+          "key": "purpose",
+          "value": "Empowering enterprises with cutting-edge tools",
+          "type": "text"
+        },
+        {
+          "key": "facebookUrl",
+          "value": "https://facebook.com/acme",
+          "type": "text"
+        },
+        {
+          "key": "instagramUrl",
+          "value": "https://instagram.com/acme",
+          "type": "text"
+        },
+        {
+          "key": "whatsappNumber",
+          "value": "+1 234 567 890",
+          "type": "text"
+        },
+        {
+          "key": "linkedinProfile",
+          "value": "https://linkedin.com/company/acme",
+          "type": "text"
+        },
+        {
+          "key": "skypeId",
+          "value": "acme.corp",
+          "type": "text"
+        }
+      ]
+    },
+    "url": {
+      "raw": "{{baseUrl}}/api/companies/register",
+      "host": ["{{baseUrl}}"],
+      "path": ["api", "companies", "register"]
+    },
+    "description": "Register a new company with logo upload using multipart/form-data. registrationNumber is auto-generated in backend (e.g. REG-1001)."
+  },
+  "response": []
+},
+        {
+          "name": "Company Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"company@acme.com\",\n  \"password\": \"CompanyPass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/companies/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "companies", "login"]
+            },
+            "description": "Login as company and receive JWT token"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Company Profile",
+      "item": [
+        {
+          "name": "Get Own Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/companies/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "companies", "me"]
+            },
+            "description": "Get authenticated company's own profile"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Own Profile with Logo",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{companyToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "multipart/form-data"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "mainPhoneNumber",
+                  "value": "+1 987 654 321",
+                  "type": "text"
+                },
+                {
+                  "key": "website",
+                  "value": "https://newsite.acme.com",
+                  "type": "text"
+                },
+                {
+                  "key": "whoWeAre",
+                  "value": "Updated company description",
+                  "type": "text"
+                },
+                {
+                  "key": "address",
+                  "value": "456 Updated Ave",
+                  "type": "text"
+                },
+                {
+                  "key": "city",
+                  "value": "Los Angeles",
+                  "type": "text"
+                },
+                {
+                  "key": "workingHours",
+                  "value": "Mon-Fri, 8am-6pm",
+                  "type": "text"
+                },
+                {
+                  "key": "logo",
+                  "type": "file",
+                  "description": "Optional new company logo (JPG, PNG, max 5MB)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/companies/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "companies", "me"]
+            },
+            "description": "Update authenticated company's profile with optional logo upload"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT token from super admin login"
+    },
+    {
+      "key": "companyToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT token from company login"
+    },
+    {
+      "key": "companyId",
+      "value": "",
+      "type": "string",
+      "description": "Company ID from registration or list response"
+    }
+  ]
+}
