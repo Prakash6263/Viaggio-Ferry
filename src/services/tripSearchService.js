@@ -101,7 +101,9 @@ const calculateAvailableSeats = async (params) => {
       trip: tripId,
       agent: partnerId,
       isDeleted: false,
-    }).lean()
+    })
+      .populate("agent", "name agentType")
+      .lean()
 
     if (!agentAllocation) {
       // Agent has no allocation for this trip
@@ -157,11 +159,25 @@ const calculateAvailableSeats = async (params) => {
     const totalChildAllocated = childAllocations[0]?.totalChildAllocated || 0
     const agentRemaining = Math.max(0, agentAllocated - totalChildAllocated)
 
+    // Determine agent level based on hierarchy (Marine → Commercial → Agent)
+    let agentLevel = "agent"
+    if (agentAllocation.agent?.agentType) {
+      const agentType = agentAllocation.agent.agentType.toLowerCase()
+      if (agentType.includes("marine")) {
+        agentLevel = "marine"
+      } else if (agentType.includes("commercial")) {
+        agentLevel = "commercial"
+      }
+    } else if (!agentAllocation.parentAgent) {
+      // Top-level agent with no parent
+      agentLevel = "marine"
+    }
+
     // Add current agent to breakdown
     availabilityBreakdown.push({
-      level: "agent",
+      level: agentLevel,
       entityId: partnerId,
-      entityName: agentAllocation.agentName || "Agent",
+      entityName: agentAllocation.agent?.name || agentAllocation.agentName || "Agent",
       allocated: agentAllocated,
       usedByChildren: totalChildAllocated,
       remaining: agentRemaining,
@@ -186,7 +202,7 @@ const calculateAvailableSeats = async (params) => {
         // Insert parent levels (skip company level which is already added)
         parentResult.availabilityBreakdown.forEach((item, index) => {
           if (index > 0) { // Skip company level
-            availabilityBreakdown.push(item)
+            availabilityBreakdown.splice(availabilityBreakdown.length - 1, 0, item)
           }
         })
       }
@@ -507,6 +523,8 @@ const searchTripsWithPricing = async (params) => {
 
       // ===== GET PRICING FOR EACH PASSENGER TYPE =====
       const pricingBreakdown = []
+      let totalBasicPrice = 0
+      let totalTaxes = 0
       let totalPrice = 0
       let hasMissingPrice = false
       let currency = null
@@ -534,8 +552,16 @@ const searchTripsWithPricing = async (params) => {
 
         if (priceResult && priceResult.price) {
           const price = priceResult.price
-          const subtotal = price.totalPrice * passenger.quantity
+          const unitTotalPrice = price.totalPrice // includes base + tax
+          const subtotal = unitTotalPrice * passenger.quantity
+          
+          // Calculate tax portion for this passenger type
+          const taxAmount = (price.totalPrice - price.basicPrice) * passenger.quantity
+          
+          totalBasicPrice += price.basicPrice * passenger.quantity
+          totalTaxes += taxAmount
           totalPrice += subtotal
+          
           currency = price.priceList?.currency
           priceListId = price.priceList?._id
 
@@ -548,7 +574,7 @@ const searchTripsWithPricing = async (params) => {
             },
             quantity: passenger.quantity,
             unitPrice: price.basicPrice,
-            unitTotalPrice: price.totalPrice,
+            unitTotalPrice: unitTotalPrice,
             subtotal: Math.round(subtotal * 100) / 100,
             taxes: price.taxIds || [],
             allowedLuggagePieces: price.allowedLuggagePieces,
@@ -619,6 +645,8 @@ const searchTripsWithPricing = async (params) => {
         },
         pricing: {
           breakdown: pricingBreakdown,
+          totalBasicPrice: hasMissingPrice ? null : Math.round(totalBasicPrice * 100) / 100,
+          totalTaxes: hasMissingPrice ? null : Math.round(totalTaxes * 100) / 100,
           totalPrice: hasMissingPrice ? null : Math.round(totalPrice * 100) / 100,
           currency,
           priceListId,
