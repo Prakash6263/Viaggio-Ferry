@@ -19,6 +19,8 @@ const { Partner } = require("../models/Partner")
  * For Agent Users:
  *   availableSeats = MIN(companyRemaining, parentRemaining, agentRemaining)
  *   where each level's remaining = allocated - SUM(child allocations)
+ *   
+ * Returns availabilityBreakdown array showing each hierarchy level
  */
 const calculateAvailableSeats = async (params) => {
   const {
@@ -67,25 +69,41 @@ const calculateAvailableSeats = async (params) => {
   // Company remaining = total capacity - allocated to agents
   const companyRemaining = totalCapacity - allocatedToAgents
 
+  // Build availability breakdown starting with company level
+  const availabilityBreakdown = [
+    {
+      level: "company",
+      entityId: companyId,
+      entityName: "Company",
+      allocated: totalCapacity,
+      usedByChildren: allocatedToAgents,
+      remaining: Math.max(0, companyRemaining),
+    },
+  ]
+
   // If user is company, return company remaining directly
   if (userType === "company") {
     return {
       availableSeats: Math.max(0, companyRemaining),
+      finalAvailableSeats: Math.max(0, companyRemaining),
       totalCapacity,
       allocatedToAgents,
       companyRemaining: Math.max(0, companyRemaining),
+      availabilityBreakdown,
     }
   }
 
   // For agent users, calculate based on allocation hierarchy
   if (userType === "partner" && partnerId) {
-    // Get the agent's allocation
+    // Get the agent's allocation with parent chain
     const agentAllocation = await AvailabilityAgentAllocation.findOne({
       company: companyId,
       trip: tripId,
       agent: partnerId,
       isDeleted: false,
-    }).lean()
+    })
+      .populate("agent", "name agentType")
+      .lean()
 
     if (!agentAllocation) {
       // Agent has no allocation for this trip
@@ -112,6 +130,7 @@ const calculateAvailableSeats = async (params) => {
     const agentAllocated = cabinAlloc.allocatedSeats || 0
 
     // Get sum of child allocations (sub-agents allocated by this agent)
+    // agentRemaining = agentAllocated - SUM(childAllocations.quantity)
     const childAllocations = await AvailabilityAgentAllocation.aggregate([
       {
         $match: {
@@ -138,10 +157,35 @@ const calculateAvailableSeats = async (params) => {
     ])
 
     const totalChildAllocated = childAllocations[0]?.totalChildAllocated || 0
-    const agentRemaining = agentAllocated - totalChildAllocated
+    const agentRemaining = Math.max(0, agentAllocated - totalChildAllocated)
 
-    // If agent has a parent, calculate parent remaining too
-    let parentRemaining = Infinity
+    // Determine agent level based on hierarchy (Marine → Commercial → Agent)
+    let agentLevel = "agent"
+    if (agentAllocation.agent?.agentType) {
+      const agentType = agentAllocation.agent.agentType.toLowerCase()
+      if (agentType.includes("marine")) {
+        agentLevel = "marine"
+      } else if (agentType.includes("commercial")) {
+        agentLevel = "commercial"
+      }
+    } else if (!agentAllocation.parentAgent) {
+      // Top-level agent with no parent
+      agentLevel = "marine"
+    }
+
+    // Add current agent to breakdown
+    availabilityBreakdown.push({
+      level: agentLevel,
+      entityId: partnerId,
+      entityName: agentAllocation.agent?.name || agentAllocation.agentName || "Agent",
+      allocated: agentAllocated,
+      usedByChildren: totalChildAllocated,
+      remaining: agentRemaining,
+    })
+
+    // If agent has a parent, recursively calculate parent hierarchy
+    let finalAvailableSeats = Math.min(companyRemaining, agentRemaining)
+    
     if (agentAllocation.parentAgent) {
       const parentResult = await calculateAvailableSeats({
         companyId,
@@ -152,23 +196,32 @@ const calculateAvailableSeats = async (params) => {
         userType: "partner",
         partnerId: agentAllocation.parentAgent,
       })
-      parentRemaining = parentResult.availableSeats
+      
+      // Extract parent breakdown and insert between company and current agent
+      if (parentResult.availabilityBreakdown && parentResult.availabilityBreakdown.length > 1) {
+        // Insert parent levels (skip company level which is already added)
+        parentResult.availabilityBreakdown.forEach((item, index) => {
+          if (index > 0) { // Skip company level
+            availabilityBreakdown.splice(availabilityBreakdown.length - 1, 0, item)
+          }
+        })
+      }
+      
+      finalAvailableSeats = parentResult.finalAvailableSeats
     }
 
-    // Final available = MIN(companyRemaining, parentRemaining, agentRemaining)
-    const availableSeats = Math.max(
-      0,
-      Math.min(companyRemaining, parentRemaining, agentRemaining)
-    )
+    // Ensure no negative availability
+    finalAvailableSeats = Math.max(0, finalAvailableSeats)
 
     return {
-      availableSeats,
+      availableSeats: finalAvailableSeats,
+      finalAvailableSeats,
       totalCapacity,
       allocatedToAgents,
       companyRemaining: Math.max(0, companyRemaining),
       agentAllocated,
-      agentRemaining: Math.max(0, agentRemaining),
-      parentRemaining: parentRemaining === Infinity ? null : parentRemaining,
+      agentRemaining,
+      availabilityBreakdown,
     }
   }
 
@@ -177,12 +230,11 @@ const calculateAvailableSeats = async (params) => {
 
 /**
  * Find best matching price based on priority order:
- * 1. Trip + Partner + PayloadType (trip-specific partner price)
- * 2. Trip + PayloadType (trip-specific price)
- * 3. Route + Partner + PayloadType (route partner price)
- * 4. Route + PayloadType (route default price)
+ * 1. Route + Partner + PayloadType/Cabin + PassengerType + VisaType (partner-specific price)
+ * 2. Route + PayloadType/Cabin + PassengerType + VisaType (default price)
  * 
  * Each level sorted by effectiveDateTime descending
+ * Uses PriceListDetail lookup with route (originPort + destinationPort) + cabin + passengerType + visaType + partner + effectiveDate
  */
 const findBestPrice = async (params) => {
   const {
@@ -254,6 +306,7 @@ const findBestPrice = async (params) => {
   }
 
   // Priority 1: Partner-specific price (if partnerId provided)
+  // Look for a price list that includes this partner in the partners array
   if (partnerId) {
     const partnerPrice = await findPrice({
       partners: new mongoose.Types.ObjectId(partnerId),
@@ -470,6 +523,8 @@ const searchTripsWithPricing = async (params) => {
 
       // ===== GET PRICING FOR EACH PASSENGER TYPE =====
       const pricingBreakdown = []
+      let totalBasicPrice = 0
+      let totalTaxes = 0
       let totalPrice = 0
       let hasMissingPrice = false
       let currency = null
@@ -497,8 +552,16 @@ const searchTripsWithPricing = async (params) => {
 
         if (priceResult && priceResult.price) {
           const price = priceResult.price
-          const subtotal = price.totalPrice * passenger.quantity
+          const unitTotalPrice = price.totalPrice // includes base + tax
+          const subtotal = unitTotalPrice * passenger.quantity
+          
+          // Calculate tax portion for this passenger type
+          const taxAmount = (price.totalPrice - price.basicPrice) * passenger.quantity
+          
+          totalBasicPrice += price.basicPrice * passenger.quantity
+          totalTaxes += taxAmount
           totalPrice += subtotal
+          
           currency = price.priceList?.currency
           priceListId = price.priceList?._id
 
@@ -511,7 +574,7 @@ const searchTripsWithPricing = async (params) => {
             },
             quantity: passenger.quantity,
             unitPrice: price.basicPrice,
-            unitTotalPrice: price.totalPrice,
+            unitTotalPrice: unitTotalPrice,
             subtotal: Math.round(subtotal * 100) / 100,
             taxes: price.taxIds || [],
             allowedLuggagePieces: price.allowedLuggagePieces,
@@ -552,11 +615,29 @@ const searchTripsWithPricing = async (params) => {
         }
       }
 
+      // Determine if booking is allowed for this cabin
+      const now = new Date()
+      const availableSeatsValue = availabilityResult.finalAvailableSeats ?? availabilityResult.availableSeats ?? 0
+      
+      // Booking is NOT allowed if:
+      // 1. No available seats
+      // 2. Price not found for any passenger type
+      // 3. Current date is after booking closing date
+      // 4. Trip has already departed
+      const bookingAllowed = 
+        availableSeatsValue > 0 &&
+        !hasMissingPrice &&
+        (!trip.bookingClosingDate || now <= trip.bookingClosingDate) &&
+        (!trip.departureDateTime || now <= trip.departureDateTime)
+
       cabinOptions.push({
         cabin: cabinDetails,
         availability: {
           totalSeats: availabilityResult.totalCapacity || cabinInfo.totalSeats,
-          availableSeats: availabilityResult.availableSeats,
+          availableSeats: Math.max(0, availabilityResult.availableSeats),
+          finalAvailableSeats: Math.max(0, availableSeatsValue),
+          availabilityBreakdown: availabilityResult.availabilityBreakdown || [],
+          bookingAllowed,
           ...(userType === "partner" && {
             agentAllocated: availabilityResult.agentAllocated,
             agentRemaining: availabilityResult.agentRemaining,
@@ -564,6 +645,8 @@ const searchTripsWithPricing = async (params) => {
         },
         pricing: {
           breakdown: pricingBreakdown,
+          totalBasicPrice: hasMissingPrice ? null : Math.round(totalBasicPrice * 100) / 100,
+          totalTaxes: hasMissingPrice ? null : Math.round(totalTaxes * 100) / 100,
           totalPrice: hasMissingPrice ? null : Math.round(totalPrice * 100) / 100,
           currency,
           priceListId,
@@ -603,6 +686,21 @@ const searchTripsWithPricing = async (params) => {
 
     // Only include trips that have at least one cabin option
     if (cabinOptions.length > 0) {
+      // Calculate trip status flags
+      const now = new Date()
+      const tripStatusFlags = {
+        bookingOpen: 
+          (!trip.bookingOpeningDate || now >= trip.bookingOpeningDate) &&
+          (!trip.bookingClosingDate || now <= trip.bookingClosingDate),
+        checkInOpen:
+          (!trip.checkInOpeningDate || now >= trip.checkInOpeningDate) &&
+          (!trip.checkInClosingDate || now <= trip.checkInClosingDate),
+        boardingClosed:
+          trip.checkInClosingDate ? now > trip.checkInClosingDate : false,
+        departed:
+          trip.departureDateTime ? now > trip.departureDateTime : false,
+      }
+
       results.push({
         trip: {
           _id: trip._id,
@@ -618,6 +716,7 @@ const searchTripsWithPricing = async (params) => {
           bookingClosingDate: trip.bookingClosingDate,
           checkInOpeningDate: trip.checkInOpeningDate,
           checkInClosingDate: trip.checkInClosingDate,
+          tripStatusFlags,
         },
         ticketingRules,
         cabinOptions,
