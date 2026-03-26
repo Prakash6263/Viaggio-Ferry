@@ -25,9 +25,17 @@ router.use(extractUserId)
  *   departureDate: Date string "YYYY-MM-DD" (required)
  *   cabin: ObjectId (optional - filter by specific cabin)
  *   visaType: String (optional - filter by visa type)
- *   adults: Number (optional - default: 1)
- *   children: Number (optional - default: 0)
+ *   passengers: Array (required) - Array of passenger objects
+ *     [{ payloadTypeId: ObjectId, quantity: Number }]
  * }
+ * 
+ * Availability Logic:
+ * - Company users: availableSeats = TripAvailability.totalCapacity - SUM(agent allocations)
+ * - Agent users: availableSeats = MIN(companyRemaining, parentRemaining, agentRemaining)
+ * 
+ * Price Priority:
+ * 1. Partner-specific price (if agent)
+ * 2. Route default price
  * 
  * Requires: read permission on trips
  */
@@ -45,8 +53,9 @@ router.post("/", checkPermission("ship-trips", "trips", "read"), tripSearchContr
  * - departureDate: Date string "YYYY-MM-DD" (required)
  * - cabin: ObjectId (optional)
  * - visaType: String (optional)
- * - adults: Number (optional - default: 1)
- * - children: Number (optional - default: 0)
+ * - passengers: JSON string of array [{ payloadTypeId: ObjectId, quantity: Number }]
+ * 
+ * Note: POST method is recommended for complex passenger arrays
  * 
  * Requires: read permission on trips
  */

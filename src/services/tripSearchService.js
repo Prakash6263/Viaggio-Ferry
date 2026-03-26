@@ -4,6 +4,7 @@ const { PriceList } = require("../models/PriceList")
 const { PriceListDetail } = require("../models/PriceListDetail")
 const { TripAvailability } = require("../models/TripAvailability")
 const AvailabilityAgentAllocation = require("../models/AvailabilityAgentAllocation")
+const { TripTicketRule } = require("../models/TripTicketRule")
 const { TicketingRule } = require("../models/TicketingRule")
 const { PayloadType } = require("../models/PayloadType")
 const { Cabin } = require("../models/Cabin")
@@ -371,10 +372,6 @@ const searchTripsWithPricing = async (params) => {
     .populate("ship", "name imoNumber")
     .populate("departurePort", "name code country")
     .populate("arrivalPort", "name code country")
-    .populate({
-      path: "ticketingRules.rule",
-      select: "ruleName ruleType restrictedWindowHours normalFee restrictedPenalty noShowPenalty conditions",
-    })
     .sort({ departureDateTime: 1 })
     .lean()
 
@@ -577,18 +574,54 @@ const searchTripsWithPricing = async (params) => {
       })
     }
 
-    // ===== FORMAT TICKETING RULES =====
+    // ===== GET TICKETING RULES FROM TripTicketRule COLLECTION =====
     const ticketingRules = {}
-    if (trip.ticketingRules && trip.ticketingRules.length > 0) {
-      for (const tr of trip.ticketingRules) {
-        if (tr.rule) {
-          ticketingRules[tr.ruleType] = {
-            ruleName: tr.rule.ruleName,
-            restrictedWindowHours: tr.rule.restrictedWindowHours,
-            normalFee: tr.rule.normalFee,
-            restrictedPenalty: tr.rule.restrictedPenalty,
-            noShowPenalty: tr.rule.noShowPenalty,
-            conditions: tr.rule.conditions,
+    const tripTicketRules = await TripTicketRule.find({
+      company: new mongoose.Types.ObjectId(companyId),
+      trip: trip._id,
+      isActive: true,
+      isDeleted: false,
+    })
+      .populate({
+        path: "ticketingRule",
+        select: "ruleName ruleType restrictedWindowHours normalFee restrictedPenalty noShowPenalty conditions",
+      })
+      .lean()
+
+    for (const ttr of tripTicketRules) {
+      if (ttr.ticketingRule) {
+        ticketingRules[ttr.ruleType] = {
+          ruleName: ttr.ticketingRule.ruleName,
+          restrictedWindowHours: ttr.ticketingRule.restrictedWindowHours,
+          normalFee: ttr.ticketingRule.normalFee,
+          restrictedPenalty: ttr.ticketingRule.restrictedPenalty,
+          noShowPenalty: ttr.ticketingRule.noShowPenalty,
+          conditions: ttr.ticketingRule.conditions,
+        }
+      }
+    }
+
+    // Fallback to embedded ticketingRules if TripTicketRule collection is empty
+    if (Object.keys(ticketingRules).length === 0 && trip.ticketingRules && trip.ticketingRules.length > 0) {
+      // Need to populate the embedded rules
+      const tripWithRules = await Trip.findById(trip._id)
+        .populate({
+          path: "ticketingRules.rule",
+          select: "ruleName ruleType restrictedWindowHours normalFee restrictedPenalty noShowPenalty conditions",
+        })
+        .lean()
+
+      if (tripWithRules?.ticketingRules) {
+        for (const tr of tripWithRules.ticketingRules) {
+          if (tr.rule) {
+            ticketingRules[tr.ruleType] = {
+              ruleName: tr.rule.ruleName,
+              restrictedWindowHours: tr.rule.restrictedWindowHours,
+              normalFee: tr.rule.normalFee,
+              restrictedPenalty: tr.rule.restrictedPenalty,
+              noShowPenalty: tr.rule.noShowPenalty,
+              conditions: tr.rule.conditions,
+            }
           }
         }
       }
