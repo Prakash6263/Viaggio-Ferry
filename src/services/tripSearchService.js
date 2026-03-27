@@ -176,28 +176,109 @@ const calculateAvailableSeats = async (params) => {
     // Collect all remaining values for MIN calculation
     const hierarchyRemainings = [companyRemaining]
 
-    // If agent has a parent, recursively get parent hierarchy
+    // If agent has a parent, we need to add the PARENT'S OWN LEVEL to the breakdown
     if (agentAllocation.parentAgent) {
-      const parentResult = await calculateAvailableSeats({
-        companyId,
-        tripId,
-        availabilityId,
-        category,
-        cabinId,
-        userType: "partner",
-        partnerId: agentAllocation.parentAgent,
+      // Get parent's own allocation remaining (not recursive result)
+      const parentAllocation = await AvailabilityAgentAllocation.findOne({
+        company: companyId,
+        trip: tripId,
+        agent: agentAllocation.parentAgent,
+        isDeleted: false,
       })
+        .populate("agent", "name agentType")
+        .lean()
 
-      // Extract parent breakdown and insert between company and current agent
-      if (parentResult.availabilityBreakdown && parentResult.availabilityBreakdown.length > 1) {
-        // Insert parent levels (skip company level which is already added)
-        const parentBreakdown = parentResult.availabilityBreakdown.slice(1) // Skip company
-        parentBreakdown.forEach((item) => {
-          // Insert before the current position to maintain hierarchy order
-          availabilityBreakdown.push(item)
-          // Collect remaining for MIN calculation
-          hierarchyRemainings.push(item.remaining)
+      if (parentAllocation) {
+        // Get parent's own remaining
+        const parentCategoryAlloc = parentAllocation.allocations?.find(
+          (a) => a.type === category
+        )
+        if (parentCategoryAlloc) {
+          const parentCabinAlloc = parentCategoryAlloc.cabins?.find(
+            (c) => c.cabin.toString() === cabinId.toString()
+          )
+          if (parentCabinAlloc) {
+            const parentAllocated = parentCabinAlloc.allocatedSeats || 0
+            
+            // Get parent's child allocations
+            const parentChildAllocations = await AvailabilityAgentAllocation.aggregate([
+              {
+                $match: {
+                  company: new mongoose.Types.ObjectId(companyId),
+                  trip: new mongoose.Types.ObjectId(tripId),
+                  parentAgent: agentAllocation.parentAgent,
+                  isDeleted: false,
+                },
+              },
+              { $unwind: "$allocations" },
+              { $match: { "allocations.type": category } },
+              { $unwind: "$allocations.cabins" },
+              {
+                $match: {
+                  "allocations.cabins.cabin": new mongoose.Types.ObjectId(cabinId),
+                },
+              },
+              {
+                $group: {
+                  _id: null,
+                  totalChildAllocated: { $sum: "$allocations.cabins.allocatedSeats" },
+                },
+              },
+            ])
+            
+            const parentTotalChildAllocated = parentChildAllocations[0]?.totalChildAllocated || 0
+            const parentRemaining = Math.max(0, parentAllocated - parentTotalChildAllocated)
+            
+            // Determine parent level
+            let parentLevel = "agent"
+            if (parentAllocation.agent?.agentType) {
+              const parentAgentType = parentAllocation.agent.agentType.toLowerCase()
+              if (parentAgentType.includes("marine")) {
+                parentLevel = "marine"
+              } else if (parentAgentType.includes("commercial")) {
+                parentLevel = "commercial"
+              }
+            } else if (!parentAllocation.parentAgent) {
+              parentLevel = "marine"
+            }
+            
+            // Add parent level to breakdown
+            availabilityBreakdown.push({
+              level: parentLevel,
+              remaining: parentRemaining,
+            })
+            
+            // Add parent remaining to hierarchy for MIN
+            hierarchyRemainings.push(parentRemaining)
+          }
+        }
+      }
+      
+      // Now recursively process parent's parent (grandparent)
+      if (parentAllocation?.parentAgent) {
+        const grandparentResult = await calculateAvailableSeats({
+          companyId,
+          tripId,
+          availabilityId,
+          category,
+          cabinId,
+          userType: "partner",
+          partnerId: parentAllocation.parentAgent,
         })
+
+        // Extract grandparent breakdown (skip company which is already added)
+        if (grandparentResult.availabilityBreakdown && grandparentResult.availabilityBreakdown.length > 1) {
+          const grandparentBreakdown = grandparentResult.availabilityBreakdown.slice(1)
+          // Insert before current agent
+          grandparentBreakdown.forEach((item) => {
+            // Check if this level already exists
+            const exists = availabilityBreakdown.some(b => b.level === item.level)
+            if (!exists) {
+              availabilityBreakdown.push(item)
+              hierarchyRemainings.push(item.remaining)
+            }
+          })
+        }
       }
     }
 
