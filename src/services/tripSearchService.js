@@ -552,6 +552,10 @@ const searchTripsWithPricing = async (params) => {
 
         if (priceResult && priceResult.price) {
           const price = priceResult.price
+          // PRICING FORMULA per requirements:
+          // unitTotalPrice = basicPrice + taxes
+          // subtotal = unitTotalPrice * quantity
+          // totalPrice = sum(all subtotals)
           const unitTotalPrice = price.totalPrice // includes base + tax
           const subtotal = unitTotalPrice * passenger.quantity
           
@@ -644,7 +648,10 @@ const searchTripsWithPricing = async (params) => {
           totalSeats: availabilityResult.totalCapacity || cabinInfo.totalSeats,
           availableSeats: Math.max(0, availabilityResult.availableSeats || 0),
           finalAvailableSeats: Math.max(0, availableSeatsValue),
-          availabilityBreakdown: availabilityResult.availabilityBreakdown || [],
+          availabilityBreakdown: (availabilityResult.availabilityBreakdown || []).map(item => ({
+            level: item.level,
+            remaining: item.remaining
+          })),
         },
         bookingAllowed,
         pricing: {
