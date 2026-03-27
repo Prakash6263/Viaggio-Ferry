@@ -13,14 +13,20 @@ const { Partner } = require("../models/Partner")
 /**
  * Calculate available seats based on allocation hierarchy
  * 
+ * CRITICAL RULE:
+ * finalAvailableSeats = MIN(
+ *   companyRemaining,
+ *   marineRemaining,
+ *   commercialRemaining,
+ *   agentRemaining
+ * )
+ * 
  * For Company Users:
- *   availableSeats = TripAvailability.seats - SUM(all agent allocations)
+ *   finalAvailableSeats = companyRemaining (TripAvailability.seats - SUM(all agent allocations))
  * 
  * For Agent Users:
- *   availableSeats = MIN(companyRemaining, parentRemaining, agentRemaining)
- *   where each level's remaining = allocated - SUM(child allocations)
- *   
- * Returns availabilityBreakdown array showing each hierarchy level
+ *   finalAvailableSeats = MIN of all hierarchy levels from company down to agent
+ *   Returns availabilityBreakdown array showing each hierarchy level
  */
 const calculateAvailableSeats = async (params) => {
   const {
@@ -183,8 +189,9 @@ const calculateAvailableSeats = async (params) => {
       remaining: agentRemaining,
     })
 
-    // If agent has a parent, recursively calculate parent hierarchy
-    let finalAvailableSeats = Math.min(companyRemaining, agentRemaining)
+    // If agent has a parent, recursively get parent hierarchy
+    let finalAvailableSeats = agentRemaining
+    const hierarchyLevels = [companyRemaining, agentRemaining]
     
     if (agentAllocation.parentAgent) {
       const parentResult = await calculateAvailableSeats({
@@ -200,14 +207,20 @@ const calculateAvailableSeats = async (params) => {
       // Extract parent breakdown and insert between company and current agent
       if (parentResult.availabilityBreakdown && parentResult.availabilityBreakdown.length > 1) {
         // Insert parent levels (skip company level which is already added)
-        parentResult.availabilityBreakdown.forEach((item, index) => {
-          if (index > 0) { // Skip company level
-            availabilityBreakdown.splice(availabilityBreakdown.length - 1, 0, item)
-          }
+        const parentBreakdown = parentResult.availabilityBreakdown.slice(1) // Skip company
+        parentBreakdown.forEach((item) => {
+          // Insert before current agent
+          availabilityBreakdown.splice(availabilityBreakdown.length - 1, 0, item)
+          // Collect remaining for MIN calculation
+          hierarchyLevels.push(item.remaining)
         })
       }
       
+      // Use the MIN formula from prompt: MIN(company, marine, commercial, agent)
       finalAvailableSeats = parentResult.finalAvailableSeats
+    } else {
+      // No parent, just use MIN of company and this agent
+      finalAvailableSeats = Math.min(companyRemaining, agentRemaining)
     }
 
     // Ensure no negative availability
@@ -642,15 +655,11 @@ const searchTripsWithPricing = async (params) => {
         cabin: cabinDetails,
         availability: {
           totalSeats: availabilityResult.totalCapacity || cabinInfo.totalSeats,
-          availableSeats: Math.max(0, availabilityResult.availableSeats),
+          availableSeats: Math.max(0, availabilityResult.availableSeats || 0),
           finalAvailableSeats: Math.max(0, availableSeatsValue),
           availabilityBreakdown: availabilityResult.availabilityBreakdown || [],
-          bookingAllowed,
-          ...(userType === "partner" && {
-            agentAllocated: availabilityResult.agentAllocated,
-            agentRemaining: availabilityResult.agentRemaining,
-          }),
         },
+        bookingAllowed,
         pricing: {
           breakdown: pricingBreakdown,
           totalBasicPrice: Math.round(totalBasicPrice * 100) / 100,
@@ -659,7 +668,6 @@ const searchTripsWithPricing = async (params) => {
           currency,
           priceListId,
           hasMissingPrice,
-          totalPassengers: totalQuantity,
         },
       })
     }
