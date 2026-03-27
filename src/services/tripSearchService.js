@@ -76,13 +76,10 @@ const calculateAvailableSeats = async (params) => {
   const companyRemaining = totalCapacity - allocatedToAgents
 
   // Build availability breakdown starting with company level
+  // Simplified format: only level and remaining
   const availabilityBreakdown = [
     {
       level: "company",
-      entityId: companyId,
-      entityName: "Company",
-      allocated: totalCapacity,
-      usedByChildren: allocatedToAgents,
       remaining: Math.max(0, companyRemaining),
     },
   ]
@@ -93,8 +90,6 @@ const calculateAvailableSeats = async (params) => {
       availableSeats: Math.max(0, companyRemaining),
       finalAvailableSeats: Math.max(0, companyRemaining),
       totalCapacity,
-      allocatedToAgents,
-      companyRemaining: Math.max(0, companyRemaining),
       availabilityBreakdown,
     }
   }
@@ -182,16 +177,12 @@ const calculateAvailableSeats = async (params) => {
     // Add current agent to breakdown
     availabilityBreakdown.push({
       level: agentLevel,
-      entityId: partnerId,
-      entityName: agentAllocation.agent?.name || agentAllocation.agentName || "Agent",
-      allocated: agentAllocated,
-      usedByChildren: totalChildAllocated,
-      remaining: agentRemaining,
+      remaining: Math.max(0, agentRemaining),
     })
 
     // If agent has a parent, recursively get parent hierarchy
     let finalAvailableSeats = agentRemaining
-    const hierarchyLevels = [companyRemaining, agentRemaining]
+    const hierarchyRemainings = [companyRemaining, agentRemaining]
     
     if (agentAllocation.parentAgent) {
       const parentResult = await calculateAvailableSeats({
@@ -209,10 +200,10 @@ const calculateAvailableSeats = async (params) => {
         // Insert parent levels (skip company level which is already added)
         const parentBreakdown = parentResult.availabilityBreakdown.slice(1) // Skip company
         parentBreakdown.forEach((item) => {
-          // Insert before current agent
+          // Insert before current agent (at position length - 1)
           availabilityBreakdown.splice(availabilityBreakdown.length - 1, 0, item)
           // Collect remaining for MIN calculation
-          hierarchyLevels.push(item.remaining)
+          hierarchyRemainings.push(item.remaining)
         })
       }
       
@@ -230,10 +221,6 @@ const calculateAvailableSeats = async (params) => {
       availableSeats: finalAvailableSeats,
       finalAvailableSeats,
       totalCapacity,
-      allocatedToAgents,
-      companyRemaining: Math.max(0, companyRemaining),
-      agentAllocated,
-      agentRemaining,
       availabilityBreakdown,
     }
   }
