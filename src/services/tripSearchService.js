@@ -76,7 +76,6 @@ const calculateAvailableSeats = async (params) => {
   const companyRemaining = totalCapacity - allocatedToAgents
 
   // Build availability breakdown starting with company level
-  // Simplified format: only level and remaining
   const availabilityBreakdown = [
     {
       level: "company",
@@ -180,10 +179,10 @@ const calculateAvailableSeats = async (params) => {
       remaining: Math.max(0, agentRemaining),
     })
 
-    // If agent has a parent, recursively get parent hierarchy
-    let finalAvailableSeats = agentRemaining
+    // Collect all remaining values for MIN calculation
     const hierarchyRemainings = [companyRemaining, agentRemaining]
-    
+
+    // If agent has a parent, recursively get parent hierarchy
     if (agentAllocation.parentAgent) {
       const parentResult = await calculateAvailableSeats({
         companyId,
@@ -194,7 +193,7 @@ const calculateAvailableSeats = async (params) => {
         userType: "partner",
         partnerId: agentAllocation.parentAgent,
       })
-      
+
       // Extract parent breakdown and insert between company and current agent
       if (parentResult.availabilityBreakdown && parentResult.availabilityBreakdown.length > 1) {
         // Insert parent levels (skip company level which is already added)
@@ -206,16 +205,13 @@ const calculateAvailableSeats = async (params) => {
           hierarchyRemainings.push(item.remaining)
         })
       }
-      
-      // Use the MIN formula from prompt: MIN(company, marine, commercial, agent)
-      finalAvailableSeats = parentResult.finalAvailableSeats
-    } else {
-      // No parent, just use MIN of company and this agent
-      finalAvailableSeats = Math.min(companyRemaining, agentRemaining)
     }
 
-    // Ensure no negative availability
-    finalAvailableSeats = Math.max(0, finalAvailableSeats)
+    // Apply MIN formula: MIN(company, marine, commercial, agent)
+    const finalAvailableSeats = Math.max(
+      0,
+      Math.min(...hierarchyRemainings)
+    )
 
     return {
       availableSeats: finalAvailableSeats,
@@ -623,16 +619,17 @@ const searchTripsWithPricing = async (params) => {
       const now = new Date()
       const availableSeatsValue = availabilityResult.finalAvailableSeats ?? availabilityResult.availableSeats ?? 0
       
-      // Booking is NOT allowed if:
-      // 1. No available seats
-      // 2. Price not found for any passenger type
-      // 3. Current date is after booking closing date
-      // 4. Trip has already departed
+      // Booking allowed when:
+      // 1. finalAvailableSeats > 0
+      // 2. currentDate < bookingClosingDate
+      // 3. currentDate < departureDateTime
+      // 4. trip.status === "SCHEDULED"
       const bookingAllowed = 
         availableSeatsValue > 0 &&
         !hasMissingPrice &&
-        (!trip.bookingClosingDate || now <= trip.bookingClosingDate) &&
-        (!trip.departureDateTime || now <= trip.departureDateTime)
+        (!trip.bookingClosingDate || now < trip.bookingClosingDate) &&
+        (!trip.departureDateTime || now < trip.departureDateTime) &&
+        trip.status === "SCHEDULED"
 
       // Calculate totalPrice as sum of all breakdown subtotals (including taxes)
       const calculatedTotalPrice = pricingBreakdown.reduce((sum, item) => {
