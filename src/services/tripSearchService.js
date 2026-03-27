@@ -8,7 +8,7 @@ const { TicketingRule } = require("../models/TicketingRule")
 const { PayloadType } = require("../models/PayloadType")
 const { Cabin } = require("../models/Cabin")
 const { Port } = require("../models/Port")
-const { Partner } = require("../models/Partner")
+const Partner = require("../models/Partner")
 
 /**
  * Calculate available seats based on allocation hierarchy
@@ -104,42 +104,69 @@ const calculateAvailableSeats = async (params) => {
 
   // For partner users, build complete hierarchy
   if (userType === "partner" && partnerId) {
-    // Helper function to calculate remaining seats for any agent/partner
-    const calculateAgentRemaining = async (agentId) => {
+    // Helper function to calculate remaining seats for any partner
+    const calculatePartnerRemaining = async (partnerId) => {
+      // Get the partner's own data
+      const partner = await Partner.findOne({
+        _id: partnerId,
+        company: companyId,
+        isDeleted: false,
+      }).lean()
+
+      if (!partner) {
+        console.log("[v0] Partner not found:", partnerId)
+        return null
+      }
+
+      console.log("[v0] Processing partner:", {
+        partnerId,
+        name: partner.name,
+        layer: partner.layer,
+        parentAccount: partner.parentAccount,
+      })
+
+      // Get allocation for this partner for this trip
       const allocation = await AvailabilityAgentAllocation.findOne({
         company: companyId,
         trip: tripId,
-        agent: agentId,
+        agent: partnerId,
         isDeleted: false,
-      })
-        .populate("agent", "name role layer parentAccount")
-        .lean()
+      }).lean()
 
-      if (!allocation) return null
+      if (!allocation) {
+        console.log("[v0] No allocation found for partner:", partnerId)
+        return null
+      }
 
       // Get allocation for this specific category and cabin
       const categoryAlloc = allocation.allocations?.find(
         (a) => a.type === category
       )
 
-      if (!categoryAlloc) return null
+      if (!categoryAlloc) {
+        console.log("[v0] No category allocation for:", { partnerId, category })
+        return null
+      }
 
       const cabinAlloc = categoryAlloc.cabins?.find(
         (c) => c.cabin.toString() === cabinId.toString()
       )
 
-      if (!cabinAlloc) return null
+      if (!cabinAlloc) {
+        console.log("[v0] No cabin allocation for:", { partnerId, cabinId })
+        return null
+      }
 
-      // Get allocated amount to this agent
+      // Get allocated amount to this partner
       const allocated = cabinAlloc.allocatedSeats || 0
 
-      // Get sum of children allocations
+      // Get sum of children allocations (agents who have this partner as their parentAccount)
       const childrenResult = await AvailabilityAgentAllocation.aggregate([
         {
           $match: {
             company: new mongoose.Types.ObjectId(companyId),
             trip: new mongoose.Types.ObjectId(tripId),
-            parentAgent: agentId,
+            parentAgent: new mongoose.Types.ObjectId(partnerId),
             isDeleted: false,
           },
         },
@@ -162,8 +189,16 @@ const calculateAvailableSeats = async (params) => {
       const usedByChildren = childrenResult[0]?.totalChildAllocated || 0
       const remaining = Math.max(0, allocated - usedByChildren)
 
+      console.log("[v0] Partner allocation calculated:", {
+        partnerId,
+        layer: partner.layer,
+        allocated,
+        usedByChildren,
+        remaining,
+      })
+
       return {
-        allocation,
+        partner,
         allocated,
         usedByChildren,
         remaining,
@@ -179,22 +214,23 @@ const calculateAvailableSeats = async (params) => {
     const maxIterations = 10 // Prevent infinite loops
 
     while (currentPartnerId && iterations < maxIterations) {
-      const agentData = await calculateAgentRemaining(currentPartnerId)
+      const partnerData = await calculatePartnerRemaining(currentPartnerId)
 
-      if (!agentData) {
+      if (!partnerData) {
+        console.log("[v0] Breaking hierarchy chain at:", currentPartnerId)
         break
       }
 
       hierarchyChain.push({
         partnerId: currentPartnerId,
-        allocation: agentData.allocation,
-        allocated: agentData.allocated,
-        usedByChildren: agentData.usedByChildren,
-        remaining: agentData.remaining,
+        partner: partnerData.partner,
+        allocated: partnerData.allocated,
+        usedByChildren: partnerData.usedByChildren,
+        remaining: partnerData.remaining,
       })
 
-      // Move to parent
-      currentPartnerId = agentData.allocation.parentAgent
+      // Move to parent using parentAccount from the Partner model
+      currentPartnerId = partnerData.partner.parentAccount
 
       iterations++
     }
@@ -202,17 +238,18 @@ const calculateAvailableSeats = async (params) => {
     console.log("[v0] Hierarchy chain built:", {
       chainLength: hierarchyChain.length,
       levels: hierarchyChain.map((h) => ({
-        level: h.allocation.agent.layer,
+        partnerId: h.partnerId,
+        layer: h.partner.layer,
         remaining: h.remaining,
       })),
     })
 
-    // Build breakdown array in correct order (company, marine, commercial, agent)
+    // Build breakdown array in correct order (company, marine, commercial, selling)
     // The hierarchy chain is from current partner upward, so reverse it
     const hierarchyRemainings = [companyRemaining]
 
     hierarchyChain.reverse().forEach((item) => {
-      const level = item.allocation.agent.layer.toLowerCase()
+      const level = item.partner.layer.toLowerCase()
       availabilityBreakdown.push({
         level,
         remaining: Math.max(0, item.remaining),
@@ -220,7 +257,7 @@ const calculateAvailableSeats = async (params) => {
       hierarchyRemainings.push(item.remaining)
     })
 
-    // Apply MIN formula: MIN(company, marine, commercial, agent)
+    // Apply MIN formula: MIN(company, marine, commercial, selling)
     const finalAvailableSeats = Math.max(0, Math.min(...hierarchyRemainings))
 
     console.log("[v0] Final availability calculation:", {
