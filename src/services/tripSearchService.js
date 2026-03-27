@@ -173,14 +173,8 @@ const calculateAvailableSeats = async (params) => {
       agentLevel = "marine"
     }
 
-    // Add current agent to breakdown
-    availabilityBreakdown.push({
-      level: agentLevel,
-      remaining: Math.max(0, agentRemaining),
-    })
-
     // Collect all remaining values for MIN calculation
-    const hierarchyRemainings = [companyRemaining, agentRemaining]
+    const hierarchyRemainings = [companyRemaining]
 
     // If agent has a parent, recursively get parent hierarchy
     if (agentAllocation.parentAgent) {
@@ -199,13 +193,22 @@ const calculateAvailableSeats = async (params) => {
         // Insert parent levels (skip company level which is already added)
         const parentBreakdown = parentResult.availabilityBreakdown.slice(1) // Skip company
         parentBreakdown.forEach((item) => {
-          // Insert before current agent (at position length - 1)
-          availabilityBreakdown.splice(availabilityBreakdown.length - 1, 0, item)
+          // Insert before the current position to maintain hierarchy order
+          availabilityBreakdown.push(item)
           // Collect remaining for MIN calculation
           hierarchyRemainings.push(item.remaining)
         })
       }
     }
+
+    // Add current agent to breakdown
+    availabilityBreakdown.push({
+      level: agentLevel,
+      remaining: Math.max(0, agentRemaining),
+    })
+    
+    // Add agent remaining to hierarchy remainings for MIN calculation
+    hierarchyRemainings.push(agentRemaining)
 
     // Apply MIN formula: MIN(company, marine, commercial, agent)
     const finalAvailableSeats = Math.max(
