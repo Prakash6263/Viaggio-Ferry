@@ -39,15 +39,6 @@ const calculateAvailableSeats = async (params) => {
     partnerId, // Required if userType is "partner"
   } = params
 
-  console.log("[v0] calculateAvailableSeats called with:", {
-    companyId,
-    tripId,
-    partnerId,
-    category,
-    cabinId,
-    userType,
-  })
-
   // Get trip availability
   const tripAvailability = await TripAvailability.findOne({
     _id: availabilityId,
@@ -114,16 +105,8 @@ const calculateAvailableSeats = async (params) => {
       }).lean()
 
       if (!partner) {
-        console.log("[v0] Partner not found:", partnerId)
         return null
       }
-
-      console.log("[v0] Processing partner:", {
-        partnerId,
-        name: partner.name,
-        layer: partner.layer,
-        parentAccount: partner.parentAccount,
-      })
 
       // Get allocation for this partner for this trip
       const allocation = await AvailabilityAgentAllocation.findOne({
@@ -134,7 +117,6 @@ const calculateAvailableSeats = async (params) => {
       }).lean()
 
       if (!allocation) {
-        console.log("[v0] No allocation found for partner:", partnerId)
         return null
       }
 
@@ -144,7 +126,6 @@ const calculateAvailableSeats = async (params) => {
       )
 
       if (!categoryAlloc) {
-        console.log("[v0] No category allocation for:", { partnerId, category })
         return null
       }
 
@@ -153,7 +134,6 @@ const calculateAvailableSeats = async (params) => {
       )
 
       if (!cabinAlloc) {
-        console.log("[v0] No cabin allocation for:", { partnerId, cabinId })
         return null
       }
 
@@ -189,14 +169,6 @@ const calculateAvailableSeats = async (params) => {
       const usedByChildren = childrenResult[0]?.totalChildAllocated || 0
       const remaining = Math.max(0, allocated - usedByChildren)
 
-      console.log("[v0] Partner allocation calculated:", {
-        partnerId,
-        layer: partner.layer,
-        allocated,
-        usedByChildren,
-        remaining,
-      })
-
       return {
         partner,
         allocated,
@@ -217,7 +189,6 @@ const calculateAvailableSeats = async (params) => {
       const partnerData = await calculatePartnerRemaining(currentPartnerId)
 
       if (!partnerData) {
-        console.log("[v0] Breaking hierarchy chain at:", currentPartnerId)
         break
       }
 
@@ -234,15 +205,6 @@ const calculateAvailableSeats = async (params) => {
 
       iterations++
     }
-
-    console.log("[v0] Hierarchy chain built:", {
-      chainLength: hierarchyChain.length,
-      levels: hierarchyChain.map((h) => ({
-        partnerId: h.partnerId,
-        layer: h.partner.layer,
-        remaining: h.remaining,
-      })),
-    })
 
     // Build breakdown array in correct order (company, marine, commercial, selling)
     // The hierarchy chain is from current partner upward, so reverse it
