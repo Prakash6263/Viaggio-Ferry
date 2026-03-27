@@ -31,7 +31,9 @@ router.use(extractUserId)
  * 
  * Requires: read permission on trips
  */
-router.post("/", checkPermission("ship-trips", "trips", "read"), tripSearchController.searchTrips)
+router.post("/",
+     checkPermission("partners-management", "allocation", "read"),
+      tripSearchController.searchTrips)
 
 /**
  * GET /api/trip-search
@@ -50,6 +52,6 @@ router.post("/", checkPermission("ship-trips", "trips", "read"), tripSearchContr
  * 
  * Requires: read permission on trips
  */
-router.get("/", checkPermission("ship-trips", "trips", "read"), tripSearchController.searchTripsGet)
+router.get("/", checkPermission("partners-management", "allocation", "read"), tripSearchController.searchTripsGet)
 
 module.exports = router

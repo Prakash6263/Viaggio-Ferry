@@ -13,14 +13,20 @@ const { Partner } = require("../models/Partner")
 /**
  * Calculate available seats based on allocation hierarchy
  * 
+ * CRITICAL RULE:
+ * finalAvailableSeats = MIN(
+ *   companyRemaining,
+ *   marineRemaining,
+ *   commercialRemaining,
+ *   agentRemaining
+ * )
+ * 
  * For Company Users:
- *   availableSeats = TripAvailability.seats - SUM(all agent allocations)
+ *   finalAvailableSeats = companyRemaining (TripAvailability.seats - SUM(all agent allocations))
  * 
  * For Agent Users:
- *   availableSeats = MIN(companyRemaining, parentRemaining, agentRemaining)
- *   where each level's remaining = allocated - SUM(child allocations)
- *   
- * Returns availabilityBreakdown array showing each hierarchy level
+ *   finalAvailableSeats = MIN of all hierarchy levels from company down to agent
+ *   Returns availabilityBreakdown array showing each hierarchy level
  */
 const calculateAvailableSeats = async (params) => {
   const {
@@ -70,13 +76,10 @@ const calculateAvailableSeats = async (params) => {
   const companyRemaining = totalCapacity - allocatedToAgents
 
   // Build availability breakdown starting with company level
+  // Simplified format: only level and remaining
   const availabilityBreakdown = [
     {
       level: "company",
-      entityId: companyId,
-      entityName: "Company",
-      allocated: totalCapacity,
-      usedByChildren: allocatedToAgents,
       remaining: Math.max(0, companyRemaining),
     },
   ]
@@ -87,8 +90,6 @@ const calculateAvailableSeats = async (params) => {
       availableSeats: Math.max(0, companyRemaining),
       finalAvailableSeats: Math.max(0, companyRemaining),
       totalCapacity,
-      allocatedToAgents,
-      companyRemaining: Math.max(0, companyRemaining),
       availabilityBreakdown,
     }
   }
@@ -176,15 +177,12 @@ const calculateAvailableSeats = async (params) => {
     // Add current agent to breakdown
     availabilityBreakdown.push({
       level: agentLevel,
-      entityId: partnerId,
-      entityName: agentAllocation.agent?.name || agentAllocation.agentName || "Agent",
-      allocated: agentAllocated,
-      usedByChildren: totalChildAllocated,
-      remaining: agentRemaining,
+      remaining: Math.max(0, agentRemaining),
     })
 
-    // If agent has a parent, recursively calculate parent hierarchy
-    let finalAvailableSeats = Math.min(companyRemaining, agentRemaining)
+    // If agent has a parent, recursively get parent hierarchy
+    let finalAvailableSeats = agentRemaining
+    const hierarchyRemainings = [companyRemaining, agentRemaining]
     
     if (agentAllocation.parentAgent) {
       const parentResult = await calculateAvailableSeats({
@@ -200,14 +198,20 @@ const calculateAvailableSeats = async (params) => {
       // Extract parent breakdown and insert between company and current agent
       if (parentResult.availabilityBreakdown && parentResult.availabilityBreakdown.length > 1) {
         // Insert parent levels (skip company level which is already added)
-        parentResult.availabilityBreakdown.forEach((item, index) => {
-          if (index > 0) { // Skip company level
-            availabilityBreakdown.splice(availabilityBreakdown.length - 1, 0, item)
-          }
+        const parentBreakdown = parentResult.availabilityBreakdown.slice(1) // Skip company
+        parentBreakdown.forEach((item) => {
+          // Insert before current agent (at position length - 1)
+          availabilityBreakdown.splice(availabilityBreakdown.length - 1, 0, item)
+          // Collect remaining for MIN calculation
+          hierarchyRemainings.push(item.remaining)
         })
       }
       
+      // Use the MIN formula from prompt: MIN(company, marine, commercial, agent)
       finalAvailableSeats = parentResult.finalAvailableSeats
+    } else {
+      // No parent, just use MIN of company and this agent
+      finalAvailableSeats = Math.min(companyRemaining, agentRemaining)
     }
 
     // Ensure no negative availability
@@ -217,10 +221,6 @@ const calculateAvailableSeats = async (params) => {
       availableSeats: finalAvailableSeats,
       finalAvailableSeats,
       totalCapacity,
-      allocatedToAgents,
-      companyRemaining: Math.max(0, companyRemaining),
-      agentAllocated,
-      agentRemaining,
       availabilityBreakdown,
     }
   }
@@ -552,6 +552,10 @@ const searchTripsWithPricing = async (params) => {
 
         if (priceResult && priceResult.price) {
           const price = priceResult.price
+          // PRICING FORMULA per requirements:
+          // unitTotalPrice = basicPrice + taxes
+          // subtotal = unitTotalPrice * quantity
+          // totalPrice = sum(all subtotals)
           const unitTotalPrice = price.totalPrice // includes base + tax
           const subtotal = unitTotalPrice * passenger.quantity
           
@@ -642,15 +646,14 @@ const searchTripsWithPricing = async (params) => {
         cabin: cabinDetails,
         availability: {
           totalSeats: availabilityResult.totalCapacity || cabinInfo.totalSeats,
-          availableSeats: Math.max(0, availabilityResult.availableSeats),
+          availableSeats: Math.max(0, availabilityResult.availableSeats || 0),
           finalAvailableSeats: Math.max(0, availableSeatsValue),
-          availabilityBreakdown: availabilityResult.availabilityBreakdown || [],
-          bookingAllowed,
-          ...(userType === "partner" && {
-            agentAllocated: availabilityResult.agentAllocated,
-            agentRemaining: availabilityResult.agentRemaining,
-          }),
+          availabilityBreakdown: (availabilityResult.availabilityBreakdown || []).map(item => ({
+            level: item.level,
+            remaining: item.remaining
+          })),
         },
+        bookingAllowed,
         pricing: {
           breakdown: pricingBreakdown,
           totalBasicPrice: Math.round(totalBasicPrice * 100) / 100,
@@ -659,7 +662,6 @@ const searchTripsWithPricing = async (params) => {
           currency,
           priceListId,
           hasMissingPrice,
-          totalPassengers: totalQuantity,
         },
       })
     }
