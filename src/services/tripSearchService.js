@@ -9,6 +9,7 @@ const { PayloadType } = require("../models/PayloadType")
 const { Cabin } = require("../models/Cabin")
 const { Port } = require("../models/Port")
 const Partner = require("../models/Partner")
+const calculateHierarchyRemaining = require("../utils/calculateHierarchyRemaining")
 
 /**
  * Calculate available seats based on allocation hierarchy
@@ -75,167 +76,22 @@ const calculateAvailableSeats = async (params) => {
   // Company remaining = total capacity - allocated to agents
   const companyRemaining = totalCapacity - allocatedToAgents
 
-  // Build availability breakdown starting with company level
-  const availabilityBreakdown = [
-    {
-      level: "company",
-      remaining: Math.max(0, companyRemaining),
-    },
-  ]
+  // Use the proper hierarchy calculation utility
+  const hierarchyResult = await calculateHierarchyRemaining({
+    companyId,
+    tripId,
+    cabinId,
+    category,
+    companyRemaining,
+    partnerId: userType === "partner" ? partnerId : null,
+  })
 
-  // If user is company, return company remaining directly
-  if (userType === "company") {
-    return {
-      availableSeats: Math.max(0, companyRemaining),
-      finalAvailableSeats: Math.max(0, companyRemaining),
-      totalCapacity,
-      availabilityBreakdown,
-    }
+  return {
+    availableSeats: hierarchyResult.availableSeats,
+    finalAvailableSeats: hierarchyResult.finalAvailableSeats,
+    totalCapacity,
+    availabilityBreakdown: hierarchyResult.availabilityBreakdown,
   }
-
-  // For partner users, build complete hierarchy
-  if (userType === "partner" && partnerId) {
-    // Helper function to calculate remaining seats for any partner
-    const calculatePartnerRemaining = async (partnerId) => {
-      // Get the partner's own data
-      const partner = await Partner.findOne({
-        _id: partnerId,
-        company: companyId,
-        isDeleted: false,
-      }).lean()
-
-      if (!partner) {
-        return null
-      }
-
-      // Get allocation for this partner for this trip
-      const allocation = await AvailabilityAgentAllocation.findOne({
-        company: companyId,
-        trip: tripId,
-        agent: partnerId,
-        isDeleted: false,
-      }).lean()
-
-      if (!allocation) {
-        return null
-      }
-
-      // Get allocation for this specific category and cabin
-      const categoryAlloc = allocation.allocations?.find(
-        (a) => a.type === category
-      )
-
-      if (!categoryAlloc) {
-        return null
-      }
-
-      const cabinAlloc = categoryAlloc.cabins?.find(
-        (c) => c.cabin.toString() === cabinId.toString()
-      )
-
-      if (!cabinAlloc) {
-        return null
-      }
-
-      // Get allocated amount to this partner
-      const allocated = cabinAlloc.allocatedSeats || 0
-
-      // Get sum of children allocations (agents who have this partner as their parentAccount)
-      const childrenResult = await AvailabilityAgentAllocation.aggregate([
-        {
-          $match: {
-            company: new mongoose.Types.ObjectId(companyId),
-            trip: new mongoose.Types.ObjectId(tripId),
-            parentAgent: new mongoose.Types.ObjectId(partnerId),
-            isDeleted: false,
-          },
-        },
-        { $unwind: "$allocations" },
-        { $match: { "allocations.type": category } },
-        { $unwind: "$allocations.cabins" },
-        {
-          $match: {
-            "allocations.cabins.cabin": new mongoose.Types.ObjectId(cabinId),
-          },
-        },
-        {
-          $group: {
-            _id: null,
-            totalChildAllocated: { $sum: "$allocations.cabins.allocatedSeats" },
-          },
-        },
-      ])
-
-      const usedByChildren = childrenResult[0]?.totalChildAllocated || 0
-      const remaining = Math.max(0, allocated - usedByChildren)
-
-      return {
-        partner,
-        allocated,
-        usedByChildren,
-        remaining,
-      }
-    }
-
-    // Build complete parent chain for current partner
-    const hierarchyChain = []
-
-    // Start from current partner and walk up to root
-    let currentPartnerId = partnerId
-    let iterations = 0
-    const maxIterations = 10 // Prevent infinite loops
-
-    while (currentPartnerId && iterations < maxIterations) {
-      const partnerData = await calculatePartnerRemaining(currentPartnerId)
-
-      if (!partnerData) {
-        break
-      }
-
-      hierarchyChain.push({
-        partnerId: currentPartnerId,
-        partner: partnerData.partner,
-        allocated: partnerData.allocated,
-        usedByChildren: partnerData.usedByChildren,
-        remaining: partnerData.remaining,
-      })
-
-      // Move to parent using parentAccount from the Partner model
-      currentPartnerId = partnerData.partner.parentAccount
-
-      iterations++
-    }
-
-    // Build breakdown array in correct order (company, marine, commercial, selling)
-    // The hierarchy chain is from current partner upward, so reverse it
-    const hierarchyRemainings = [companyRemaining]
-
-    hierarchyChain.reverse().forEach((item) => {
-      const level = item.partner.layer.toLowerCase()
-      availabilityBreakdown.push({
-        level,
-        remaining: Math.max(0, item.remaining),
-      })
-      hierarchyRemainings.push(item.remaining)
-    })
-
-    // Apply MIN formula: MIN(company, marine, commercial, selling)
-    const finalAvailableSeats = Math.max(0, Math.min(...hierarchyRemainings))
-
-    console.log("[v0] Final availability calculation:", {
-      hierarchyRemainings,
-      finalAvailableSeats,
-    })
-
-    return {
-      availableSeats: finalAvailableSeats,
-      finalAvailableSeats,
-      totalCapacity,
-      availabilityBreakdown,
-    }
-  }
-
-  return { availableSeats: 0, error: "Invalid user type" }
 }
 
 /**
