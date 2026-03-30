@@ -2,7 +2,7 @@ const createHttpError = require("http-errors")
 const mongoose = require("mongoose")
 const { searchTripsWithPricing } = require("../services/tripSearchService")
 const connectDB = require("../config/db")
-
+const User = require("../models/User")
 /**
  * Helper to determine user type and partner ID from request
  * 
@@ -11,28 +11,24 @@ const connectDB = require("../config/db")
  * - layer: "selling-agent", "commercial-agent", "marine-agent", or "company"
  * - agent: Partner ID (reference to Partner collection)
  */
-const getUserTypeAndPartnerId = (req) => {
+
+const getUserTypeAndPartnerId = async (req) => {
   const { user } = req
-  
-  // Default to company
+
   let userType = "company"
   let partnerId = null
 
-  if (user) {
-    // Check if user is a partner/agent by looking at the layer field
-    // Partners have layers like "selling-agent", "commercial-agent", "marine-agent"
-    if (user.layer && user.layer !== "company") {
-      // This is a partner/agent user
-      // Use user.agent (Partner ID) from the User model, not user.id (User ID)
-      userType = "partner"
-      partnerId = user.agent
-      console.log("[v0] Detected partner user:", { layer: user.layer, partnerId })
+  if (user && user.layer && user.layer !== "company") {
+    userType = "partner"
+
+    const userRecord = await User.findById(user.id).select("agent")
+
+    if (!userRecord || !userRecord.agent) {
+      throw new Error("User does not have partner assigned")
     }
-    // Otherwise it's a company user
-    else {
-      userType = "company"
-      partnerId = null
-    }
+
+    partnerId = userRecord.agent
+    console.log("[Trip Search] Partner resolved from DB:", partnerId)
   }
 
   return { userType, partnerId }
@@ -132,7 +128,7 @@ const searchTrips = async (req, res, next) => {
     // Validate each passenger entry - allow quantity 0 for children/infants not traveling
     for (let i = 0; i < passengers.length; i++) {
       const passenger = passengers[i]
-      
+
       if (!passenger.payloadTypeId) {
         throw createHttpError(400, `Passenger at index ${i} is missing payloadTypeId`)
       }
@@ -184,7 +180,7 @@ const searchTrips = async (req, res, next) => {
     }
 
     // Get user type and partner ID from JWT
-    const { userType, partnerId } = getUserTypeAndPartnerId(req)
+    const { userType, partnerId } = await getUserTypeAndPartnerId(req)
 
     // Perform search
     const result = await searchTripsWithPricing({
@@ -277,7 +273,7 @@ const searchTripsGet = async (req, res, next) => {
     // Validate each passenger entry - allow quantity 0 for children/infants not traveling
     for (let i = 0; i < passengers.length; i++) {
       const passenger = passengers[i]
-      
+
       if (!passenger.payloadTypeId) {
         throw createHttpError(400, `Passenger at index ${i} is missing payloadTypeId`)
       }
@@ -329,7 +325,7 @@ const searchTripsGet = async (req, res, next) => {
     }
 
     // Get user type and partner ID from JWT
-    const { userType, partnerId } = getUserTypeAndPartnerId(req)
+    const { userType, partnerId } = await getUserTypeAndPartnerId(req)
 
     // Perform search
     const result = await searchTripsWithPricing({
