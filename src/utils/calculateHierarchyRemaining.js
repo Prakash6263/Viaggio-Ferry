@@ -71,8 +71,6 @@ async function calculateHierarchyRemaining(params) {
 
     // Build allocation chain starting from current partner
     // Walk up using parentAgent to find all parent allocations
-    const allocationChain = []
-    let currentAllocationId = null
     let iterations = 0
     const maxIterations = 10
 
@@ -82,11 +80,13 @@ async function calculateHierarchyRemaining(params) {
       trip: tripIdObj,
       agent: partnerIdObj,
       isDeleted: false,
-    }).lean()
+    })
+      .populate("agent", "layer")
+      .lean()
 
     console.log("[v0] Current agent allocation found:", {
       found: !!currentAllocation,
-      agentId: currentAllocation?.agent.toString(),
+      agentId: currentAllocation?.agent._id.toString(),
     })
 
     if (!currentAllocation) {
