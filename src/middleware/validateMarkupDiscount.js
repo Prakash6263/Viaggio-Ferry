@@ -57,8 +57,21 @@ const validateMarkupDiscount = async (req, res, next) => {
       if (providerType) {
         try {
           if (providerType === "Company") {
-            if (provider !== companyId) {
-              errors.push("provider must match companyId when providerType is Company")
+            // For Company providerType, provider can be:
+            // 1. The company ID itself (company-level admin)
+            // 2. A Partner ID belonging to this company (hierarchical user with parent permission)
+            if (provider === companyId) {
+              // Provider is the company itself - this is valid
+            } else {
+              // Check if provider is a Partner that belongs to this company
+              const partnerExists = await Partner.exists({
+                _id: provider,
+                company: companyId,
+                isDeleted: false,
+              })
+              if (!partnerExists) {
+                errors.push("provider must be either the company or a partner belonging to this company")
+              }
             }
           } else if (providerType === "Partner") {
             const partnerExists = await Partner.exists({
