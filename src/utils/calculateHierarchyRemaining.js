@@ -72,19 +72,10 @@ async function calculateHierarchyRemaining(params) {
       parentAgent: currentAllocation?.parentAgent?.toString(),
     })
 
-    if (!currentAllocation) {
-      console.log("[v0] No allocation for agent, returning company level only")
-      return {
-        availableSeats: Math.max(0, companyRemaining),
-        totalAvailable: Math.max(0, companyRemaining),
-        availabilityBreakdown,
-        finalAvailableSeats: Math.max(0, companyRemaining),
-      }
-    }
-
     // STEP 2: Build chain by walking UP the parentAgent hierarchy
-    const chainAllocations = [currentAllocation]
-    let currentParentId = currentAllocation.parentAgent
+    // Start with current allocation if exists, otherwise start with empty chain
+    const chainAllocations = currentAllocation ? [currentAllocation] : []
+    let currentParentId = currentAllocation?.parentAgent
     let iterations = 0
 
     while (currentParentId && iterations < 10) {
@@ -197,6 +188,17 @@ async function calculateHierarchyRemaining(params) {
     }
 
     // STEP 4: Apply MIN formula
+    // If no allocations found in chain, return company level only
+    if (chainAllocations.length === 0) {
+      console.log("[v0] No allocations found in chain, using company level only")
+      return {
+        availableSeats: Math.max(0, companyRemaining),
+        totalAvailable: Math.max(0, companyRemaining),
+        availabilityBreakdown,
+        finalAvailableSeats: Math.max(0, companyRemaining),
+      }
+    }
+
     const finalAvailableSeats = Math.max(0, Math.min(...hierarchyRemainings))
 
     console.log("[v0] Final result:", {
