@@ -77,13 +77,28 @@ async function calculateHierarchyRemaining(params) {
     let startParentId = currentAllocation?.parentAgent
     if (!currentAllocation) {
       console.log("[v0] No direct allocation, checking Partner hierarchy")
+      
+      // First check if Partner exists at all (without company filter)
+      const partnerExists = await Partner.findOne({
+        _id: partnerIdObj,
+      }).select("_id company isDeleted layer parentAccount").lean()
+      
+      console.log("[v0] Partner existence check (no company filter):", {
+        exists: !!partnerExists,
+        partnerId: partnerExists?._id?.toString(),
+        company: partnerExists?.company?.toString(),
+        isDeleted: partnerExists?.isDeleted,
+        layer: partnerExists?.layer,
+      })
+      
+      // Now try with company filter
       const partner = await Partner.findOne({
         _id: partnerIdObj,
         company: companyIdObj,
         isDeleted: false,
       }).select("parentAccount layer").lean()
       
-      console.log("[v0] Partner lookup result:", {
+      console.log("[v0] Partner lookup result (with company filter):", {
         found: !!partner,
         partnerId: partner?._id?.toString(),
         layer: partner?.layer,
