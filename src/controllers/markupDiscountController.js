@@ -26,6 +26,13 @@ const createMarkupDiscountRule = async (req, res, next) => {
       priority,
     } = req.body
 
+    console.log("[v0] MarkupDiscount CREATE - Received request:")
+    console.log("  companyId:", companyId)
+    console.log("  userId:", userId)
+    console.log("  provider:", provider)
+    console.log("  providerType:", providerType)
+    console.log("  appliedLayer:", appliedLayer)
+
     if (!companyId) throw createHttpError(400, "Company ID is required")
 
     // Validate required fields (Mandatory: Rule Name, Rule Type, Provider, Applied to Layer, Partner, Commission Value, Effective Date, Expiry Date, at least one service type)

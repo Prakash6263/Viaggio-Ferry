@@ -53,21 +53,33 @@ const validateCommissionRule = async (req, res, next) => {
       // Validate provider based on providerType if both provided
       if (providerType) {
         try {
+          console.log("[v0] Commission: Validating provider - ID:", provider, "Type:", providerType, "Company:", companyId)
           if (providerType === "Company") {
             // For Company providerType, provider can be:
             // 1. The company ID itself (company-level admin)
             // 2. A Partner ID belonging to this company (hierarchical user with parent permission)
             if (provider === companyId) {
+              console.log("[v0] Commission: Provider matches company ID - VALID")
               // Provider is the company itself - this is valid
             } else {
               // Check if provider is a Partner that belongs to this company
+              console.log("[v0] Commission: Checking if provider is a Partner in this company...")
               const partnerExists = await Partner.exists({
                 _id: provider,
                 company: companyId,
                 isDeleted: false,
               })
+              console.log("[v0] Commission: Partner lookup result:", partnerExists)
               if (!partnerExists) {
+                // Additional debugging - check all Partners in this company
+                const allPartners = await Partner.find({
+                  company: companyId,
+                  isDeleted: false,
+                }).select("_id name layer")
+                console.log("[v0] Commission: Available Partners in company:", allPartners.map(p => ({ id: p._id, name: p.name, layer: p.layer })))
                 errors.push("provider must be either the company or a partner belonging to this company")
+              } else {
+                console.log("[v0] Commission: Provider found as Partner - VALID")
               }
             }
           } else if (providerType === "Partner") {
