@@ -106,12 +106,15 @@ async function calculateHierarchyRemaining(params) {
     let chainAllocations = []
 
     while (currentAgentId && iterations < maxIterations) {
+      // Populate agent to get layer information
       const allocation = await AvailabilityAgentAllocation.findOne({
         company: companyIdObj,
         trip: tripIdObj,
         agent: currentAgentId,
         isDeleted: false,
-      }).lean()
+      })
+        .populate("agent", "layer")
+        .lean()
 
       if (!allocation) {
         break
@@ -119,7 +122,8 @@ async function calculateHierarchyRemaining(params) {
 
       chainAllocations.push(allocation)
       console.log("[v0] Added allocation to chain:", {
-        agentId: currentAgentId.toString(),
+        agentId: allocation.agent._id.toString(),
+        layer: allocation.agent.layer,
         parentAgent: allocation.parentAgent?.toString(),
       })
 
@@ -130,8 +134,9 @@ async function calculateHierarchyRemaining(params) {
 
     console.log("[v0] Built allocation chain:", {
       chainLength: chainAllocations.length,
-      agents: chainAllocations.map((a) => ({
-        agent: a.agent.toString(),
+      layers: chainAllocations.map((a) => ({
+        agentId: a.agent._id.toString(),
+        layer: a.agent.layer,
         parentAgent: a.parentAgent?.toString(),
       })),
     })
@@ -140,19 +145,23 @@ async function calculateHierarchyRemaining(params) {
     chainAllocations.reverse()
 
     console.log("[v0] Reversed allocation chain order (parent to child):", {
-      agents: chainAllocations.map((a) => a.agent.toString()),
+      layers: chainAllocations.map((a) => a.agent.layer),
     })
 
     // Calculate remaining for each allocation level
     for (const allocation of chainAllocations) {
+      const agentId = allocation.agent._id
+      const layer = allocation.agent.layer
+
       // Find this level's allocation for the specified category and cabin
       const categoryAlloc = allocation.allocations?.find(
         (a) => a.type === category
       )
 
       if (!categoryAlloc) {
-        console.log("[v0] No category allocation for agent:", {
-          agentId: allocation.agent.toString(),
+        console.log("[v0] No category allocation for:", {
+          layer,
+          agentId: agentId.toString(),
           category,
         })
         continue
@@ -163,8 +172,9 @@ async function calculateHierarchyRemaining(params) {
       )
 
       if (!cabinAlloc) {
-        console.log("[v0] No cabin allocation for agent:", {
-          agentId: allocation.agent.toString(),
+        console.log("[v0] No cabin allocation for:", {
+          layer,
+          agentId: agentId.toString(),
           cabinId: cabinIdObj.toString(),
         })
         continue
@@ -179,7 +189,7 @@ async function calculateHierarchyRemaining(params) {
           $match: {
             company: companyIdObj,
             trip: tripIdObj,
-            parentAgent: allocation.agent,
+            parentAgent: agentId,
             isDeleted: false,
           },
         },
@@ -201,20 +211,10 @@ async function calculateHierarchyRemaining(params) {
 
       const usedByChildren = childrenResult[0]?.totalChildAllocated || 0
       const remaining = Math.max(0, allocated - usedByChildren)
-
-      // Find the partner to get the layer name
-      const partner = await Partner.findOne({
-        _id: allocation.agent,
-        company: companyIdObj,
-        isDeleted: false,
-      })
-        .select("layer")
-        .lean()
-
-      const level = partner?.layer?.toLowerCase() || "unknown"
+      const levelName = layer.toLowerCase()
 
       availabilityBreakdown.push({
-        level,
+        level: levelName,
         allocated,
         usedByChildren,
         remaining,
@@ -223,8 +223,8 @@ async function calculateHierarchyRemaining(params) {
       hierarchyRemainings.push(remaining)
 
       console.log("[v0] Hierarchy level calculation:", {
-        level,
-        agentId: allocation.agent.toString(),
+        level: levelName,
+        agentId: agentId.toString(),
         allocated,
         usedByChildren,
         remaining,
@@ -237,7 +237,7 @@ async function calculateHierarchyRemaining(params) {
     console.log("[v0] Final hierarchy calculation:", {
       hierarchyRemainings,
       finalAvailableSeats,
-      breakdownLevels: availabilityBreakdown.map((b) => b.level),
+      breakdownLevels: availabilityBreakdown.map((b) => ({ level: b.level, remaining: b.remaining })),
     })
 
     return {
