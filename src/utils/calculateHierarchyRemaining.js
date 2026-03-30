@@ -57,6 +57,12 @@ async function calculateHierarchyRemaining(params) {
     })
 
     // STEP 1: Get current agent's allocation
+    console.log("[v0] Querying allocation with:", {
+      companyId: companyIdObj.toString(),
+      tripId: tripIdObj.toString(),
+      partnerId: partnerIdObj.toString(),
+    })
+
     const currentAllocation = await AvailabilityAgentAllocation.findOne({
       company: companyIdObj,
       trip: tripIdObj,
@@ -64,53 +70,44 @@ async function calculateHierarchyRemaining(params) {
       isDeleted: false,
     })
       .populate("agent", "layer")
-      .select("+parentAgent")
       .lean()
 
     console.log("[v0] Current allocation:", {
       found: !!currentAllocation,
-      agentLayer: currentAllocation?.agent.layer,
+      agentLayer: currentAllocation?.agent?.layer,
       parentAgent: currentAllocation?.parentAgent?.toString(),
+      allocationData: currentAllocation ? {
+        id: currentAllocation._id.toString(),
+        agent: currentAllocation.agent?._id.toString(),
+        parentAgent: currentAllocation.parentAgent?.toString(),
+      } : null,
     })
 
-    // STEP 1B: If no direct allocation, find parent via Partner hierarchy
-    let startParentId = currentAllocation?.parentAgent
+    // If not found, debug why
     if (!currentAllocation) {
-      console.log("[v0] No direct allocation, checking Partner hierarchy")
-      
-      // First check if Partner exists at all (without company filter)
-      const partnerExists = await Partner.findOne({
-        _id: partnerIdObj,
-      }).select("_id company isDeleted layer parentAccount").lean()
-      
-      console.log("[v0] Partner existence check (no company filter):", {
-        exists: !!partnerExists,
-        partnerId: partnerExists?._id?.toString(),
-        company: partnerExists?.company?.toString(),
-        isDeleted: partnerExists?.isDeleted,
-        layer: partnerExists?.layer,
-      })
-      
-      // Now try with company filter
-      const partner = await Partner.findOne({
-        _id: partnerIdObj,
-        company: companyIdObj,
+      console.log("[v0] Allocation not found, checking if ANY allocation exists for this trip...")
+      const anyAllocation = await AvailabilityAgentAllocation.findOne({
+        trip: tripIdObj,
         isDeleted: false,
-      }).select("parentAccount layer").lean()
+      }).select("_id agent company trip parentAgent").lean()
       
-      console.log("[v0] Partner lookup result (with company filter):", {
-        found: !!partner,
-        partnerId: partner?._id?.toString(),
-        layer: partner?.layer,
-        parentAccount: partner?.parentAccount?.toString(),
-      })
-      
-      if (partner?.parentAccount) {
-        console.log("[v0] Found parent via Partner.parentAccount:", partner.parentAccount.toString())
-        startParentId = partner.parentAccount
-      } else {
-        console.log("[v0] Partner found but no parentAccount, this is company-level or has no parent")
-      }
+      console.log("[v0] Any allocation on trip:", !!anyAllocation ? {
+        found: true,
+        agent: anyAllocation.agent.toString(),
+        company: anyAllocation.company.toString(),
+        parentAgent: anyAllocation.parentAgent?.toString(),
+      } : { found: false })
+    }
+
+    // STEP 1B: Determine starting parent from allocation or Partner hierarchy
+    let startParentId = currentAllocation?.parentAgent
+    
+    if (!currentAllocation) {
+      console.log("[v0] No allocation found for this agent on this trip")
+    } else if (currentAllocation.parentAgent) {
+      console.log("[v0] Allocation exists with parentAgent:", currentAllocation.parentAgent.toString())
+    } else {
+      console.log("[v0] Allocation exists but parentAgent is null, parent is company level")
     }
 
     // STEP 2: Build chain by walking UP the parentAgent/parentAccount hierarchy
@@ -132,7 +129,6 @@ async function calculateHierarchyRemaining(params) {
         isDeleted: false,
       })
         .populate("agent", "layer")
-        .select("+parentAgent")
         .lean()
 
       if (!parentAllocation) {
