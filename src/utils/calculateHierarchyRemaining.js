@@ -64,6 +64,7 @@ async function calculateHierarchyRemaining(params) {
       isDeleted: false,
     })
       .populate("agent", "layer")
+      .select("+parentAgent")
       .lean()
 
     console.log("[v0] Current allocation:", {
@@ -107,6 +108,7 @@ async function calculateHierarchyRemaining(params) {
         isDeleted: false,
       })
         .populate("agent", "layer")
+        .select("+parentAgent")
         .lean()
 
       if (!parentAllocation) {
