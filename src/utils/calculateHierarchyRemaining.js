@@ -121,13 +121,14 @@ async function calculateHierarchyRemaining(params) {
       hierarchyRemainings.push(remaining)
     }
 
+    // Sum remaining seats from all hierarchy levels instead of using MIN
     const finalAvailableSeats = Math.max(
       0,
-      Math.min(...hierarchyRemainings)
+      hierarchyRemainings.reduce((sum, remaining) => sum + remaining, 0)
     )
 
     return {
-      availableSeats: finalAvailableSeats,
+      availableSeats: companyRemaining,
       availabilityBreakdown,
       finalAvailableSeats,
     }
