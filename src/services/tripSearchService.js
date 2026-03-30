@@ -15,7 +15,7 @@ const calculateHierarchyRemaining = require("../utils/calculateHierarchyRemainin
  * Calculate available seats based on allocation hierarchy
  * 
  * CRITICAL RULE:
- * finalAvailableSeats = MIN(
+ * finalAvailableSeats = SUM(
  *   companyRemaining,
  *   marineRemaining,
  *   commercialRemaining,
@@ -23,10 +23,12 @@ const calculateHierarchyRemaining = require("../utils/calculateHierarchyRemainin
  * )
  * 
  * For Company Users:
- *   finalAvailableSeats = companyRemaining (TripAvailability.seats - SUM(all agent allocations))
+ *   availableSeats = companyRemaining (TripAvailability.seats - SUM(all agent allocations))
+ *   finalAvailableSeats = companyRemaining
  * 
  * For Partner Users:
- *   finalAvailableSeats = MIN of all hierarchy levels from company down to partner
+ *   finalAvailableSeats = SUM of remaining seats from all hierarchy levels from company down to partner
+ *   availableSeats = companyRemaining (company level remaining)
  *   Returns availabilityBreakdown array showing each hierarchy level
  */
 const calculateAvailableSeats = async (params) => {
