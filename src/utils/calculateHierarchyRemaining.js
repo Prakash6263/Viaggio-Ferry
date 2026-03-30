@@ -100,58 +100,70 @@ async function calculateHierarchyRemaining(params) {
       }
     }
 
-    // Build allocation chain from current up to company
-    // Each allocation has parentAgent pointing to its parent in the hierarchy
-    let currentAgentId = partnerIdObj
-    let chainAllocations = []
+    // Build allocation chain by walking UP the hierarchy using parentAgent
+    const allocationChain = []
+    
+    // Add current allocation first
+    allocationChain.push(currentAllocation)
+    
+    console.log("[v0] Starting chain walk from agent:", {
+      agentId: partnerIdObj.toString(),
+      parentAgent: currentAllocation.parentAgent?.toString(),
+    })
 
-    while (currentAgentId && iterations < maxIterations) {
-      // Populate agent to get layer information
-      const allocation = await AvailabilityAgentAllocation.findOne({
+    // Walk up the hierarchy chain using parentAgent references
+    let currentParentId = currentAllocation.parentAgent
+    iterations = 0
+    
+    while (currentParentId && iterations < maxIterations) {
+      const parentAllocation = await AvailabilityAgentAllocation.findOne({
         company: companyIdObj,
         trip: tripIdObj,
-        agent: currentAgentId,
+        agent: currentParentId,
         isDeleted: false,
       })
         .populate("agent", "layer")
         .lean()
 
-      if (!allocation) {
+      if (!parentAllocation) {
+        console.log("[v0] Parent allocation not found for agent:", {
+          agentId: currentParentId.toString(),
+        })
+        // Parent doesn't have an allocation, but might still be in the hierarchy
+        // Continue looking up in case higher levels exist
         break
       }
 
-      chainAllocations.push(allocation)
-      console.log("[v0] Added allocation to chain:", {
-        agentId: allocation.agent._id.toString(),
-        layer: allocation.agent.layer,
-        parentAgent: allocation.parentAgent?.toString(),
+      allocationChain.push(parentAllocation)
+      console.log("[v0] Added parent allocation to chain:", {
+        iteration: iterations,
+        agentId: parentAllocation.agent._id.toString(),
+        layer: parentAllocation.agent.layer,
+        parentAgent: parentAllocation.parentAgent?.toString(),
       })
 
-      // Move to parent agent
-      currentAgentId = allocation.parentAgent
+      // Move up to next parent
+      currentParentId = parentAllocation.parentAgent
       iterations++
     }
 
-    console.log("[v0] Built allocation chain:", {
-      chainLength: chainAllocations.length,
-      layers: chainAllocations.map((a) => ({
+    // Reverse to get company-first order
+    allocationChain.reverse()
+
+    console.log("[v0] Built allocation chain (company to agent):", {
+      chainLength: allocationChain.length,
+      layers: allocationChain.map((a) => ({
         agentId: a.agent._id.toString(),
         layer: a.agent.layer,
         parentAgent: a.parentAgent?.toString(),
       })),
     })
 
-    // Reverse chain to process from parent to child (company → marine → commercial → agent)
-    chainAllocations.reverse()
-
-    console.log("[v0] Reversed allocation chain order (parent to child):", {
-      layers: chainAllocations.map((a) => a.agent.layer),
-    })
-
     // Calculate remaining for each allocation level
-    for (const allocation of chainAllocations) {
+    for (const allocation of allocationChain) {
       const agentId = allocation.agent._id
       const layer = allocation.agent.layer
+      const levelName = layer.toLowerCase()
 
       // Find this level's allocation for the specified category and cabin
       const categoryAlloc = allocation.allocations?.find(
@@ -160,10 +172,19 @@ async function calculateHierarchyRemaining(params) {
 
       if (!categoryAlloc) {
         console.log("[v0] No category allocation for:", {
-          layer,
+          layer: levelName,
           agentId: agentId.toString(),
           category,
         })
+        // Even without this category, we need to include this level in breakdown
+        // with 0 allocated, so it contributes to the MIN calculation
+        availabilityBreakdown.push({
+          level: levelName,
+          allocated: 0,
+          usedByChildren: 0,
+          remaining: 0,
+        })
+        hierarchyRemainings.push(0)
         continue
       }
 
@@ -171,17 +192,8 @@ async function calculateHierarchyRemaining(params) {
         (c) => c.cabin.toString() === cabinIdObj.toString()
       )
 
-      if (!cabinAlloc) {
-        console.log("[v0] No cabin allocation for:", {
-          layer,
-          agentId: agentId.toString(),
-          cabinId: cabinIdObj.toString(),
-        })
-        continue
-      }
-
-      // Get allocated to this level
-      const allocated = cabinAlloc.allocatedSeats || 0
+      // Get allocated to this level (0 if cabin not found)
+      const allocated = cabinAlloc?.allocatedSeats || 0
 
       // Get sum of children allocations (allocations where parentAgent = this agent)
       const childrenResult = await AvailabilityAgentAllocation.aggregate([
@@ -211,7 +223,6 @@ async function calculateHierarchyRemaining(params) {
 
       const usedByChildren = childrenResult[0]?.totalChildAllocated || 0
       const remaining = Math.max(0, allocated - usedByChildren)
-      const levelName = layer.toLowerCase()
 
       availabilityBreakdown.push({
         level: levelName,
