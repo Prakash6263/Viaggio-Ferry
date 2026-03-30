@@ -8,8 +8,8 @@ const connectDB = require("../config/db")
  * 
  * User JWT can have:
  * - role: "company" or "user"
- * - layer: "selling-agent", "commercial", "marine", or undefined (for company users)
- * - id: user's ID (their own partner ID if they're an agent)
+ * - layer: "selling-agent", "commercial-agent", "marine-agent", or "company"
+ * - agent: Partner ID (reference to Partner collection)
  */
 const getUserTypeAndPartnerId = (req) => {
   const { user } = req
@@ -20,11 +20,12 @@ const getUserTypeAndPartnerId = (req) => {
 
   if (user) {
     // Check if user is a partner/agent by looking at the layer field
-    // Partners have layers like "selling-agent", "commercial", "marine"
+    // Partners have layers like "selling-agent", "commercial-agent", "marine-agent"
     if (user.layer && user.layer !== "company") {
       // This is a partner/agent user
+      // Use user.agent (Partner ID) from the User model, not user.id (User ID)
       userType = "partner"
-      partnerId = user.id // Use the user's own ID as their partnerId
+      partnerId = user.agent
       console.log("[v0] Detected partner user:", { layer: user.layer, partnerId })
     }
     // Otherwise it's a company user
