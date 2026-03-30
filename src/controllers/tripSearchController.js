@@ -2,36 +2,33 @@ const createHttpError = require("http-errors")
 const mongoose = require("mongoose")
 const { searchTripsWithPricing } = require("../services/tripSearchService")
 const connectDB = require("../config/db")
-
+const User = require("../models/User")
 /**
  * Helper to determine user type and partner ID from request
  * 
  * User JWT can have:
  * - role: "company" or "user"
- * - layer: "selling-agent", "commercial", "marine", or undefined (for company users)
- * - id: user's ID (their own partner ID if they're an agent)
+ * - layer: "selling-agent", "commercial-agent", "marine-agent", or "company"
+ * - agent: Partner ID (reference to Partner collection)
  */
-const getUserTypeAndPartnerId = (req) => {
+
+const getUserTypeAndPartnerId = async (req) => {
   const { user } = req
   
-  // Default to company
   let userType = "company"
   let partnerId = null
 
-  if (user) {
-    // Check if user is a partner/agent by looking at the layer field
-    // Partners have layers like "selling-agent", "commercial", "marine"
-    if (user.layer && user.layer !== "company") {
-      // This is a partner/agent user
-      userType = "partner"
-      partnerId = user.id // Use the user's own ID as their partnerId
-      console.log("[v0] Detected partner user:", { layer: user.layer, partnerId })
+  if (user && user.layer && user.layer !== "company") {
+    userType = "partner"
+
+    const userRecord = await User.findById(user.id).select("agent")
+
+    if (!userRecord || !userRecord.agent) {
+      throw new Error("User does not have partner assigned")
     }
-    // Otherwise it's a company user
-    else {
-      userType = "company"
-      partnerId = null
-    }
+
+    partnerId = userRecord.agent
+    console.log("[Trip Search] Partner resolved from DB:", partnerId)
   }
 
   return { userType, partnerId }
@@ -183,7 +180,7 @@ const searchTrips = async (req, res, next) => {
     }
 
     // Get user type and partner ID from JWT
-    const { userType, partnerId } = getUserTypeAndPartnerId(req)
+    const { userType, partnerId } = await getUserTypeAndPartnerId(req)
 
     // Perform search
     const result = await searchTripsWithPricing({
@@ -328,7 +325,7 @@ const searchTripsGet = async (req, res, next) => {
     }
 
     // Get user type and partner ID from JWT
-    const { userType, partnerId } = getUserTypeAndPartnerId(req)
+    const { userType, partnerId } = await getUserTypeAndPartnerId(req)
 
     // Perform search
     const result = await searchTripsWithPricing({

@@ -245,6 +245,7 @@ const loginCompany = async (req, res, next) => {
           companyId: user.company._id,
           layer: user.layer,
           moduleAccess: moduleAccess,
+          agent: user.agent, // Include agent ID in token for permission checks
         },
         process.env.JWT_SECRET || "your-secret-key",
         { expiresIn: "24h" },
