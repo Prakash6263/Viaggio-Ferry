@@ -197,6 +197,20 @@ const searchTrips = async (req, res, next) => {
       passengers,
     })
 
+    console.log("[v0] Trip search result - Trips found:", result.data.trips.length)
+    if (result.data.trips.length > 0) {
+      console.log("[v0] First trip cabin options count:", result.data.trips[0].cabinOptions.length)
+      result.data.trips.forEach((trip, tripIdx) => {
+        console.log(`[v0] Trip ${tripIdx}: ${trip.trip.tripName} has ${trip.cabinOptions.length} cabin options`)
+        trip.cabinOptions.forEach((cabinOpt, cabinIdx) => {
+          console.log(`  [Cabin ${cabinIdx}] ${cabinOpt.cabin.name} - Pricing breakdown items: ${cabinOpt.pricing.breakdown.length}`)
+          cabinOpt.pricing.breakdown.forEach((item, itemIdx) => {
+            console.log(`    [Item ${itemIdx}] ${item.payloadType.name} - Qty: ${item.quantity}, Price: ${item.unitTotalPrice}, Type: ${item.priceType}`)
+          })
+        })
+      })
+    }
+
     res.status(200).json(result)
   } catch (error) {
     next(error)

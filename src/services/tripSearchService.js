@@ -161,6 +161,16 @@ const findBestPrice = async (params) => {
     // Filter where priceList matched
     const validPrices = priceDetails.filter((pd) => pd.priceList !== null)
     
+    console.log("[v0] findPrice - Total price details found:", priceDetails.length)
+    console.log("[v0] findPrice - Valid prices after filtering:", validPrices.length)
+    if (validPrices.length > 0) {
+      console.log("[v0] findPrice - Extra query applied:", JSON.stringify(extraPriceListQuery))
+      console.log("[v0] findPrice - Matching prices found:")
+      validPrices.forEach((p, idx) => {
+        console.log(`  [${idx}] Price ID: ${p._id}, EffectiveDateTime: ${p.priceList?.effectiveDateTime}, BasicPrice: ${p.basicPrice}`)
+      })
+    }
+    
     // Sort by effectiveDateTime descending and return the first (most recent)
     if (validPrices.length > 0) {
       validPrices.sort(
@@ -168,8 +178,15 @@ const findBestPrice = async (params) => {
           new Date(b.priceList.effectiveDateTime) -
           new Date(a.priceList.effectiveDateTime)
       )
+      console.log("[v0] findPrice - Selected price (after sorting by most recent):", {
+        priceId: validPrices[0]._id,
+        basicPrice: validPrices[0].basicPrice,
+        totalPrice: validPrices[0].totalPrice,
+        effectiveDateTime: validPrices[0].priceList?.effectiveDateTime
+      })
       return validPrices[0]
     }
+    console.log("[v0] findPrice - No prices found matching query")
     return null
   }
 
@@ -404,6 +421,7 @@ const searchTripsWithPricing = async (params) => {
         )
 
         // Find best price for this passenger type
+        console.log("[v0] Searching for price - Passenger Type:", payloadType.name, "Quantity:", passenger.quantity)
         const priceResult = await findBestPrice({
           companyId,
           tripId: trip._id,
@@ -417,6 +435,7 @@ const searchTripsWithPricing = async (params) => {
           partnerId,
           departureDate,
         })
+        console.log("[v0] Price search result for", payloadType.name, ":", priceResult ? { priceType: priceResult.priceType, priorityLevel: priceResult.priorityLevel } : "NO PRICE FOUND")
 
         if (priceResult && priceResult.price) {
           const price = priceResult.price
