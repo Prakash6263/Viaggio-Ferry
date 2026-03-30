@@ -6,24 +6,16 @@ const AvailabilityAgentAllocation = require("../models/AvailabilityAgentAllocati
  * Calculate remaining seats based on allocation hierarchy
  * 
  * CRITICAL ALGORITHM:
+ * Hierarchy: Company → Marine → Commercial → Agent
  * 
- * Hierarchy structure: Company → Marine → Commercial → Agent
+ * Formula: finalAvailableSeats = MIN(remaining across all levels)
+ * Where: remaining = allocatedSeats - usedByChildren
  * 
- * For Partner Users:
- * 1. Build allocation chain from current partner up to company using parentAgent
- * 2. For each level in the allocation chain:
- *    remaining = allocatedSeats - usedByChildren
- * 3. Final available seats = MIN(remaining across all hierarchy levels)
- * 4. Build breakdown showing each level's remaining seats
- * 
- * @param {Object} params
- * @param {string} params.companyId - Company ID
- * @param {string} params.tripId - Trip ID
- * @param {string} params.cabinId - Cabin ID
- * @param {string} params.category - Category type (passenger/vehicle/cargo)
- * @param {number} params.companyRemaining - Company's remaining seats
- * @param {string} params.partnerId - Partner/Agent ID (for partner users)
- * @returns {Promise<{availableSeats, availabilityBreakdown}>}
+ * Steps:
+ * 1. Get current agent's allocation
+ * 2. Walk UP parentAgent chain to build complete hierarchy
+ * 3. For each level: calculate remaining = allocated - usedByChildren
+ * 4. Apply MIN to get final available seats
  */
 async function calculateHierarchyRemaining(params) {
   const {
@@ -42,11 +34,9 @@ async function calculateHierarchyRemaining(params) {
       remaining: Math.max(0, companyRemaining),
     },
   ]
-
   const hierarchyRemainings = [companyRemaining]
 
   if (!partnerId) {
-    // Company user - return company remaining only
     return {
       availableSeats: Math.max(0, companyRemaining),
       totalAvailable: Math.max(0, companyRemaining),
@@ -55,26 +45,18 @@ async function calculateHierarchyRemaining(params) {
     }
   }
 
-  // For partner users, build complete hierarchy chain from partner up through parentAgent relationships
   try {
     const companyIdObj = new mongoose.Types.ObjectId(companyId)
     const tripIdObj = new mongoose.Types.ObjectId(tripId)
     const cabinIdObj = new mongoose.Types.ObjectId(cabinId)
     const partnerIdObj = new mongoose.Types.ObjectId(partnerId)
 
-    console.log("[v0] Starting hierarchy calculation for partner:", {
+    console.log("[v0] Starting hierarchy calculation:", {
       partnerId: partnerIdObj.toString(),
-      tripId: tripIdObj.toString(),
-      cabinId: cabinIdObj.toString(),
       category,
     })
 
-    // Build allocation chain starting from current partner
-    // Walk up using parentAgent to find all parent allocations
-    let iterations = 0
-    const maxIterations = 10
-
-    // First find the current agent's allocation record
+    // STEP 1: Get current agent's allocation
     const currentAllocation = await AvailabilityAgentAllocation.findOne({
       company: companyIdObj,
       trip: tripIdObj,
@@ -84,14 +66,14 @@ async function calculateHierarchyRemaining(params) {
       .populate("agent", "layer")
       .lean()
 
-    console.log("[v0] Current agent allocation found:", {
+    console.log("[v0] Current allocation:", {
       found: !!currentAllocation,
-      agentId: currentAllocation?.agent._id.toString(),
+      agentLayer: currentAllocation?.agent.layer,
+      parentAgent: currentAllocation?.parentAgent?.toString(),
     })
 
     if (!currentAllocation) {
-      // No allocation found for this partner - return company level only
-      console.log("[v0] No allocation found for partner, returning company level only")
+      console.log("[v0] No allocation for agent, returning company level only")
       return {
         availableSeats: Math.max(0, companyRemaining),
         totalAvailable: Math.max(0, companyRemaining),
@@ -100,22 +82,17 @@ async function calculateHierarchyRemaining(params) {
       }
     }
 
-    // Build allocation chain by walking UP the hierarchy using parentAgent
-    const allocationChain = []
-    
-    // Add current allocation first
-    allocationChain.push(currentAllocation)
-    
-    console.log("[v0] Starting chain walk from agent:", {
-      agentId: partnerIdObj.toString(),
-      parentAgent: currentAllocation.parentAgent?.toString(),
-    })
-
-    // Walk up the hierarchy chain using parentAgent references
+    // STEP 2: Build chain by walking UP the parentAgent hierarchy
+    const chainAllocations = [currentAllocation]
     let currentParentId = currentAllocation.parentAgent
-    iterations = 0
-    
-    while (currentParentId && iterations < maxIterations) {
+    let iterations = 0
+
+    while (currentParentId && iterations < 10) {
+      console.log("[v0] Looking for parent:", {
+        parentAgentId: currentParentId.toString(),
+        iteration: iterations,
+      })
+
       const parentAllocation = await AvailabilityAgentAllocation.findOne({
         company: companyIdObj,
         trip: tripIdObj,
@@ -126,60 +103,39 @@ async function calculateHierarchyRemaining(params) {
         .lean()
 
       if (!parentAllocation) {
-        console.log("[v0] Parent allocation not found for agent:", {
-          agentId: currentParentId.toString(),
-        })
-        // Parent doesn't have an allocation, but might still be in the hierarchy
-        // Continue looking up in case higher levels exist
+        console.log("[v0] Parent allocation not found, stopping chain walk")
         break
       }
 
-      allocationChain.push(parentAllocation)
-      console.log("[v0] Added parent allocation to chain:", {
-        iteration: iterations,
-        agentId: parentAllocation.agent._id.toString(),
+      chainAllocations.push(parentAllocation)
+      console.log("[v0] Added parent to chain:", {
         layer: parentAllocation.agent.layer,
-        parentAgent: parentAllocation.parentAgent?.toString(),
+        parentAgentId: currentParentId.toString(),
       })
 
-      // Move up to next parent
       currentParentId = parentAllocation.parentAgent
       iterations++
     }
 
     // Reverse to get company-first order
-    allocationChain.reverse()
+    chainAllocations.reverse()
 
-    console.log("[v0] Built allocation chain (company to agent):", {
-      chainLength: allocationChain.length,
-      layers: allocationChain.map((a) => ({
-        agentId: a.agent._id.toString(),
-        layer: a.agent.layer,
-        parentAgent: a.parentAgent?.toString(),
-      })),
+    console.log("[v0] Final chain:", {
+      length: chainAllocations.length,
+      layers: chainAllocations.map((a) => a.agent.layer),
     })
 
-    // Calculate remaining for each allocation level
-    for (const allocation of allocationChain) {
-      const agentId = allocation.agent._id
-      const layer = allocation.agent.layer
-      const levelName = layer.toLowerCase()
+    // STEP 3: Calculate remaining for each level in the chain
+    for (const alloc of chainAllocations) {
+      const agentId = alloc.agent._id
+      const layer = alloc.agent.layer.toLowerCase()
 
-      // Find this level's allocation for the specified category and cabin
-      const categoryAlloc = allocation.allocations?.find(
-        (a) => a.type === category
-      )
+      const categoryAlloc = alloc.allocations?.find((a) => a.type === category)
 
       if (!categoryAlloc) {
-        console.log("[v0] No category allocation for:", {
-          layer: levelName,
-          agentId: agentId.toString(),
-          category,
-        })
-        // Even without this category, we need to include this level in breakdown
-        // with 0 allocated, so it contributes to the MIN calculation
+        console.log("[v0] No category for level:", { layer, category })
         availabilityBreakdown.push({
-          level: levelName,
+          level: layer,
           allocated: 0,
           usedByChildren: 0,
           remaining: 0,
@@ -192,10 +148,9 @@ async function calculateHierarchyRemaining(params) {
         (c) => c.cabin.toString() === cabinIdObj.toString()
       )
 
-      // Get allocated to this level (0 if cabin not found)
       const allocated = cabinAlloc?.allocatedSeats || 0
 
-      // Get sum of children allocations (allocations where parentAgent = this agent)
+      // Get children allocations
       const childrenResult = await AvailabilityAgentAllocation.aggregate([
         {
           $match: {
@@ -216,16 +171,16 @@ async function calculateHierarchyRemaining(params) {
         {
           $group: {
             _id: null,
-            totalChildAllocated: { $sum: "$allocations.cabins.allocatedSeats" },
+            total: { $sum: "$allocations.cabins.allocatedSeats" },
           },
         },
       ])
 
-      const usedByChildren = childrenResult[0]?.totalChildAllocated || 0
+      const usedByChildren = childrenResult[0]?.total || 0
       const remaining = Math.max(0, allocated - usedByChildren)
 
       availabilityBreakdown.push({
-        level: levelName,
+        level: layer,
         allocated,
         usedByChildren,
         remaining,
@@ -233,22 +188,21 @@ async function calculateHierarchyRemaining(params) {
 
       hierarchyRemainings.push(remaining)
 
-      console.log("[v0] Hierarchy level calculation:", {
-        level: levelName,
-        agentId: agentId.toString(),
+      console.log("[v0] Level calculation:", {
+        layer,
         allocated,
         usedByChildren,
         remaining,
       })
     }
 
-    // Final available seats = MIN of all hierarchy levels
+    // STEP 4: Apply MIN formula
     const finalAvailableSeats = Math.max(0, Math.min(...hierarchyRemainings))
 
-    console.log("[v0] Final hierarchy calculation:", {
-      hierarchyRemainings,
-      finalAvailableSeats,
-      breakdownLevels: availabilityBreakdown.map((b) => ({ level: b.level, remaining: b.remaining })),
+    console.log("[v0] Final result:", {
+      levels: hierarchyRemainings.length,
+      values: hierarchyRemainings,
+      final: finalAvailableSeats,
     })
 
     return {
@@ -258,9 +212,7 @@ async function calculateHierarchyRemaining(params) {
       finalAvailableSeats,
     }
   } catch (error) {
-    console.error("[v0] Error calculating hierarchy remaining:", error.message)
-    console.error("[v0] Stack:", error.stack)
-    // Return company level on error
+    console.error("[v0] Hierarchy error:", error.message)
     return {
       availableSeats: Math.max(0, companyRemaining),
       totalAvailable: Math.max(0, companyRemaining),
