@@ -83,9 +83,18 @@ async function calculateHierarchyRemaining(params) {
         isDeleted: false,
       }).select("parentAccount layer").lean()
       
+      console.log("[v0] Partner lookup result:", {
+        found: !!partner,
+        partnerId: partner?._id?.toString(),
+        layer: partner?.layer,
+        parentAccount: partner?.parentAccount?.toString(),
+      })
+      
       if (partner?.parentAccount) {
         console.log("[v0] Found parent via Partner.parentAccount:", partner.parentAccount.toString())
         startParentId = partner.parentAccount
+      } else {
+        console.log("[v0] Partner found but no parentAccount, this is company-level or has no parent")
       }
     }
 
@@ -112,7 +121,7 @@ async function calculateHierarchyRemaining(params) {
         .lean()
 
       if (!parentAllocation) {
-        console.log("[v0] Parent allocation not found, checking Partner hierarchy for next parent")
+        console.log("[v0] Parent allocation not found for agent:", currentParentId.toString())
         // Try to get parent from Partner.parentAccount instead
         const parentPartner = await Partner.findOne({
           _id: currentParentId,
@@ -120,8 +129,15 @@ async function calculateHierarchyRemaining(params) {
           isDeleted: false,
         }).select("parentAccount layer").lean()
         
+        console.log("[v0] Parent Partner lookup:", {
+          partnerId: currentParentId.toString(),
+          found: !!parentPartner,
+          layer: parentPartner?.layer,
+          parentAccount: parentPartner?.parentAccount?.toString(),
+        })
+        
         if (parentPartner?.parentAccount) {
-          console.log("[v0] Found next parent via Partner.parentAccount")
+          console.log("[v0] Found next parent via Partner.parentAccount:", parentPartner.parentAccount.toString())
           currentParentId = parentPartner.parentAccount
           iterations++
           continue
