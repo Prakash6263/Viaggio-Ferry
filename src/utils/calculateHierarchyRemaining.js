@@ -72,10 +72,26 @@ async function calculateHierarchyRemaining(params) {
       parentAgent: currentAllocation?.parentAgent?.toString(),
     })
 
-    // STEP 2: Build chain by walking UP the parentAgent hierarchy
+    // STEP 1B: If no direct allocation, find parent via Partner hierarchy
+    let startParentId = currentAllocation?.parentAgent
+    if (!currentAllocation) {
+      console.log("[v0] No direct allocation, checking Partner hierarchy")
+      const partner = await Partner.findOne({
+        _id: partnerIdObj,
+        company: companyIdObj,
+        isDeleted: false,
+      }).select("parentAccount layer").lean()
+      
+      if (partner?.parentAccount) {
+        console.log("[v0] Found parent via Partner.parentAccount:", partner.parentAccount.toString())
+        startParentId = partner.parentAccount
+      }
+    }
+
+    // STEP 2: Build chain by walking UP the parentAgent/parentAccount hierarchy
     // Start with current allocation if exists, otherwise start with empty chain
     const chainAllocations = currentAllocation ? [currentAllocation] : []
-    let currentParentId = currentAllocation?.parentAgent
+    let currentParentId = startParentId
     let iterations = 0
 
     while (currentParentId && iterations < 10) {
@@ -94,8 +110,23 @@ async function calculateHierarchyRemaining(params) {
         .lean()
 
       if (!parentAllocation) {
-        console.log("[v0] Parent allocation not found, stopping chain walk")
-        break
+        console.log("[v0] Parent allocation not found, checking Partner hierarchy for next parent")
+        // Try to get parent from Partner.parentAccount instead
+        const parentPartner = await Partner.findOne({
+          _id: currentParentId,
+          company: companyIdObj,
+          isDeleted: false,
+        }).select("parentAccount layer").lean()
+        
+        if (parentPartner?.parentAccount) {
+          console.log("[v0] Found next parent via Partner.parentAccount")
+          currentParentId = parentPartner.parentAccount
+          iterations++
+          continue
+        } else {
+          console.log("[v0] No parent found in allocation or Partner hierarchy, stopping chain walk")
+          break
+        }
       }
 
       chainAllocations.push(parentAllocation)
@@ -104,7 +135,23 @@ async function calculateHierarchyRemaining(params) {
         parentAgentId: currentParentId.toString(),
       })
 
+      // Try to get next parent from allocation's parentAgent first
       currentParentId = parentAllocation.parentAgent
+      
+      // If no parentAgent in allocation, try Partner hierarchy
+      if (!currentParentId) {
+        const parentPartner = await Partner.findOne({
+          _id: parentAllocation.agent._id,
+          company: companyIdObj,
+          isDeleted: false,
+        }).select("parentAccount").lean()
+        
+        currentParentId = parentPartner?.parentAccount || null
+        if (currentParentId) {
+          console.log("[v0] No parentAgent in allocation, using Partner.parentAccount for next parent")
+        }
+      }
+      
       iterations++
     }
 
