@@ -574,18 +574,66 @@ const deleteMarkupDiscountRule = async (req, res, next) => {
 /**
  * GET /api/markup-discounts/history
  * Get history of markup/discount rule actions
+ * Supports layer-wise filtering same as list API
  */
 const getMarkupDiscountHistory = async (req, res, next) => {
   try {
-    const { companyId } = req
-    const { ruleId, actionType, dateRange = "last7days" } = req.query
+    const { companyId, user, agent } = req
+    const { 
+      ruleId, 
+      actionType, 
+      dateRange = "last7days",
+      layer,
+      routeFrom,
+      routeTo,
+      ruleType,
+      search
+    } = req.query
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
 
     const filter = { company: companyId, isDeleted: false }
 
+    // Filter by role: if user role is "user", only show rules created by their connected partner/agent
+    // If role is "company", show all rules for the company (same as list API)
+    if (user?.role === "user" && agent) {
+      filter.providerPartner = agent
+    }
+
     if (ruleId) {
       filter._id = ruleId
+    }
+
+    // Apply layer filter (same as list API)
+    if (layer) {
+      filter.appliedLayer = layer
+    }
+
+    // Apply search filter (same as list API)
+    if (search && search.trim().length > 0) {
+      filter.ruleName = { $regex: search.trim(), $options: "i" }
+    }
+
+    // Filter by routes (same as list API)
+    if (routeFrom || routeTo) {
+      if (routeFrom && routeTo) {
+        filter.$and = [
+          { "routes.routeFrom": routeFrom },
+          { "routes.routeTo": routeTo },
+        ]
+      } else {
+        if (routeFrom) {
+          filter["routes.routeFrom"] = routeFrom
+        }
+        if (routeTo) {
+          filter["routes.routeTo"] = routeTo
+        }
+      }
+    }
+
+    // Apply ruleType filter (same as list API)
+    if (ruleType) {
+      filter.ruleType = ruleType
     }
 
     // Build date range filter
