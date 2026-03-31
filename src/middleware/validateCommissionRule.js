@@ -53,36 +53,28 @@ const validateCommissionRule = async (req, res, next) => {
       // Validate provider based on providerType if both provided
       if (providerType) {
         try {
-          console.log("[v0] Commission: Validating provider - ID:", provider, "Type:", providerType, "Company:", companyId)
           if (providerType === "Company") {
             // For Company providerType, provider can be:
             // 1. The company ID itself (company-level admin)
-            // 2. A Partner ID belonging to this company (hierarchical user with parent permission)
+            // 2. A Partner ID belonging to this company (partner users creating rules)
             if (provider === companyId) {
-              console.log("[v0] Commission: Provider matches company ID - VALID")
               // Provider is the company itself - this is valid
             } else {
               // Check if provider is a Partner that belongs to this company
-              console.log("[v0] Commission: Checking if provider is a Partner in this company...")
+              // This allows partner users (Marine Agent, Commercial Agent, etc.) to create commission rules
               const partnerExists = await Partner.exists({
                 _id: provider,
                 company: companyId,
                 isDeleted: false,
               })
-              console.log("[v0] Commission: Partner lookup result:", partnerExists)
+              // If provider is a valid partner in this company, it's allowed
+              // This enables hierarchical users connected to partners to create rules
               if (!partnerExists) {
-                // Additional debugging - check all Partners in this company
-                const allPartners = await Partner.find({
-                  company: companyId,
-                  isDeleted: false,
-                }).select("_id name layer")
-                console.log("[v0] Commission: Available Partners in company:", allPartners.map(p => ({ id: p._id, name: p.name, layer: p.layer })))
                 errors.push("provider must be either the company or a partner belonging to this company")
-              } else {
-                console.log("[v0] Commission: Provider found as Partner - VALID")
               }
             }
           } else if (providerType === "Partner") {
+            // For Partner providerType, validate that the partner exists and belongs to this company
             const partnerExists = await Partner.exists({
               _id: provider,
               company: companyId,
@@ -93,7 +85,7 @@ const validateCommissionRule = async (req, res, next) => {
             }
           }
         } catch (err) {
-          console.error("[v0] Error validating provider:", err)
+          console.error("Error validating provider:", err)
           errors.push("Error validating provider")
         }
       }
@@ -137,23 +129,11 @@ const validateCommissionRule = async (req, res, next) => {
       errors.push("commissionValue must be positive or zero")
     }
 
-    // Validate serviceDetails (MANDATORY: at least one checkbox required)
-    if (!serviceDetails || typeof serviceDetails !== "object") {
-      errors.push("serviceDetails is required and must be an object")
-    } else {
+    // Validate serviceDetails (OPTIONAL - but validate if provided)
+    if (serviceDetails && typeof serviceDetails === "object") {
       const { passenger = [], cargo = [], vehicle = [] } = serviceDetails
 
-      // Check if at least one service type exists (Passenger, Cargo, or Vehicle)
-      const hasServiceDetails =
-        (Array.isArray(passenger) && passenger.length > 0) ||
-        (Array.isArray(cargo) && cargo.length > 0) ||
-        (Array.isArray(vehicle) && vehicle.length > 0)
-
-      if (!hasServiceDetails) {
-        errors.push("At least one of Passenger, Cargo, or Vehicle must be selected")
-      }
-
-      // Validate passenger service
+      // Validate passenger service if provided
       if (Array.isArray(passenger) && passenger.length > 0) {
         for (const service of passenger) {
           if (!service.cabinId) {
@@ -167,7 +147,7 @@ const validateCommissionRule = async (req, res, next) => {
         }
       }
 
-      // Validate cargo service
+      // Validate cargo service if provided
       if (Array.isArray(cargo) && cargo.length > 0) {
         for (const service of cargo) {
           if (!service.cabinId) {
@@ -181,7 +161,7 @@ const validateCommissionRule = async (req, res, next) => {
         }
       }
 
-      // Validate vehicle service
+      // Validate vehicle service if provided
       if (Array.isArray(vehicle) && vehicle.length > 0) {
         for (const service of vehicle) {
           if (!service.cabinId) {
@@ -195,7 +175,7 @@ const validateCommissionRule = async (req, res, next) => {
         }
       }
 
-      // Check if cabins exist in database
+      // Check if cabins exist in database (only if any cabin IDs provided)
       if (errors.length === 0 && companyId) {
         const allCabinIds = [
           ...(passenger || []).map((s) => s.cabinId),
@@ -216,44 +196,33 @@ const validateCommissionRule = async (req, res, next) => {
       }
     }
 
-    // Validate routes array (optional)
-    if (routes) {
-      if (!Array.isArray(routes)) {
-        errors.push("routes must be an array")
-      } else if (routes.length > 0) {
-        // Validate each route in the array only if provided
-        for (let i = 0; i < routes.length; i++) {
-          const route = routes[i]
+    // Validate routes array (OPTIONAL - routes are not required)
+    if (routes && Array.isArray(routes) && routes.length > 0) {
+      // Only validate route entries if routes array is provided and has items
+      for (let i = 0; i < routes.length; i++) {
+        const route = routes[i]
 
-          if (!route || typeof route !== "object") {
-            errors.push(`Route ${i + 1}: must be an object with routeFrom and routeTo`)
-            break
-          }
+        if (!route || typeof route !== "object") {
+          errors.push(`Route ${i + 1}: must be an object with routeFrom and routeTo`)
+          break
+        }
 
-          if (!route.routeFrom) {
-            errors.push(`Route ${i + 1}: routeFrom is required`)
-            break
-          }
+        // Only validate routeFrom/routeTo if the route object is provided
+        // Both are required within a route object, but routes array itself is optional
+        if (route.routeFrom && !mongoose.Types.ObjectId.isValid(route.routeFrom)) {
+          errors.push(`Route ${i + 1}: routeFrom must be a valid ObjectId`)
+          break
+        }
 
-          if (!route.routeTo) {
-            errors.push(`Route ${i + 1}: routeTo is required`)
-            break
-          }
+        if (route.routeTo && !mongoose.Types.ObjectId.isValid(route.routeTo)) {
+          errors.push(`Route ${i + 1}: routeTo must be a valid ObjectId`)
+          break
+        }
 
-          if (typeof route.routeFrom !== "string" || !mongoose.Types.ObjectId.isValid(route.routeFrom)) {
-            errors.push(`Route ${i + 1}: routeFrom must be a valid ObjectId`)
-            break
-          }
-
-          if (typeof route.routeTo !== "string" || !mongoose.Types.ObjectId.isValid(route.routeTo)) {
-            errors.push(`Route ${i + 1}: routeTo must be a valid ObjectId`)
-            break
-          }
-
-          if (route.routeFrom === route.routeTo) {
-            errors.push(`Route ${i + 1}: routeFrom and routeTo must be different ports`)
-            break
-          }
+        // If both are provided, they must be different
+        if (route.routeFrom && route.routeTo && route.routeFrom === route.routeTo) {
+          errors.push(`Route ${i + 1}: routeFrom and routeTo must be different ports`)
+          break
         }
       }
     }

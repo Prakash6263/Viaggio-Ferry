@@ -7,10 +7,10 @@ const { MarkupDiscountRule } = require("../models/MarkupDiscountRule")
  */
 const createMarkupDiscountRule = async (req, res, next) => {
   try {
-    const { companyId, userId } = req
+    const { companyId, userId, user, agent } = req
     const {
       ruleName,
-      provider,
+      provider: bodyProvider,
       providerType,
       appliedLayer,
       partnerScope,
@@ -26,14 +26,14 @@ const createMarkupDiscountRule = async (req, res, next) => {
       priority,
     } = req.body
 
-    console.log("[v0] MarkupDiscount CREATE - Received request:")
-    console.log("  companyId:", companyId)
-    console.log("  userId:", userId)
-    console.log("  provider:", provider)
-    console.log("  providerType:", providerType)
-    console.log("  appliedLayer:", appliedLayer)
-
     if (!companyId) throw createHttpError(400, "Company ID is required")
+
+    // For user role, use agent ID from token as provider if not provided in body
+    // This allows partner users (Marine Agent, etc.) to create rules using their agent/partner ID
+    let provider = bodyProvider
+    if (user?.role === "user" && agent && !provider) {
+      provider = agent
+    }
 
     // Validate required fields (Mandatory: Rule Name, Rule Type, Provider, Applied to Layer, Partner, Commission Value, Effective Date, Expiry Date, at least one service type)
     if (!ruleName || ruleName.trim().length === 0)
@@ -48,18 +48,8 @@ const createMarkupDiscountRule = async (req, res, next) => {
     if (!effectiveDate) throw createHttpError(400, "effectiveDate is required")
     if (!expiryDate) throw createHttpError(400, "expiryDate is required")
     
-    // Validate at least one service type is selected (Passenger, Cargo, or Vehicle)
-    if (!serviceDetails || typeof serviceDetails !== "object") {
-      throw createHttpError(400, "serviceDetails is required")
-    }
-    const { passenger = [], cargo = [], vehicle = [] } = serviceDetails
-    const hasServiceDetails =
-      (Array.isArray(passenger) && passenger.length > 0) ||
-      (Array.isArray(cargo) && cargo.length > 0) ||
-      (Array.isArray(vehicle) && vehicle.length > 0)
-    if (!hasServiceDetails) {
-      throw createHttpError(400, "At least one of Passenger, Cargo, or Vehicle must be selected")
-    }
+    // serviceDetails is now optional - validate only if provided
+    // This allows rules to apply globally without specific service type restrictions
 
     // For specific partner scope, partner is required
     if (partnerScope === "SpecificPartner" && !partner) {
@@ -77,23 +67,34 @@ const createMarkupDiscountRule = async (req, res, next) => {
     }
 
     // Check for duplicate rules before creating
-    // Duplicate check: same company, provider, layer, and any overlapping routes
-    const duplicateRule = await MarkupDiscountRule.findOne({
+    // Duplicate check: same company, provider, layer, and any overlapping routes (if routes provided)
+    const duplicateQuery = {
       company: companyId,
       providerCompany,
       providerPartner,
       appliedLayer,
       partnerScope,
       partner: partnerScope === "SpecificPartner" ? partner : null,
-      serviceDetails,
       visaType: visaType || null,
-      "routes.routeFrom": { $in: routes.map(r => r.routeFrom) },
-      "routes.routeTo": { $in: routes.map(r => r.routeTo) },
       isDeleted: false,
-    })
+    }
+
+    // Filter out empty/invalid routes before processing
+    // This prevents BSONError when empty strings are passed for routeFrom/routeTo
+    const validRoutes = routes && Array.isArray(routes) 
+      ? routes.filter(r => r && r.routeFrom && r.routeTo && r.routeFrom.trim() !== "" && r.routeTo.trim() !== "")
+      : []
+
+    // Only add route filters if valid routes are provided
+    if (validRoutes.length > 0) {
+      duplicateQuery["routes.routeFrom"] = { $in: validRoutes.map(r => r.routeFrom) }
+      duplicateQuery["routes.routeTo"] = { $in: validRoutes.map(r => r.routeTo) }
+    }
+
+    const duplicateRule = await MarkupDiscountRule.findOne(duplicateQuery)
 
     if (duplicateRule) {
-      throw createHttpError(400, "Duplicate rule already exists for one or more of these routes")
+      throw createHttpError(400, "Duplicate rule already exists with similar criteria")
     }
 
     const rule = new MarkupDiscountRule({
@@ -110,7 +111,7 @@ const createMarkupDiscountRule = async (req, res, next) => {
       valueType,
       serviceDetails,
       visaType: visaType || null,
-      routes,
+      routes: validRoutes,
       effectiveDate: new Date(effectiveDate),
       expiryDate: new Date(expiryDate),
       priority: priority || 1,
@@ -448,23 +449,23 @@ const updateMarkupDiscountRule = async (req, res, next) => {
 
     if (visaType !== undefined) rule.visaType = visaType || null
     
-    // Handle routes array update
+    // Handle routes array update (routes are optional)
     if (routes !== undefined) {
-      if (!Array.isArray(routes) || routes.length === 0) {
-        throw createHttpError(400, "At least one route is required")
+      if (routes === null || (Array.isArray(routes) && routes.length === 0)) {
+        // Allow clearing routes - set to empty array
+        rule.routes = []
+      } else if (Array.isArray(routes)) {
+        // Filter out empty/invalid routes to prevent BSONError
+        const validRoutes = routes.filter(r => r && r.routeFrom && r.routeTo && r.routeFrom.trim() !== "" && r.routeTo.trim() !== "")
+        
+        // Validate each valid route
+        validRoutes.forEach((route, index) => {
+          if (route.routeFrom === route.routeTo) {
+            throw createHttpError(400, `Route ${index + 1}: routeFrom and routeTo must be different ports`)
+          }
+        })
+        rule.routes = validRoutes
       }
-      
-      // Validate each route
-      routes.forEach((route, index) => {
-        if (!route.routeFrom || !route.routeTo) {
-          throw createHttpError(400, `Route ${index + 1}: Both routeFrom and routeTo are required`)
-        }
-        if (route.routeFrom === route.routeTo) {
-          throw createHttpError(400, `Route ${index + 1}: routeFrom and routeTo must be different ports`)
-        }
-      })
-      
-      rule.routes = routes
     }
     
     if (effectiveDate !== undefined) rule.effectiveDate = new Date(effectiveDate)
