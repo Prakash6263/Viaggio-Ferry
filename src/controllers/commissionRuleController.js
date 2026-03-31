@@ -65,6 +65,13 @@ const createCommissionRule = async (req, res, next) => {
       providerPartner = provider
     }
 
+    // IMPORTANT: If the creator is a user (role: "user") with an agent/partner ID,
+    // always store the agent ID in providerPartner so we can filter by it in list API.
+    // This is needed even when providerType is "Company" — the user still belongs to a partner.
+    if (user?.role === "user" && agent) {
+      providerPartner = agent
+    }
+
     // Filter out empty/invalid routes before processing
     // This prevents BSONError when empty strings are passed for routeFrom/routeTo
     const validRoutes = routes && Array.isArray(routes) 

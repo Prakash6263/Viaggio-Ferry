@@ -1200,7 +1200,7 @@ const loginUser = async (req, res, next) => {
       process.env.JWT_SECRET || "your-secret-key",
       { expiresIn: "24h" }
     )
-console.log(`[v0] User logged in: ${token} (ID: ${user.agent})`)
+
     res.json({
       success: true,
       message: "Login successful",
