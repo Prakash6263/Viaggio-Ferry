@@ -10,8 +10,6 @@ const createCommissionRule = async (req, res, next) => {
     const { companyId, userId, user, agent } = req
     const {
       ruleName,
-      provider: bodyProvider,
-      providerType,
       appliedLayer,
       partnerScope,
       partner,
@@ -27,42 +25,39 @@ const createCommissionRule = async (req, res, next) => {
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
 
-    // For user role, use agent ID from token as provider if not provided in body
-    // This allows partner users (Marine Agent, etc.) to create rules using their agent/partner ID
-    let provider = bodyProvider
-    if (user?.role === "user" && agent && !provider) {
-      provider = agent
+    // Derive providerType, providerCompany, providerPartner entirely from token — never trust frontend
+    // - role "company": providerType = "Company", providerCompany = companyId, providerPartner = null
+    // - role "user" with agent: providerType = "Partner", providerCompany = companyId, providerPartner = agent
+    let providerType
+    let providerCompany // always set to the company
+    let providerPartner 
+
+    if (user?.role === "user" && agent) {
+      providerType = "Partner"
+      providerPartner = agent
+      providerCompany = null
+    } else {
+      providerType = "Company"
+      providerCompany = companyId
+      providerPartner = null
     }
 
     // Validate required fields (Mandatory: Rule Name, Rule Type, Provider, Applied to Layer, Commission Value, Effective Date, Expiry Date, at least one service type)
     if (!ruleName || ruleName.trim().length === 0)
       throw createHttpError(400, "ruleName is required")
     if (!commissionType) throw createHttpError(400, "commissionType (Rule Type) is required")
-    if (!provider) throw createHttpError(400, "provider is required")
-    if (!providerType) throw createHttpError(400, "providerType is required")
     if (!appliedLayer) throw createHttpError(400, "appliedLayer is required")
     if (commissionValue === undefined || commissionValue === null)
       throw createHttpError(400, "commissionValue (Commission Value) is required")
     if (commissionValue < 0) throw createHttpError(400, "commissionValue must be positive")
     if (!effectiveDate) throw createHttpError(400, "effectiveDate is required")
     if (!expiryDate) throw createHttpError(400, "expiryDate is required")
-    
-    // serviceDetails is now optional - validate only if provided
-    // This allows rules to apply globally without specific service type restrictions
+
+    // serviceDetails is optional - validate only if provided
 
     // For specific partner scope, partner is required
     if (partnerScope === "SpecificPartner" && !partner) {
       throw createHttpError(400, "partner is required when partnerScope is SpecificPartner")
-    }
-
-    // Set provider fields based on providerType
-    let providerCompany = null
-    let providerPartner = null
-
-    if (providerType === "Company") {
-      providerCompany = companyId
-    } else if (providerType === "Partner") {
-      providerPartner = provider
     }
 
     // Filter out empty/invalid routes before processing
@@ -174,10 +169,12 @@ const createCommissionRule = async (req, res, next) => {
 /**
  * GET /api/commission-rules
  * List all commission rules for the company
+ * - If role is "company", show all rules for that company
+ * - If role is "user", show only rules created by the user's connected partner/agent
  */
 const listCommissionRules = async (req, res, next) => {
   try {
-    const { companyId } = req
+    const { companyId, user, agent } = req
     const {
       page = 1,
       limit = 10,
@@ -197,6 +194,14 @@ const listCommissionRules = async (req, res, next) => {
       isDeleted: false,
       $or: [{ expiryDate: null }, { expiryDate: { $gte: new Date() } }],
     }
+
+    // Filter by role: if user role is "user", only show rules created by their connected partner/agent
+    // If role is "company", show all rules for the company
+    if (user?.role === "user" && agent) {
+      // User is connected to a partner/agent - only show their rules
+      filter.providerPartner = agent
+    }
+    // If role is "company" or no agent, show all company rules (default behavior)
 
     // Apply additional filters
     if (search && search.trim().length > 0) {
