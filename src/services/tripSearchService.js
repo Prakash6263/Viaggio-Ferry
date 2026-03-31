@@ -268,12 +268,18 @@ const searchTripsWithPricing = async (params) => {
   }
 
   // ===== FIND TRIPS =====
-  // Parse departure date - search for trips on that day
+  // Parse departure date - search for trips within 5 days before and 5 days after
   const searchDate = new Date(departureDate)
-  const startOfDay = new Date(searchDate)
-  startOfDay.setHours(0, 0, 0, 0)
-  const endOfDay = new Date(searchDate)
-  endOfDay.setHours(23, 59, 59, 999)
+  
+  // Calculate 5 days before the search date
+  const startDate = new Date(searchDate)
+  startDate.setDate(startDate.getDate() - 5)
+  startDate.setHours(0, 0, 0, 0)
+  
+  // Calculate 5 days after the search date
+  const endDate = new Date(searchDate)
+  endDate.setDate(endDate.getDate() + 5)
+  endDate.setHours(23, 59, 59, 999)
 
   // Build trip query - Match originPort to departurePort, destinationPort to arrivalPort
   const tripQuery = {
@@ -281,8 +287,8 @@ const searchTripsWithPricing = async (params) => {
     departurePort: new mongoose.Types.ObjectId(originPort),
     arrivalPort: new mongoose.Types.ObjectId(destinationPort),
     departureDateTime: {
-      $gte: startOfDay,
-      $lte: endOfDay,
+      $gte: startDate,
+      $lte: endDate,
     },
     status: "SCHEDULED",
     isDeleted: false,
@@ -306,6 +312,11 @@ const searchTripsWithPricing = async (params) => {
           originPort,
           destinationPort,
           departureDate,
+          dateRange: {
+            from: startDate.toISOString().split('T')[0],
+            to: endDate.toISOString().split('T')[0],
+            daysBeforeAfter: 5,
+          },
           cabin,
           visaType,
           passengers,
@@ -626,6 +637,11 @@ const searchTripsWithPricing = async (params) => {
         originPort,
         destinationPort,
         departureDate,
+        dateRange: {
+          from: startDate.toISOString().split('T')[0],
+          to: endDate.toISOString().split('T')[0],
+          daysBeforeAfter: 5,
+        },
         cabin,
         visaType,
         passengers,
