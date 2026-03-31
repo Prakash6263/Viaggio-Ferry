@@ -152,10 +152,13 @@ const verifyToken = (req, res, next) => {
       companyId: decoded.companyId || undefined, // May not exist for admins
       layer: decoded.layer || undefined,
       moduleAccess: decoded.moduleAccess || [],
+      agent: decoded.agent || undefined, // Agent/Partner ID for user role
     }
     
     // Attach companyId separately for backward compatibility (may be undefined for admins)
     req.companyId = decoded.companyId
+    // Attach agent ID separately for user role (partner users)
+    req.agent = decoded.agent
     
     next()
   } catch (error) {

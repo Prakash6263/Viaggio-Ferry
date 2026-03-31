@@ -7,10 +7,10 @@ const { MarkupDiscountRule } = require("../models/MarkupDiscountRule")
  */
 const createMarkupDiscountRule = async (req, res, next) => {
   try {
-    const { companyId, userId } = req
+    const { companyId, userId, user, agent } = req
     const {
       ruleName,
-      provider,
+      provider: bodyProvider,
       providerType,
       appliedLayer,
       partnerScope,
@@ -26,14 +26,14 @@ const createMarkupDiscountRule = async (req, res, next) => {
       priority,
     } = req.body
 
-    console.log("[v0] MarkupDiscount CREATE - Received request:")
-    console.log("  companyId:", companyId)
-    console.log("  userId:", userId)
-    console.log("  provider:", provider)
-    console.log("  providerType:", providerType)
-    console.log("  appliedLayer:", appliedLayer)
-
     if (!companyId) throw createHttpError(400, "Company ID is required")
+
+    // For user role, use agent ID from token as provider if not provided in body
+    // This allows partner users (Marine Agent, etc.) to create rules using their agent/partner ID
+    let provider = bodyProvider
+    if (user?.role === "user" && agent && !provider) {
+      provider = agent
+    }
 
     // Validate required fields (Mandatory: Rule Name, Rule Type, Provider, Applied to Layer, Partner, Commission Value, Effective Date, Expiry Date, at least one service type)
     if (!ruleName || ruleName.trim().length === 0)
@@ -79,10 +79,16 @@ const createMarkupDiscountRule = async (req, res, next) => {
       isDeleted: false,
     }
 
-    // Only add route filters if routes are provided
-    if (routes && Array.isArray(routes) && routes.length > 0) {
-      duplicateQuery["routes.routeFrom"] = { $in: routes.map(r => r.routeFrom).filter(Boolean) }
-      duplicateQuery["routes.routeTo"] = { $in: routes.map(r => r.routeTo).filter(Boolean) }
+    // Filter out empty/invalid routes before processing
+    // This prevents BSONError when empty strings are passed for routeFrom/routeTo
+    const validRoutes = routes && Array.isArray(routes) 
+      ? routes.filter(r => r && r.routeFrom && r.routeTo && r.routeFrom.trim() !== "" && r.routeTo.trim() !== "")
+      : []
+
+    // Only add route filters if valid routes are provided
+    if (validRoutes.length > 0) {
+      duplicateQuery["routes.routeFrom"] = { $in: validRoutes.map(r => r.routeFrom) }
+      duplicateQuery["routes.routeTo"] = { $in: validRoutes.map(r => r.routeTo) }
     }
 
     const duplicateRule = await MarkupDiscountRule.findOne(duplicateQuery)
@@ -105,7 +111,7 @@ const createMarkupDiscountRule = async (req, res, next) => {
       valueType,
       serviceDetails,
       visaType: visaType || null,
-      routes,
+      routes: validRoutes,
       effectiveDate: new Date(effectiveDate),
       expiryDate: new Date(expiryDate),
       priority: priority || 1,
@@ -449,13 +455,16 @@ const updateMarkupDiscountRule = async (req, res, next) => {
         // Allow clearing routes - set to empty array
         rule.routes = []
       } else if (Array.isArray(routes)) {
-        // Validate each route only if routes are provided
-        routes.forEach((route, index) => {
-          if (route.routeFrom && route.routeTo && route.routeFrom === route.routeTo) {
+        // Filter out empty/invalid routes to prevent BSONError
+        const validRoutes = routes.filter(r => r && r.routeFrom && r.routeTo && r.routeFrom.trim() !== "" && r.routeTo.trim() !== "")
+        
+        // Validate each valid route
+        validRoutes.forEach((route, index) => {
+          if (route.routeFrom === route.routeTo) {
             throw createHttpError(400, `Route ${index + 1}: routeFrom and routeTo must be different ports`)
           }
         })
-        rule.routes = routes
+        rule.routes = validRoutes
       }
     }
     
