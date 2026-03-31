@@ -640,18 +640,58 @@ const activateCommissionRule = async (req, res, next) => {
 /**
  * GET /api/commission-rules/history
  * Get history of commission rule actions
+ * Supports layer-wise filtering same as list API
  */
 const getCommissionHistory = async (req, res, next) => {
   try {
-    const { companyId } = req
-    const { ruleId, actionType, dateRange = "last7days" } = req.query
+    const { companyId, user, agent } = req
+    const { 
+      ruleId, 
+      actionType, 
+      dateRange = "last7days",
+      layer,
+      routeFrom,
+      routeTo,
+      partnerScope,
+      search
+    } = req.query
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
 
     const filter = { company: companyId, isDeleted: false }
 
+    // Filter by role: if user role is "user", only show rules created by their connected partner/agent
+    // If role is "company", show all rules for the company (same as list API)
+    if (user?.role === "user" && agent) {
+      filter.providerPartner = agent
+    }
+
     if (ruleId) {
       filter._id = ruleId
+    }
+
+    // Apply layer filter (same as list API)
+    if (layer) {
+      filter.appliedLayer = layer
+    }
+
+    // Apply search filter (same as list API)
+    if (search && search.trim().length > 0) {
+      filter.ruleName = { $regex: search.trim(), $options: "i" }
+    }
+
+    // Filter by routes (same as list API)
+    if (routeFrom) {
+      filter["routes.routeFrom"] = routeFrom
+    }
+
+    if (routeTo) {
+      filter["routes.routeTo"] = routeTo
+    }
+
+    // Apply partnerScope filter (same as list API)
+    if (partnerScope) {
+      filter.partnerScope = partnerScope
     }
 
     // Build date range filter
