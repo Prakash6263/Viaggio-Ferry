@@ -176,10 +176,12 @@ const createMarkupDiscountRule = async (req, res, next) => {
 /**
  * GET /api/markup-discounts
  * List all markup/discount rules for the company
+ * - If role is "company", show all rules for that company
+ * - If role is "user", show only rules created by the user's connected partner/agent
  */
 const listMarkupDiscountRules = async (req, res, next) => {
   try {
-    const { companyId } = req
+    const { companyId, user, agent } = req
     const {
       page = 1,
       limit = 10,
@@ -199,6 +201,14 @@ const listMarkupDiscountRules = async (req, res, next) => {
       isDeleted: false,
       $or: [{ expiryDate: null }, { expiryDate: { $gte: new Date() } }],
     }
+
+    // Filter by role: if user role is "user", only show rules created by their connected partner/agent
+    // If role is "company", show all rules for the company
+    if (user?.role === "user" && agent) {
+      // User is connected to a partner/agent - only show their rules
+      filter.providerPartner = agent
+    }
+    // If role is "company" or no agent, show all company rules (default behavior)
 
     // Apply filters
     if (search && search.trim().length > 0) {
