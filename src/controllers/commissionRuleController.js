@@ -10,8 +10,6 @@ const createCommissionRule = async (req, res, next) => {
     const { companyId, userId, user, agent } = req
     const {
       ruleName,
-      provider: bodyProvider,
-      providerType,
       appliedLayer,
       partnerScope,
       partner,
@@ -27,49 +25,36 @@ const createCommissionRule = async (req, res, next) => {
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
 
-    // For user role, use agent ID from token as provider if not provided in body
-    // This allows partner users (Marine Agent, etc.) to create rules using their agent/partner ID
-    let provider = bodyProvider
-    if (user?.role === "user" && agent && !provider) {
-      provider = agent
+    // Derive providerType, providerCompany, providerPartner entirely from token — never trust frontend
+    // - role "company": providerType = "Company", providerCompany = companyId, providerPartner = null
+    // - role "user" with agent: providerType = "Partner", providerCompany = companyId, providerPartner = agent
+    let providerType
+    let providerCompany = companyId   // always set to the company
+    let providerPartner = null
+
+    if (user?.role === "user" && agent) {
+      providerType = "Partner"
+      providerPartner = agent
+    } else {
+      providerType = "Company"
     }
 
     // Validate required fields (Mandatory: Rule Name, Rule Type, Provider, Applied to Layer, Commission Value, Effective Date, Expiry Date, at least one service type)
     if (!ruleName || ruleName.trim().length === 0)
       throw createHttpError(400, "ruleName is required")
     if (!commissionType) throw createHttpError(400, "commissionType (Rule Type) is required")
-    if (!provider) throw createHttpError(400, "provider is required")
-    if (!providerType) throw createHttpError(400, "providerType is required")
     if (!appliedLayer) throw createHttpError(400, "appliedLayer is required")
     if (commissionValue === undefined || commissionValue === null)
       throw createHttpError(400, "commissionValue (Commission Value) is required")
     if (commissionValue < 0) throw createHttpError(400, "commissionValue must be positive")
     if (!effectiveDate) throw createHttpError(400, "effectiveDate is required")
     if (!expiryDate) throw createHttpError(400, "expiryDate is required")
-    
-    // serviceDetails is now optional - validate only if provided
-    // This allows rules to apply globally without specific service type restrictions
+
+    // serviceDetails is optional - validate only if provided
 
     // For specific partner scope, partner is required
     if (partnerScope === "SpecificPartner" && !partner) {
       throw createHttpError(400, "partner is required when partnerScope is SpecificPartner")
-    }
-
-    // Set provider fields based on providerType
-    let providerCompany = null
-    let providerPartner = null
-
-    if (providerType === "Company") {
-      providerCompany = companyId
-    } else if (providerType === "Partner") {
-      providerPartner = provider
-    }
-
-    // IMPORTANT: If the creator is a user (role: "user") with an agent/partner ID,
-    // always store the agent ID in providerPartner so we can filter by it in list API.
-    // This is needed even when providerType is "Company" — the user still belongs to a partner.
-    if (user?.role === "user" && agent) {
-      providerPartner = agent
     }
 
     // Filter out empty/invalid routes before processing

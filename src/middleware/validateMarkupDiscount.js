@@ -17,8 +17,6 @@ const validateMarkupDiscount = async (req, res, next) => {
   try {
     const {
       ruleName,
-      provider,
-      providerType,
       appliedLayer,
       partnerScope,
       partner,
@@ -45,61 +43,8 @@ const validateMarkupDiscount = async (req, res, next) => {
       errors.push("ruleName must not exceed 200 characters")
     }
 
-    // Validate provider (MANDATORY)
-    if (!provider) {
-      errors.push("provider is required")
-    } else if (typeof provider !== "string") {
-      errors.push("provider must be a valid ObjectId string")
-    } else if (!mongoose.Types.ObjectId.isValid(provider)) {
-      errors.push("provider must be a valid ObjectId")
-    } else {
-      // Validate provider based on providerType if both provided
-      if (providerType) {
-        try {
-          if (providerType === "Company") {
-            // For Company providerType, provider can be:
-            // 1. The company ID itself (company-level admin)
-            // 2. A Partner ID belonging to this company (partner users creating rules)
-            if (provider === companyId) {
-              // Provider is the company itself - this is valid
-            } else {
-              // Check if provider is a Partner that belongs to this company
-              // This allows partner users (Marine Agent, Commercial Agent, etc.) to create markup/discounts
-              const partnerExists = await Partner.exists({
-                _id: provider,
-                company: companyId,
-                isDeleted: false,
-              })
-              // If provider is a valid partner in this company, it's allowed
-              // This enables hierarchical users connected to partners to create rules
-              if (!partnerExists) {
-                errors.push("provider must be either the company or a partner belonging to this company")
-              }
-            }
-          } else if (providerType === "Partner") {
-            // For Partner providerType, validate that the partner exists and belongs to this company
-            const partnerExists = await Partner.exists({
-              _id: provider,
-              company: companyId,
-              isDeleted: false,
-            })
-            if (!partnerExists) {
-              errors.push("provider does not exist or does not belong to this company")
-            }
-          }
-        } catch (err) {
-          console.error("Error validating provider:", err)
-          errors.push("Error validating provider")
-        }
-      }
-    }
-
-    // Validate providerType (MANDATORY)
-    if (!providerType) {
-      errors.push("providerType is required")
-    } else if (!VALID_PROVIDER_TYPES.includes(providerType)) {
-      errors.push(`providerType must be one of: ${VALID_PROVIDER_TYPES.join(", ")}`)
-    }
+    // providerType, provider, providerCompany, providerPartner are now derived
+    // entirely from the JWT token on the backend — no frontend validation needed
 
     // Validate appliedLayer
     if (!appliedLayer) {
