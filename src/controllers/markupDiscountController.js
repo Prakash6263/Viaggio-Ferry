@@ -372,11 +372,12 @@ const getMarkupDiscountRule = async (req, res, next) => {
 /**
  * PUT /api/markup-discounts/:id
  * Update a markup/discount rule
+ * Each layer can only update their own created rules
  */
 const updateMarkupDiscountRule = async (req, res, next) => {
   try {
     const { id } = req.params
-    const { companyId, userId } = req
+    const { companyId, userId, user, agent } = req
     const {
       ruleName,
       provider,
@@ -405,6 +406,21 @@ const updateMarkupDiscountRule = async (req, res, next) => {
 
     if (!rule) {
       throw createHttpError(404, "Markup/Discount rule not found")
+    }
+
+    // Layer-wise ownership validation: each layer can only update their own created rules
+    // If user role is "user" (partner/agent layer), they can only update rules they created (providerPartner matches their agent)
+    // If user role is "company", they can only update rules created by company (providerType === "Company")
+    if (user?.role === "user" && agent) {
+      // Partner/Agent layer: can only update rules where providerPartner matches their agent
+      if (rule.providerType !== "Partner" || String(rule.providerPartner) !== String(agent)) {
+        throw createHttpError(403, "You can only update rules created by your own layer")
+      }
+    } else if (user?.role === "company") {
+      // Company layer: can only update rules created by company
+      if (rule.providerType !== "Company") {
+        throw createHttpError(403, "You can only update rules created by your own layer")
+      }
     }
 
     // Update fields if provided
@@ -540,11 +556,12 @@ const updateMarkupDiscountRule = async (req, res, next) => {
 /**
  * DELETE /api/markup-discounts/:id
  * Soft delete a markup/discount rule
+ * Each layer can only delete their own created rules
  */
 const deleteMarkupDiscountRule = async (req, res, next) => {
   try {
     const { id } = req.params
-    const { companyId } = req
+    const { companyId, user, agent } = req
 
     if (!companyId) throw createHttpError(400, "Company ID is required")
 
@@ -555,6 +572,19 @@ const deleteMarkupDiscountRule = async (req, res, next) => {
 
     if (!rule) {
       throw createHttpError(404, "Markup/Discount rule not found")
+    }
+
+    // Layer-wise ownership validation: each layer can only delete their own created rules
+    if (user?.role === "user" && agent) {
+      // Partner/Agent layer: can only delete rules where providerPartner matches their agent
+      if (rule.providerType !== "Partner" || String(rule.providerPartner) !== String(agent)) {
+        throw createHttpError(403, "You can only delete rules created by your own layer")
+      }
+    } else if (user?.role === "company") {
+      // Company layer: can only delete rules created by company
+      if (rule.providerType !== "Company") {
+        throw createHttpError(403, "You can only delete rules created by your own layer")
+      }
     }
 
     // Soft delete
