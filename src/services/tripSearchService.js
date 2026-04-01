@@ -671,23 +671,6 @@ const searchTripsWithPricing = async (params) => {
       totalQuantity,
     })
 
-    // Debug: Log search results
-    console.log("[v0] Outbound trips found:", outboundResult.trips.length)
-    outboundResult.trips.forEach((t, i) => {
-      console.log(`[v0]   Outbound ${i}: ${t.trip.tripCode}, cabinOptions: ${t.cabinOptions.length}`)
-      t.cabinOptions.forEach((c, j) => {
-        console.log(`[v0]     Cabin ${j}: ${c.cabin.name}, seats: ${c.availability.finalAvailableSeats}`)
-      })
-    })
-    
-    console.log("[v0] Inbound trips found:", inboundResult.trips.length)
-    inboundResult.trips.forEach((t, i) => {
-      console.log(`[v0]   Inbound ${i}: ${t.trip.tripCode}, cabinOptions: ${t.cabinOptions.length}`)
-      t.cabinOptions.forEach((c, j) => {
-        console.log(`[v0]     Cabin ${j}: ${c.cabin.name}, seats: ${c.availability.finalAvailableSeats}`)
-      })
-    })
-
     // Combine outbound and inbound trips
     // Each return option = outbound trip + inbound trip
     const combinedReturnTrips = []
@@ -703,13 +686,11 @@ const searchTripsWithPricing = async (params) => {
 
           // Skip if cabin doesn't exist in inbound trip
           if (!matchingInboundCabin) {
-            console.log(`[v0] Skipping combination: cabin ${outboundCabin.cabin.name} not found in inbound trip ${inboundTrip.trip.tripCode}`)
             continue
           }
 
           // Check if both cabins have pricing
           if (!outboundCabin.pricing || !matchingInboundCabin.pricing) {
-            console.log(`[v0] Skipping combination: missing pricing for cabin ${outboundCabin.cabin.name}`)
             continue
           }
 
@@ -840,8 +821,6 @@ const searchTripsWithPricing = async (params) => {
         }
       }
     }
-
-    console.log("[v0] Combined return trip combinations:", combinedReturnTrips.length)
 
     const successMessage = combinedReturnTrips.length === 0 
       ? "No return trip combinations found matching your search criteria" 
