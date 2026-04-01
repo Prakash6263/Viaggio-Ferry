@@ -671,137 +671,177 @@ const searchTripsWithPricing = async (params) => {
       totalQuantity,
     })
 
+    // Debug: Log search results
+    console.log("[v0] Outbound trips found:", outboundResult.trips.length)
+    outboundResult.trips.forEach((t, i) => {
+      console.log(`[v0]   Outbound ${i}: ${t.trip.tripCode}, cabinOptions: ${t.cabinOptions.length}`)
+      t.cabinOptions.forEach((c, j) => {
+        console.log(`[v0]     Cabin ${j}: ${c.cabin.name}, seats: ${c.availability.finalAvailableSeats}`)
+      })
+    })
+    
+    console.log("[v0] Inbound trips found:", inboundResult.trips.length)
+    inboundResult.trips.forEach((t, i) => {
+      console.log(`[v0]   Inbound ${i}: ${t.trip.tripCode}, cabinOptions: ${t.cabinOptions.length}`)
+      t.cabinOptions.forEach((c, j) => {
+        console.log(`[v0]     Cabin ${j}: ${c.cabin.name}, seats: ${c.availability.finalAvailableSeats}`)
+      })
+    })
+
     // Combine outbound and inbound trips
     // Each return option = outbound trip + inbound trip
     const combinedReturnTrips = []
 
     for (const outboundTrip of outboundResult.trips) {
-      for (const inboundTrip of inboundResult.trips) {
-        // Combine pricing: total price = outbound price + inbound price
-        const combinedPricingBreakdown = []
-        let combinedTotalBasicPrice = 0
-        let combinedTotalTaxes = 0
-        let combinedTotalPrice = 0
-        let hasMissingPrice = false
-        let currency = null
+      // For each outbound trip, find matching inbound trips with same cabin
+      for (const outboundCabin of outboundTrip.cabinOptions) {
+        for (const inboundTrip of inboundResult.trips) {
+          // Find matching cabin in inbound trip
+          const matchingInboundCabin = inboundTrip.cabinOptions.find(
+            c => c.cabin._id.toString() === outboundCabin.cabin._id.toString()
+          )
 
-        // Combine pricing for each passenger type
-        for (let i = 0; i < outboundTrip.cabinOptions[0].pricing.breakdown.length; i++) {
-          const outboundPricing = outboundTrip.cabinOptions[0].pricing.breakdown[i]
-          const inboundPricing = inboundTrip.cabinOptions[0].pricing.breakdown[i]
-
-          // Check if both have prices
-          if (!outboundPricing.unitTotalPrice || !inboundPricing.unitTotalPrice) {
-            hasMissingPrice = true
+          // Skip if cabin doesn't exist in inbound trip
+          if (!matchingInboundCabin) {
+            console.log(`[v0] Skipping combination: cabin ${outboundCabin.cabin.name} not found in inbound trip ${inboundTrip.trip.tripCode}`)
+            continue
           }
 
-          const outboundSubtotal = outboundPricing.subtotal || 0
-          const inboundSubtotal = inboundPricing.subtotal || 0
-          const combinedSubtotal = outboundSubtotal + inboundSubtotal
+          // Check if both cabins have pricing
+          if (!outboundCabin.pricing || !matchingInboundCabin.pricing) {
+            console.log(`[v0] Skipping combination: missing pricing for cabin ${outboundCabin.cabin.name}`)
+            continue
+          }
 
-          combinedTotalBasicPrice += (outboundPricing.unitPrice || 0) * outboundPricing.quantity
-          combinedTotalBasicPrice += (inboundPricing.unitPrice || 0) * inboundPricing.quantity
-          
-          const outboundTaxes = (outboundPricing.subtotal || 0) - ((outboundPricing.unitPrice || 0) * outboundPricing.quantity)
-          const inboundTaxes = (inboundPricing.subtotal || 0) - ((inboundPricing.unitPrice || 0) * inboundPricing.quantity)
-          
-          combinedTotalTaxes += outboundTaxes + inboundTaxes
-          combinedTotalPrice += combinedSubtotal
+          // Combine pricing: total price = outbound price + inbound price
+          const combinedPricingBreakdown = []
+          let combinedTotalBasicPrice = 0
+          let combinedTotalTaxes = 0
+          let combinedTotalPrice = 0
+          let hasMissingPrice = false
+          let currency = null
 
-          currency = outboundPricing.unitTotalPrice ? outboundTrip.cabinOptions[0].pricing.currency : inboundTrip.cabinOptions[0].pricing.currency
+          // Combine pricing for each passenger type
+          for (let i = 0; i < outboundCabin.pricing.breakdown.length; i++) {
+            const outboundPricing = outboundCabin.pricing.breakdown[i]
+            const inboundPricing = matchingInboundCabin.pricing.breakdown[i]
 
-          combinedPricingBreakdown.push({
-            payloadType: outboundPricing.payloadType,
-            quantity: outboundPricing.quantity,
-            outboundPrice: {
-              unitPrice: outboundPricing.unitPrice,
-              unitTotalPrice: outboundPricing.unitTotalPrice,
-              subtotal: outboundSubtotal,
+            // Check if both have prices
+            if (!outboundPricing.unitTotalPrice || !inboundPricing.unitTotalPrice) {
+              hasMissingPrice = true
+            }
+
+            const outboundSubtotal = outboundPricing.subtotal || 0
+            const inboundSubtotal = inboundPricing.subtotal || 0
+            const combinedSubtotal = outboundSubtotal + inboundSubtotal
+
+            combinedTotalBasicPrice += (outboundPricing.unitPrice || 0) * outboundPricing.quantity
+            combinedTotalBasicPrice += (inboundPricing.unitPrice || 0) * inboundPricing.quantity
+            
+            const outboundTaxes = (outboundPricing.subtotal || 0) - ((outboundPricing.unitPrice || 0) * outboundPricing.quantity)
+            const inboundTaxes = (inboundPricing.subtotal || 0) - ((inboundPricing.unitPrice || 0) * inboundPricing.quantity)
+            
+            combinedTotalTaxes += outboundTaxes + inboundTaxes
+            combinedTotalPrice += combinedSubtotal
+
+            currency = outboundPricing.unitTotalPrice ? outboundCabin.pricing.currency : matchingInboundCabin.pricing.currency
+
+            combinedPricingBreakdown.push({
+              payloadType: outboundPricing.payloadType,
+              quantity: outboundPricing.quantity,
+              outboundPrice: {
+                unitPrice: outboundPricing.unitPrice,
+                unitTotalPrice: outboundPricing.unitTotalPrice,
+                subtotal: outboundSubtotal,
+              },
+              inboundPrice: {
+                unitPrice: inboundPricing.unitPrice,
+                unitTotalPrice: inboundPricing.unitTotalPrice,
+                subtotal: inboundSubtotal,
+              },
+              returnTotalPrice: combinedSubtotal, // outbound + inbound
+              taxes: [...(outboundPricing.taxes || []), ...(inboundPricing.taxes || [])],
+            })
+          }
+
+          // Available seats = min(outbound seats, inbound seats)
+          // Note: Don't filter out if seats = 0, just set bookingAllowed = false
+          const outboundAvailableSeats = outboundCabin.availability.finalAvailableSeats
+          const inboundAvailableSeats = matchingInboundCabin.availability.finalAvailableSeats
+          const combinedAvailableSeats = Math.min(outboundAvailableSeats, inboundAvailableSeats)
+
+          // Booking allowed only if both trips allow booking and there are available seats
+          const outboundBookingAllowed = outboundCabin.bookingAllowed
+          const inboundBookingAllowed = matchingInboundCabin.bookingAllowed
+          const combinedBookingAllowed = outboundBookingAllowed && inboundBookingAllowed && !hasMissingPrice && combinedAvailableSeats > 0
+
+          combinedReturnTrips.push({
+            returnTrip: {
+              outbound: {
+                _id: outboundTrip.trip._id,
+                tripName: outboundTrip.trip.tripName,
+                tripCode: outboundTrip.trip.tripCode,
+                ship: outboundTrip.trip.ship,
+                departurePort: outboundTrip.trip.departurePort,
+                arrivalPort: outboundTrip.trip.arrivalPort,
+                departureDateTime: outboundTrip.trip.departureDateTime,
+                arrivalDateTime: outboundTrip.trip.arrivalDateTime,
+                status: outboundTrip.trip.status,
+                tripStatusFlags: outboundTrip.trip.tripStatusFlags,
+              },
+              inbound: {
+                _id: inboundTrip.trip._id,
+                tripName: inboundTrip.trip.tripName,
+                tripCode: inboundTrip.trip.tripCode,
+                ship: inboundTrip.trip.ship,
+                departurePort: inboundTrip.trip.departurePort,
+                arrivalPort: inboundTrip.trip.arrivalPort,
+                departureDateTime: inboundTrip.trip.departureDateTime,
+                arrivalDateTime: inboundTrip.trip.arrivalDateTime,
+                status: inboundTrip.trip.status,
+                tripStatusFlags: inboundTrip.trip.tripStatusFlags,
+              },
             },
-            inboundPrice: {
-              unitPrice: inboundPricing.unitPrice,
-              unitTotalPrice: inboundPricing.unitTotalPrice,
-              subtotal: inboundSubtotal,
+            cabin: outboundCabin.cabin,
+            availability: {
+              outboundSeats: outboundAvailableSeats,
+              inboundSeats: inboundAvailableSeats,
+              combinedAvailableSeats: combinedAvailableSeats,
+              totalSeats: Math.min(
+                outboundCabin.availability.totalSeats,
+                matchingInboundCabin.availability.totalSeats
+              ),
             },
-            returnTotalPrice: combinedSubtotal, // outbound + inbound
-            taxes: [...(outboundPricing.taxes || []), ...(inboundPricing.taxes || [])],
+            bookingAllowed: combinedBookingAllowed,
+            pricing: {
+              breakdown: combinedPricingBreakdown,
+              outboundTotal: outboundCabin.pricing.totalPrice,
+              inboundTotal: matchingInboundCabin.pricing.totalPrice,
+              returnTotalPrice: Math.round(combinedTotalPrice * 100) / 100, // outbound + inbound
+              totalBasicPrice: Math.round(combinedTotalBasicPrice * 100) / 100,
+              totalTaxes: Math.round(combinedTotalTaxes * 100) / 100,
+              currency: currency || outboundCabin.pricing.currency,
+              hasMissingPrice,
+            },
+            passengers: passengers.map((p) => {
+              const pt = payloadTypes.find((pt) => pt._id.toString() === p.payloadTypeId)
+              return {
+                payloadType: {
+                  _id: pt._id,
+                  name: pt.name,
+                  code: pt.code,
+                  ageRange: pt.ageRange,
+                },
+                quantity: p.quantity,
+              }
+            }),
+            totalPassengers: totalQuantity,
           })
         }
-
-        // Available seats = min(outbound seats, inbound seats)
-        const outboundAvailableSeats = outboundTrip.cabinOptions[0].availability.finalAvailableSeats
-        const inboundAvailableSeats = inboundTrip.cabinOptions[0].availability.finalAvailableSeats
-        const combinedAvailableSeats = Math.min(outboundAvailableSeats, inboundAvailableSeats)
-
-        // Booking allowed only if both trips allow booking
-        const outboundBookingAllowed = outboundTrip.cabinOptions[0].bookingAllowed
-        const inboundBookingAllowed = inboundTrip.cabinOptions[0].bookingAllowed
-        const combinedBookingAllowed = outboundBookingAllowed && inboundBookingAllowed && !hasMissingPrice
-
-        combinedReturnTrips.push({
-          returnTrip: {
-            outbound: {
-              _id: outboundTrip.trip._id,
-              tripName: outboundTrip.trip.tripName,
-              tripCode: outboundTrip.trip.tripCode,
-              ship: outboundTrip.trip.ship,
-              departurePort: outboundTrip.trip.departurePort,
-              arrivalPort: outboundTrip.trip.arrivalPort,
-              departureDateTime: outboundTrip.trip.departureDateTime,
-              arrivalDateTime: outboundTrip.trip.arrivalDateTime,
-              status: outboundTrip.trip.status,
-              tripStatusFlags: outboundTrip.trip.tripStatusFlags,
-            },
-            inbound: {
-              _id: inboundTrip.trip._id,
-              tripName: inboundTrip.trip.tripName,
-              tripCode: inboundTrip.trip.tripCode,
-              ship: inboundTrip.trip.ship,
-              departurePort: inboundTrip.trip.departurePort,
-              arrivalPort: inboundTrip.trip.arrivalPort,
-              departureDateTime: inboundTrip.trip.departureDateTime,
-              arrivalDateTime: inboundTrip.trip.arrivalDateTime,
-              status: inboundTrip.trip.status,
-              tripStatusFlags: inboundTrip.trip.tripStatusFlags,
-            },
-          },
-          cabin: outboundTrip.cabinOptions[0].cabin,
-          availability: {
-            outboundSeats: outboundAvailableSeats,
-            inboundSeats: inboundAvailableSeats,
-            combinedAvailableSeats: combinedAvailableSeats,
-            totalSeats: Math.min(
-              outboundTrip.cabinOptions[0].availability.totalSeats,
-              inboundTrip.cabinOptions[0].availability.totalSeats
-            ),
-          },
-          bookingAllowed: combinedBookingAllowed,
-          pricing: {
-            breakdown: combinedPricingBreakdown,
-            outboundTotal: outboundTrip.cabinOptions[0].pricing.totalPrice,
-            inboundTotal: inboundTrip.cabinOptions[0].pricing.totalPrice,
-            returnTotalPrice: Math.round(combinedTotalPrice * 100) / 100, // outbound + inbound
-            totalBasicPrice: Math.round(combinedTotalBasicPrice * 100) / 100,
-            totalTaxes: Math.round(combinedTotalTaxes * 100) / 100,
-            currency: currency || outboundTrip.cabinOptions[0].pricing.currency,
-            hasMissingPrice,
-          },
-          passengers: passengers.map((p) => {
-            const pt = payloadTypes.find((pt) => pt._id.toString() === p.payloadTypeId)
-            return {
-              payloadType: {
-                _id: pt._id,
-                name: pt.name,
-                code: pt.code,
-                ageRange: pt.ageRange,
-              },
-              quantity: p.quantity,
-            }
-          }),
-          totalPassengers: totalQuantity,
-        })
       }
     }
+
+    console.log("[v0] Combined return trip combinations:", combinedReturnTrips.length)
 
     const successMessage = combinedReturnTrips.length === 0 
       ? "No return trip combinations found matching your search criteria" 
