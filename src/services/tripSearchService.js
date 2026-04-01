@@ -855,51 +855,52 @@ const searchTripsWithPricing = async (params) => {
         trips: combinedReturnTrips,
       },
     }
-  } else {
+  }
+  
+  // One-way search
     // One-way search
-    const oneWayResult = await searchTripsForDirection({
-      companyId,
-      userType,
-      partnerId,
-      category: normalizedCategory,
-      priceListTripType,
-      departPort: originPort,
-      arrivePort: destinationPort,
-      searchDate: departureDate,
-      cabin,
-      visaType,
-      passengers,
-      payloadTypes,
-      totalQuantity,
-    })
+  const oneWayResult = await searchTripsForDirection({
+    companyId,
+    userType,
+    partnerId,
+    category: normalizedCategory,
+    priceListTripType,
+    departPort: originPort,
+    arrivePort: destinationPort,
+    searchDate: departureDate,
+    cabin,
+    visaType,
+    passengers,
+    payloadTypes,
+    totalQuantity,
+  })
 
-    const successMessage = oneWayResult.trips.length === 0
-      ? "No trips found matching your search criteria"
-      : `Found ${oneWayResult.trips.length} trip(s) matching your search criteria`
+  const successMessage = oneWayResult.trips.length === 0
+    ? "No trips found matching your search criteria"
+    : `Found ${oneWayResult.trips.length} trip(s) matching your search criteria`
 
-    return {
-      success: true,
-      message: successMessage,
-      data: {
-        searchParams: {
-          category: normalizedCategory,
-          tripType,
-          originPort,
-          destinationPort,
-          departureDate,
-          dateRange: {
-            from: oneWayResult.dateRange.from.toISOString().split('T')[0],
-            to: oneWayResult.dateRange.to.toISOString().split('T')[0],
-            daysBeforeAfter: 5,
-          },
-          cabin,
-          visaType,
-          passengers,
-          totalPassengers: totalQuantity,
+  return {
+    success: true,
+    message: successMessage,
+    data: {
+      searchParams: {
+        category: normalizedCategory,
+        tripType,
+        originPort,
+        destinationPort,
+        departureDate,
+        dateRange: {
+          from: oneWayResult.dateRange.from.toISOString().split('T')[0],
+          to: oneWayResult.dateRange.to.toISOString().split('T')[0],
+          daysBeforeAfter: 5,
         },
-        trips: oneWayResult.trips,
+        cabin,
+        visaType,
+        passengers,
+        totalPassengers: totalQuantity,
       },
-    }
+      trips: oneWayResult.trips,
+    },
   }
 }
 
