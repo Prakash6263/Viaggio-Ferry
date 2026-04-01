@@ -94,6 +94,7 @@ const searchTrips = async (req, res, next) => {
       originPort,
       destinationPort,
       departureDate,
+      returnDate,
       cabin,
       visaType,
       passengers,
@@ -118,6 +119,11 @@ const searchTrips = async (req, res, next) => {
 
     if (!departureDate) {
       throw createHttpError(400, "Departure date is required")
+    }
+
+    // Return trips require returnDate
+    if (tripType.toLowerCase() === "return" && !returnDate) {
+      throw createHttpError(400, "Return date is required for return trips")
     }
 
     // Validate passengers array
@@ -192,6 +198,7 @@ const searchTrips = async (req, res, next) => {
       originPort,
       destinationPort,
       departureDate: parsedDate,
+      returnDate: returnDate ? new Date(returnDate) : null,
       cabin,
       visaType,
       passengers,
@@ -228,6 +235,7 @@ const searchTripsGet = async (req, res, next) => {
       originPort,
       destinationPort,
       departureDate,
+      returnDate,
       cabin,
       visaType,
       passengers: passengersStr,
@@ -252,6 +260,11 @@ const searchTripsGet = async (req, res, next) => {
 
     if (!departureDate) {
       throw createHttpError(400, "Departure date is required")
+    }
+
+    // Return trips require returnDate
+    if (tripType.toLowerCase() === "return" && !returnDate) {
+      throw createHttpError(400, "Return date is required for return trips")
     }
 
     // Parse passengers from JSON string
@@ -337,6 +350,7 @@ const searchTripsGet = async (req, res, next) => {
       originPort,
       destinationPort,
       departureDate: parsedDate,
+      returnDate: returnDate ? new Date(returnDate) : null,
       cabin,
       visaType,
       passengers,
