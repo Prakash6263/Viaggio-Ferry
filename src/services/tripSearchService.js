@@ -25,6 +25,7 @@ const searchTripsForDirection = async (params) => {
     departPort,
     arrivePort,
     searchDate,
+    searchWindowDays = 5, // Default to ±5 days, can be overridden
     cabin,
     visaType,
     passengers,
@@ -32,13 +33,13 @@ const searchTripsForDirection = async (params) => {
     totalQuantity,
   } = params
 
-  // Parse search date - search for trips within 5 days before and 5 days after
+  // Parse search date - search for trips within searchWindowDays before and after
   const searchStartDate = new Date(searchDate)
-  searchStartDate.setDate(searchStartDate.getDate() - 5)
+  searchStartDate.setDate(searchStartDate.getDate() - searchWindowDays)
   searchStartDate.setHours(0, 0, 0, 0)
   
   const searchEndDate = new Date(searchDate)
-  searchEndDate.setDate(searchEndDate.getDate() + 5)
+  searchEndDate.setDate(searchEndDate.getDate() + searchWindowDays)
   searchEndDate.setHours(23, 59, 59, 999)
 
   // Build trip query
