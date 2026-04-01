@@ -12,6 +12,336 @@ const Partner = require("../models/Partner")
 const calculateHierarchyRemaining = require("../utils/calculateHierarchyRemaining")
 
 /**
+ * Helper function to search trips for a single direction
+ * Used for both one-way and return (for outbound/inbound) searches
+ */
+const searchTripsForDirection = async (params) => {
+  const {
+    companyId,
+    userType,
+    partnerId,
+    category,
+    priceListTripType,
+    departPort,
+    arrivePort,
+    searchDate,
+    cabin,
+    visaType,
+    passengers,
+    payloadTypes,
+    totalQuantity,
+  } = params
+
+  // Parse search date - search for trips within 5 days before and 5 days after
+  const searchStartDate = new Date(searchDate)
+  searchStartDate.setDate(searchStartDate.getDate() - 5)
+  searchStartDate.setHours(0, 0, 0, 0)
+  
+  const searchEndDate = new Date(searchDate)
+  searchEndDate.setDate(searchEndDate.getDate() + 5)
+  searchEndDate.setHours(23, 59, 59, 999)
+
+  // Build trip query
+  const tripQuery = {
+    company: new mongoose.Types.ObjectId(companyId),
+    departurePort: new mongoose.Types.ObjectId(departPort),
+    arrivalPort: new mongoose.Types.ObjectId(arrivePort),
+    departureDateTime: {
+      $gte: searchStartDate,
+      $lte: searchEndDate,
+    },
+    status: "SCHEDULED",
+    isDeleted: false,
+  }
+
+  const trips = await Trip.find(tripQuery)
+    .populate("ship", "name imoNumber")
+    .populate("departurePort", "name code country")
+    .populate("arrivalPort", "name code country")
+    .sort({ departureDateTime: 1 })
+    .lean()
+
+  if (trips.length === 0) {
+    return { trips: [], dateRange: { from: searchStartDate, to: searchEndDate } }
+  }
+
+  // Build results for each trip
+  const results = []
+
+  for (const trip of trips) {
+    // Get trip availability
+    const tripAvailability = await TripAvailability.findOne({
+      company: new mongoose.Types.ObjectId(companyId),
+      trip: trip._id,
+      isDeleted: false,
+    })
+      .populate("availabilityTypes.cabins.cabin", "name cabinCode")
+      .lean()
+
+    // Get all cabins for this category from trip or availability
+    let availableCabins = []
+    
+    // From trip capacity details
+    if (trip.tripCapacityDetails && trip.tripCapacityDetails[category]) {
+      availableCabins = trip.tripCapacityDetails[category].map((c) => ({
+        cabinId: c.cabinId,
+        cabinName: c.cabinName,
+        totalSeats: c.totalSeat,
+        remainingSeats: c.remainingSeat,
+      }))
+    }
+
+    // If cabin filter is provided, filter cabins
+    if (cabin) {
+      availableCabins = availableCabins.filter(
+        (c) => c.cabinId.toString() === cabin
+      )
+    }
+
+    // Build cabin options with pricing and availability
+    const cabinOptions = []
+
+    for (const cabinInfo of availableCabins) {
+      const cabinId = cabinInfo.cabinId
+
+      // Calculate availability based on allocation hierarchy
+      let availabilityResult = { availableSeats: cabinInfo.remainingSeats }
+      
+      if (tripAvailability) {
+        availabilityResult = await calculateAvailableSeats({
+          companyId,
+          tripId: trip._id,
+          availabilityId: tripAvailability._id,
+          category,
+          cabinId,
+          userType,
+          partnerId,
+        })
+      }
+
+      // Get pricing for each passenger type
+      const pricingBreakdown = []
+      let totalBasicPrice = 0
+      let totalTaxes = 0
+      let totalPrice = 0
+      let hasMissingPrice = false
+      let currency = null
+      let priceListId = null
+
+      for (const passenger of passengers) {
+        const payloadType = payloadTypes.find(
+          (pt) => pt._id.toString() === passenger.payloadTypeId
+        )
+
+        // Find best price for this passenger type
+        const priceResult = await findBestPrice({
+          companyId,
+          tripId: trip._id,
+          category,
+          ticketType: priceListTripType,
+          originPort: departPort,
+          destinationPort: arrivePort,
+          cabinId,
+          passengerTypeId: passenger.payloadTypeId,
+          visaType,
+          partnerId,
+          departureDate: searchDate,
+        })
+
+        if (priceResult && priceResult.price) {
+          const price = priceResult.price
+          const unitTotalPrice = price.totalPrice // includes base + tax
+          const subtotal = unitTotalPrice * passenger.quantity
+          
+          const taxAmount = (price.totalPrice - price.basicPrice) * passenger.quantity
+          
+          totalBasicPrice += price.basicPrice * passenger.quantity
+          totalTaxes += taxAmount
+          totalPrice += subtotal
+          
+          currency = price.priceList?.currency
+          priceListId = price.priceList?._id
+
+          pricingBreakdown.push({
+            payloadType: {
+              _id: payloadType._id,
+              name: payloadType.name,
+              code: payloadType.code,
+              ageRange: payloadType.ageRange,
+            },
+            quantity: passenger.quantity,
+            unitPrice: price.basicPrice,
+            unitTotalPrice: unitTotalPrice,
+            subtotal: Math.round(subtotal * 100) / 100,
+            taxes: price.taxIds || [],
+            allowedLuggagePieces: price.allowedLuggagePieces,
+            allowedLuggageWeight: price.allowedLuggageWeight,
+            excessLuggagePricePerKg: price.excessLuggagePricePerKg,
+            priceType: priceResult.priceType,
+          })
+        } else {
+          // No price found
+          if (passenger.quantity > 0) {
+            hasMissingPrice = true
+          }
+          pricingBreakdown.push({
+            payloadType: {
+              _id: payloadType._id,
+              name: payloadType.name,
+              code: payloadType.code,
+              ageRange: payloadType.ageRange,
+            },
+            quantity: passenger.quantity,
+            unitPrice: null,
+            unitTotalPrice: null,
+            subtotal: passenger.quantity === 0 ? 0 : null,
+            taxes: [],
+            ...(passenger.quantity > 0
+              ? { error: "No price found for this passenger type" }
+              : {}),
+          })
+        }
+      }
+
+      // Fetch cabin details if not populated
+      let cabinDetails = { _id: cabinId, name: cabinInfo.cabinName }
+      if (!cabinInfo.cabinName) {
+        const cabinDoc = await Cabin.findById(cabinId).select("name cabinCode").lean()
+        if (cabinDoc) {
+          cabinDetails = cabinDoc
+        }
+      }
+
+      // Determine if booking is allowed
+      const now = new Date()
+      const availableSeatsValue = availabilityResult.finalAvailableSeats ?? availabilityResult.availableSeats ?? 0
+      
+      const bookingAllowed = 
+        availableSeatsValue > 0 &&
+        !hasMissingPrice &&
+        (!trip.bookingClosingDate || now < trip.bookingClosingDate) &&
+        (!trip.departureDateTime || now < trip.departureDateTime) &&
+        trip.status === "SCHEDULED"
+
+      // Calculate total price
+      const calculatedTotalPrice = pricingBreakdown.reduce((sum, item) => {
+        if (item.subtotal !== null && item.subtotal !== undefined) {
+          return sum + item.subtotal
+        }
+        return sum
+      }, 0)
+
+      cabinOptions.push({
+        cabin: cabinDetails,
+        availability: {
+          totalSeats: availabilityResult.totalCapacity || cabinInfo.totalSeats,
+          availableSeats: Math.max(0, availabilityResult.availableSeats || 0),
+          finalAvailableSeats: Math.max(0, availableSeatsValue),
+          availabilityBreakdown: (availabilityResult.availabilityBreakdown || []).map(item => ({
+            level: item.level,
+            remaining: item.remaining
+          })),
+        },
+        bookingAllowed,
+        pricing: {
+          breakdown: pricingBreakdown,
+          totalBasicPrice: Math.round(totalBasicPrice * 100) / 100,
+          totalTaxes: Math.round(totalTaxes * 100) / 100,
+          totalPrice: Math.round(calculatedTotalPrice * 100) / 100,
+          currency,
+          priceListId,
+          hasMissingPrice,
+        },
+      })
+    }
+
+    // Get ticketing rules
+    const ticketingRules = {}
+    
+    if (trip.ticketingRules && trip.ticketingRules.length > 0) {
+      const tripWithRules = await Trip.findById(trip._id)
+        .populate({
+          path: "ticketingRules.rule",
+          select: "ruleName ruleType restrictedWindowHours normalFee restrictedPenalty noShowPenalty conditions",
+        })
+        .lean()
+
+      if (tripWithRules?.ticketingRules) {
+        for (const tr of tripWithRules.ticketingRules) {
+          if (tr.rule) {
+            ticketingRules[tr.ruleType] = {
+              ruleName: tr.rule.ruleName,
+              restrictedWindowHours: tr.rule.restrictedWindowHours,
+              normalFee: tr.rule.normalFee,
+              restrictedPenalty: tr.rule.restrictedPenalty,
+              noShowPenalty: tr.rule.noShowPenalty,
+              conditions: tr.rule.conditions,
+            }
+          }
+        }
+      }
+    }
+
+    // Only include trips that have at least one cabin option
+    if (cabinOptions.length > 0) {
+      // Calculate trip status flags
+      const now = new Date()
+      const tripStatusFlags = {
+        bookingOpen: 
+          (!trip.bookingOpeningDate || now >= trip.bookingOpeningDate) &&
+          (!trip.bookingClosingDate || now <= trip.bookingClosingDate),
+        checkInOpen:
+          (!trip.checkInOpeningDate || now >= trip.checkInOpeningDate) &&
+          (!trip.checkInClosingDate || now <= trip.checkInClosingDate),
+        boardingClosed:
+          trip.checkInClosingDate ? now > trip.checkInClosingDate : false,
+        departed:
+          trip.departureDateTime ? now > trip.departureDateTime : false,
+      }
+
+      results.push({
+        trip: {
+          _id: trip._id,
+          tripName: trip.tripName,
+          tripCode: trip.tripCode,
+          ship: trip.ship,
+          departurePort: trip.departurePort,
+          arrivalPort: trip.arrivalPort,
+          departureDateTime: trip.departureDateTime,
+          arrivalDateTime: trip.arrivalDateTime,
+          status: trip.status,
+          bookingOpeningDate: trip.bookingOpeningDate,
+          bookingClosingDate: trip.bookingClosingDate,
+          checkInOpeningDate: trip.checkInOpeningDate,
+          checkInClosingDate: trip.checkInClosingDate,
+          tripStatusFlags,
+        },
+        ticketingRules,
+        cabinOptions,
+        passengers: passengers.map((p) => {
+          const pt = payloadTypes.find((pt) => pt._id.toString() === p.payloadTypeId)
+          return {
+            payloadType: {
+              _id: pt._id,
+              name: pt.name,
+              code: pt.code,
+              ageRange: pt.ageRange,
+            },
+            quantity: p.quantity,
+          }
+        }),
+        totalPassengers: totalQuantity,
+      })
+    }
+  }
+
+  return { 
+    trips: results, 
+    dateRange: { from: searchStartDate, to: searchEndDate }
+  }
+}
+
+/**
  * Calculate available seats based on allocation hierarchy
  * 
  * CRITICAL RULE:
@@ -194,9 +524,8 @@ const findBestPrice = async (params) => {
 }
 
 /**
- * Search trips with matching price list details
+ * Search for trips with pricing details
  * 
- * @param {Object} params - Search parameters
  * @param {String} params.companyId - Company ID (required)
  * @param {String} params.userType - "company" or "partner"
  * @param {String} params.partnerId - Partner ID if userType is partner
@@ -205,6 +534,7 @@ const findBestPrice = async (params) => {
  * @param {String} params.originPort - Origin port ID (required)
  * @param {String} params.destinationPort - Destination port ID (required)
  * @param {Date} params.departureDate - Departure date (required)
+ * @param {Date} params.returnDate - Return date (required for return trips)
  * @param {String} params.cabin - Cabin ID (optional)
  * @param {String} params.visaType - Visa type (optional)
  * @param {Array} params.passengers - Array of passenger objects with payloadTypeId and quantity
@@ -220,6 +550,7 @@ const searchTripsWithPricing = async (params) => {
     originPort,
     destinationPort,
     departureDate,
+    returnDate,
     cabin,
     visaType,
     passengers = [],
@@ -232,6 +563,9 @@ const searchTripsWithPricing = async (params) => {
   if (!originPort) throw new Error("Origin port is required")
   if (!destinationPort) throw new Error("Destination port is required")
   if (!departureDate) throw new Error("Departure date is required")
+  if (tripType.toLowerCase() === "return" && !returnDate) {
+    throw new Error("Return date is required for return trips")
+  }
   if (!passengers || passengers.length === 0) {
     throw new Error("At least one passenger with payloadTypeId and quantity is required")
   }
@@ -267,65 +601,8 @@ const searchTripsWithPricing = async (params) => {
     priceListTripType = "round_trip"
   }
 
-  // ===== FIND TRIPS =====
-  // Parse departure date - search for trips within 5 days before and 5 days after
-  const searchDate = new Date(departureDate)
-  
-  // Calculate 5 days before the search date
-  const startDate = new Date(searchDate)
-  startDate.setDate(startDate.getDate() - 5)
-  startDate.setHours(0, 0, 0, 0)
-  
-  // Calculate 5 days after the search date
-  const endDate = new Date(searchDate)
-  endDate.setDate(endDate.getDate() + 5)
-  endDate.setHours(23, 59, 59, 999)
-
-  // Build trip query - Match originPort to departurePort, destinationPort to arrivalPort
-  const tripQuery = {
-    company: new mongoose.Types.ObjectId(companyId),
-    departurePort: new mongoose.Types.ObjectId(originPort),
-    arrivalPort: new mongoose.Types.ObjectId(destinationPort),
-    departureDateTime: {
-      $gte: startDate,
-      $lte: endDate,
-    },
-    status: "SCHEDULED",
-    isDeleted: false,
-  }
-
-  const trips = await Trip.find(tripQuery)
-    .populate("ship", "name imoNumber")
-    .populate("departurePort", "name code country")
-    .populate("arrivalPort", "name code country")
-    .sort({ departureDateTime: 1 })
-    .lean()
-
-  if (trips.length === 0) {
-    return {
-      success: true,
-      message: "No trips found matching the search criteria",
-      data: {
-        searchParams: {
-          category: normalizedCategory,
-          tripType,
-          originPort,
-          destinationPort,
-          departureDate,
-          dateRange: {
-            from: startDate.toISOString().split('T')[0],
-            to: endDate.toISOString().split('T')[0],
-            daysBeforeAfter: 5,
-          },
-          cabin,
-          visaType,
-          passengers,
-          totalPassengers: totalQuantity,
-        },
-        trips: [],
-      },
-    }
-  }
+  // Normalize trip type
+  const normalizedTripType = tripType.toLowerCase() === "return" ? "return" : "one_way"
 
   // ===== GET PAYLOAD TYPES =====
   const passengerTypeIds = passengers.map((p) => new mongoose.Types.ObjectId(p.payloadTypeId))
@@ -346,314 +623,146 @@ const searchTripsWithPricing = async (params) => {
     throw new Error(`Invalid or inactive payload types: ${missingIds.join(", ")}`)
   }
 
-  // ===== BUILD RESULTS =====
-  const results = []
+  // ===== PERFORM SEARCH BASED ON TRIP TYPE =====
+  let searchResults = {}
+  let allTrips = []
 
-  for (const trip of trips) {
-    // Get trip availability
-    const tripAvailability = await TripAvailability.findOne({
-      company: new mongoose.Types.ObjectId(companyId),
-      trip: trip._id,
-      isDeleted: false,
+  if (normalizedTripType === "return") {
+    // Search for both outbound and inbound trips
+    console.log("[Trip Search] Searching return trip - outbound:", originPort, "->", destinationPort)
+    console.log("[Trip Search] Searching return trip - inbound:", destinationPort, "->", originPort)
+
+    // Outbound: originPort -> destinationPort on departureDate
+    const outboundResult = await searchTripsForDirection({
+      companyId,
+      userType,
+      partnerId,
+      category: normalizedCategory,
+      priceListTripType,
+      departPort: originPort,
+      arrivePort: destinationPort,
+      searchDate: departureDate,
+      cabin,
+      visaType,
+      passengers,
+      payloadTypes,
+      totalQuantity,
     })
-      .populate("availabilityTypes.cabins.cabin", "name cabinCode")
-      .lean()
 
-    // Get all cabins for this category from trip or availability
-    let availableCabins = []
+    // Inbound: destinationPort -> originPort on returnDate
+    const inboundResult = await searchTripsForDirection({
+      companyId,
+      userType,
+      partnerId,
+      category: normalizedCategory,
+      priceListTripType,
+      departPort: destinationPort,
+      arrivePort: originPort,
+      searchDate: returnDate,
+      cabin,
+      visaType,
+      passengers,
+      payloadTypes,
+      totalQuantity,
+    })
+
+    searchResults = {
+      outbound: outboundResult.trips,
+      inbound: inboundResult.trips,
+      outboundDateRange: outboundResult.dateRange,
+      inboundDateRange: inboundResult.dateRange,
+    }
     
-    // From trip capacity details
-    if (trip.tripCapacityDetails && trip.tripCapacityDetails[normalizedCategory]) {
-      availableCabins = trip.tripCapacityDetails[normalizedCategory].map((c) => ({
-        cabinId: c.cabinId,
-        cabinName: c.cabinName,
-        totalSeats: c.totalSeat,
-        remainingSeats: c.remainingSeat,
-      }))
-    }
+    // For message, count both outbound and inbound
+    const totalTripsFound = outboundResult.trips.length + inboundResult.trips.length
+    
+    const successMessage = totalTripsFound === 0 
+      ? "No return trips found matching your search criteria" 
+      : `Found ${outboundResult.trips.length} outbound trip(s) and ${inboundResult.trips.length} inbound trip(s)`
 
-    // If cabin filter is provided, filter cabins
-    if (cabin) {
-      availableCabins = availableCabins.filter(
-        (c) => c.cabinId.toString() === cabin
-      )
-    }
-
-    // Build cabin options with pricing and availability
-    const cabinOptions = []
-
-    for (const cabinInfo of availableCabins) {
-      const cabinId = cabinInfo.cabinId
-
-      // ===== CALCULATE AVAILABILITY BASED ON ALLOCATION HIERARCHY =====
-      let availabilityResult = { availableSeats: cabinInfo.remainingSeats }
-      
-      if (tripAvailability) {
-        availabilityResult = await calculateAvailableSeats({
-          companyId,
-          tripId: trip._id,
-          availabilityId: tripAvailability._id,
+    return {
+      success: true,
+      message: successMessage,
+      data: {
+        searchParams: {
           category: normalizedCategory,
-          cabinId,
-          userType,
-          partnerId,
-        })
-      }
-
-      // ===== GET PRICING FOR EACH PASSENGER TYPE =====
-      const pricingBreakdown = []
-      let totalBasicPrice = 0
-      let totalTaxes = 0
-      let totalPrice = 0
-      let hasMissingPrice = false
-      let currency = null
-      let priceListId = null
-
-      for (const passenger of passengers) {
-        const payloadType = payloadTypes.find(
-          (pt) => pt._id.toString() === passenger.payloadTypeId
-        )
-
-        // Find best price for this passenger type
-        const priceResult = await findBestPrice({
-          companyId,
-          tripId: trip._id,
-          category: normalizedCategory,
-          ticketType: priceListTripType,
+          tripType,
           originPort,
           destinationPort,
-          cabinId,
-          passengerTypeId: passenger.payloadTypeId,
-          visaType,
-          partnerId,
           departureDate,
-        })
-
-        if (priceResult && priceResult.price) {
-          const price = priceResult.price
-          // PRICING FORMULA per requirements:
-          // unitTotalPrice = basicPrice + taxes
-          // subtotal = unitTotalPrice * quantity
-          // totalPrice = sum(all subtotals)
-          const unitTotalPrice = price.totalPrice // includes base + tax
-          const subtotal = unitTotalPrice * passenger.quantity
-          
-          // Calculate tax portion for this passenger type
-          const taxAmount = (price.totalPrice - price.basicPrice) * passenger.quantity
-          
-          totalBasicPrice += price.basicPrice * passenger.quantity
-          totalTaxes += taxAmount
-          totalPrice += subtotal
-          
-          currency = price.priceList?.currency
-          priceListId = price.priceList?._id
-
-          pricingBreakdown.push({
-            payloadType: {
-              _id: payloadType._id,
-              name: payloadType.name,
-              code: payloadType.code,
-              ageRange: payloadType.ageRange,
-            },
-            quantity: passenger.quantity,
-            unitPrice: price.basicPrice,
-            unitTotalPrice: unitTotalPrice,
-            subtotal: Math.round(subtotal * 100) / 100,
-            taxes: price.taxIds || [],
-            allowedLuggagePieces: price.allowedLuggagePieces,
-            allowedLuggageWeight: price.allowedLuggageWeight,
-            excessLuggagePricePerKg: price.excessLuggagePricePerKg,
-            priceType: priceResult.priceType,
-          })
-        } else {
-          // No price found
-          if (passenger.quantity > 0) {
-            hasMissingPrice = true
-          }
-          pricingBreakdown.push({
-            payloadType: {
-              _id: payloadType._id,
-              name: payloadType.name,
-              code: payloadType.code,
-              ageRange: payloadType.ageRange,
-            },
-            quantity: passenger.quantity,
-            unitPrice: null,
-            unitTotalPrice: null,
-            subtotal: passenger.quantity === 0 ? 0 : null,
-            taxes: [],
-            ...(passenger.quantity > 0
-              ? { error: "No price found for this passenger type" }
-              : {}),
-          })
-        }
-      }
-
-      // Fetch cabin details if not populated
-      let cabinDetails = { _id: cabinId, name: cabinInfo.cabinName }
-      if (!cabinInfo.cabinName) {
-        const cabinDoc = await Cabin.findById(cabinId).select("name cabinCode").lean()
-        if (cabinDoc) {
-          cabinDetails = cabinDoc
-        }
-      }
-
-      // Determine if booking is allowed for this cabin
-      const now = new Date()
-      const availableSeatsValue = availabilityResult.finalAvailableSeats ?? availabilityResult.availableSeats ?? 0
-      
-      // Booking allowed when:
-      // 1. finalAvailableSeats > 0
-      // 2. currentDate < bookingClosingDate
-      // 3. currentDate < departureDateTime
-      // 4. trip.status === "SCHEDULED"
-      const bookingAllowed = 
-        availableSeatsValue > 0 &&
-        !hasMissingPrice &&
-        (!trip.bookingClosingDate || now < trip.bookingClosingDate) &&
-        (!trip.departureDateTime || now < trip.departureDateTime) &&
-        trip.status === "SCHEDULED"
-
-      // Calculate totalPrice as sum of all breakdown subtotals (including taxes)
-      const calculatedTotalPrice = pricingBreakdown.reduce((sum, item) => {
-        if (item.subtotal !== null && item.subtotal !== undefined) {
-          return sum + item.subtotal
-        }
-        return sum
-      }, 0)
-
-      cabinOptions.push({
-        cabin: cabinDetails,
-        availability: {
-          totalSeats: availabilityResult.totalCapacity || cabinInfo.totalSeats,
-          availableSeats: Math.max(0, availabilityResult.availableSeats || 0),
-          finalAvailableSeats: Math.max(0, availableSeatsValue),
-          availabilityBreakdown: (availabilityResult.availabilityBreakdown || []).map(item => ({
-            level: item.level,
-            remaining: item.remaining
-          })),
+          returnDate,
+          outboundDateRange: {
+            from: outboundResult.dateRange.from.toISOString().split('T')[0],
+            to: outboundResult.dateRange.to.toISOString().split('T')[0],
+            daysBeforeAfter: 5,
+          },
+          inboundDateRange: {
+            from: inboundResult.dateRange.from.toISOString().split('T')[0],
+            to: inboundResult.dateRange.to.toISOString().split('T')[0],
+            daysBeforeAfter: 5,
+          },
+          cabin,
+          visaType,
+          passengers,
+          totalPassengers: totalQuantity,
         },
-        bookingAllowed,
-        pricing: {
-          breakdown: pricingBreakdown,
-          totalBasicPrice: Math.round(totalBasicPrice * 100) / 100,
-          totalTaxes: Math.round(totalTaxes * 100) / 100,
-          totalPrice: Math.round(calculatedTotalPrice * 100) / 100,
-          currency,
-          priceListId,
-          hasMissingPrice,
+        trips: {
+          outbound: outboundResult.trips,
+          inbound: inboundResult.trips,
         },
-      })
-    }
-
-    // ===== GET TICKETING RULES FROM EMBEDDED Trip.ticketingRules =====
-    const ticketingRules = {}
-    
-    if (trip.ticketingRules && trip.ticketingRules.length > 0) {
-      // Need to populate the embedded rules
-      const tripWithRules = await Trip.findById(trip._id)
-        .populate({
-          path: "ticketingRules.rule",
-          select: "ruleName ruleType restrictedWindowHours normalFee restrictedPenalty noShowPenalty conditions",
-        })
-        .lean()
-
-      if (tripWithRules?.ticketingRules) {
-        for (const tr of tripWithRules.ticketingRules) {
-          if (tr.rule) {
-            ticketingRules[tr.ruleType] = {
-              ruleName: tr.rule.ruleName,
-              restrictedWindowHours: tr.rule.restrictedWindowHours,
-              normalFee: tr.rule.normalFee,
-              restrictedPenalty: tr.rule.restrictedPenalty,
-              noShowPenalty: tr.rule.noShowPenalty,
-              conditions: tr.rule.conditions,
-            }
-          }
-        }
-      }
-    }
-
-    // Only include trips that have at least one cabin option
-    if (cabinOptions.length > 0) {
-      // Calculate trip status flags
-      const now = new Date()
-      const tripStatusFlags = {
-        bookingOpen: 
-          (!trip.bookingOpeningDate || now >= trip.bookingOpeningDate) &&
-          (!trip.bookingClosingDate || now <= trip.bookingClosingDate),
-        checkInOpen:
-          (!trip.checkInOpeningDate || now >= trip.checkInOpeningDate) &&
-          (!trip.checkInClosingDate || now <= trip.checkInClosingDate),
-        boardingClosed:
-          trip.checkInClosingDate ? now > trip.checkInClosingDate : false,
-        departed:
-          trip.departureDateTime ? now > trip.departureDateTime : false,
-      }
-
-      results.push({
-        trip: {
-          _id: trip._id,
-          tripName: trip.tripName,
-          tripCode: trip.tripCode,
-          ship: trip.ship,
-          departurePort: trip.departurePort,
-          arrivalPort: trip.arrivalPort,
-          departureDateTime: trip.departureDateTime,
-          arrivalDateTime: trip.arrivalDateTime,
-          status: trip.status,
-          bookingOpeningDate: trip.bookingOpeningDate,
-          bookingClosingDate: trip.bookingClosingDate,
-          checkInOpeningDate: trip.checkInOpeningDate,
-          checkInClosingDate: trip.checkInClosingDate,
-          tripStatusFlags,
-        },
-        ticketingRules,
-        cabinOptions,
-        passengers: passengers.map((p) => {
-          const pt = payloadTypes.find((pt) => pt._id.toString() === p.payloadTypeId)
-          return {
-            payloadType: {
-              _id: pt._id,
-              name: pt.name,
-              code: pt.code,
-              ageRange: pt.ageRange,
-            },
-            quantity: p.quantity,
-          }
-        }),
-        totalPassengers: totalQuantity,
-      })
-    }
-  }
-
-  return {
-    success: true,
-    message: `Found ${results.length} trip(s) matching your search criteria`,
-    data: {
-      searchParams: {
-        category: normalizedCategory,
-        tripType,
-        originPort,
-        destinationPort,
-        departureDate,
-        dateRange: {
-          from: startDate.toISOString().split('T')[0],
-          to: endDate.toISOString().split('T')[0],
-          daysBeforeAfter: 5,
-        },
-        cabin,
-        visaType,
-        passengers,
-        totalPassengers: totalQuantity,
       },
-      trips: results,
-    },
+    }
+  } else {
+    // One-way search
+    const oneWayResult = await searchTripsForDirection({
+      companyId,
+      userType,
+      partnerId,
+      category: normalizedCategory,
+      priceListTripType,
+      departPort: originPort,
+      arrivePort: destinationPort,
+      searchDate: departureDate,
+      cabin,
+      visaType,
+      passengers,
+      payloadTypes,
+      totalQuantity,
+    })
+
+    const successMessage = oneWayResult.trips.length === 0
+      ? "No trips found matching your search criteria"
+      : `Found ${oneWayResult.trips.length} trip(s) matching your search criteria`
+
+    return {
+      success: true,
+      message: successMessage,
+      data: {
+        searchParams: {
+          category: normalizedCategory,
+          tripType,
+          originPort,
+          destinationPort,
+          departureDate,
+          dateRange: {
+            from: oneWayResult.dateRange.from.toISOString().split('T')[0],
+            to: oneWayResult.dateRange.to.toISOString().split('T')[0],
+            daysBeforeAfter: 5,
+          },
+          cabin,
+          visaType,
+          passengers,
+          totalPassengers: totalQuantity,
+        },
+        trips: oneWayResult.trips,
+      },
+    }
   }
 }
 
 module.exports = {
   searchTripsWithPricing,
+  searchTripsForDirection,
   calculateAvailableSeats,
   findBestPrice,
 }
