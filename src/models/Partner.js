@@ -61,5 +61,9 @@ const partnerSchema = new mongoose.Schema(
 
 partnerSchema.index({ company: 1, layer: 1, role: 1 })
 partnerSchema.index({ company: 1, name: "text", phone: "text", address: "text" })
-
+// UNIQUE index with soft delete
+partnerSchema.index(
+  { company: 1, name: 1 },
+  { unique: true, partialFilterExpression: { isDeleted: false } }
+)
 module.exports = mongoose.model("Partner", partnerSchema)

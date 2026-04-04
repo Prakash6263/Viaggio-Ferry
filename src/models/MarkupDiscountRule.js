@@ -131,7 +131,11 @@ MarkupDiscountRuleSchema.index({
   "routes.routeFrom": 1,
   "routes.routeTo": 1,
   visaType: 1,
-})
+},
+ {
+    unique: true,
+    partialFilterExpression: { isDeleted: false }
+  })
 module.exports = {
   RULE_TYPES,
   VALUE_TYPES,
