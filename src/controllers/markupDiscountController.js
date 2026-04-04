@@ -430,19 +430,19 @@ const updateMarkupDiscountRule = async (req, res, next) => {
       rule.ruleName = ruleName.trim()
     }
 
-    if (provider !== undefined || providerType !== undefined) {
-      const newProviderType = providerType !== undefined ? providerType : rule.providerType
-      const newProvider = provider !== undefined ? provider : (rule.providerType === "Company" ? rule.providerCompany : rule.providerPartner)
+    // if (provider !== undefined || providerType !== undefined) {
+    //   const newProviderType = providerType !== undefined ? providerType : rule.providerType
+    //   const newProvider = provider !== undefined ? provider : (rule.providerType === "Company" ? rule.providerCompany : rule.providerPartner)
 
-      if (newProviderType === "Company") {
-        rule.providerCompany = companyId
-        rule.providerPartner = null
-      } else if (newProviderType === "Partner") {
-        rule.providerPartner = newProvider
-        rule.providerCompany = null
-      }
-      rule.providerType = newProviderType
-    }
+    //   if (newProviderType === "Company") {
+    //     rule.providerCompany = companyId
+    //     rule.providerPartner = null
+    //   } else if (newProviderType === "Partner") {
+    //     rule.providerPartner = newProvider
+    //     rule.providerCompany = null
+    //   }
+    //   rule.providerType = newProviderType
+    // }
 
     if (appliedLayer !== undefined) rule.appliedLayer = appliedLayer
     if (partnerScope !== undefined) {
