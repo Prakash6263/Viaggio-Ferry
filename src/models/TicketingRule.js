@@ -82,7 +82,7 @@ const TicketingRuleSchema = new mongoose.Schema(
 )
 
 // Indexes
-TicketingRuleSchema.index({ company: 1, ruleName: 1 }, { unique: true, sparse: true })
+TicketingRuleSchema.index({ company: 1, ruleName: 1 }, { unique: true, sparse: true, partialFilterExpression: { isDeleted: { $eq: false } } })
 TicketingRuleSchema.index({ company: 1, ruleType: 1 })
 TicketingRuleSchema.index({ company: 1, isDeleted: 1 })
 

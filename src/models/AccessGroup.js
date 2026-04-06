@@ -37,7 +37,7 @@ const AccessGroupSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-AccessGroupSchema.index({ company: 1, groupCode: 1 }, { unique: true })
+AccessGroupSchema.index({ company: 1, groupCode: 1 }, { unique: true, partialFilterExpression: { isDeleted: { $eq: false } } })
 AccessGroupSchema.index({ company: 1, isDeleted: 1 })
 
 // Filter out soft-deleted documents by default

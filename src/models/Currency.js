@@ -4,7 +4,6 @@ const CurrencySchema = new mongoose.Schema(
   {
     currencyId: {
       type: Number,
-      unique: true,
     },
 
     currencyCode: {
@@ -37,15 +36,16 @@ const CurrencySchema = new mongoose.Schema(
 )
 
 /**
- * ✅ Compound unique index
+ * ✅ Compound unique index with partial filter
  * Same currencyCode allowed
  * Same countryName allowed
- * BUT pair must be unique
+ * BUT pair must be unique (excluding deleted records)
  */
 CurrencySchema.index(
   { currencyCode: 1, countryName: 1 },
-  { unique: true }
+  { unique: true, partialFilterExpression: { isDeleted: { $eq: false } } }
 )
+CurrencySchema.index({ currencyId: 1 }, { unique: true, partialFilterExpression: { isDeleted: { $eq: false } } })
 
 module.exports = {
   Currency: mongoose.model("Currency", CurrencySchema),

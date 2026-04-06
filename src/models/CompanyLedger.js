@@ -105,7 +105,7 @@ const CompanyLedgerSchema = new mongoose.Schema(
 )
 
 // Compound indexes for multi-tenant queries
-CompanyLedgerSchema.index({ company: 1, ledgerCode: 1 }, { unique: true })
+CompanyLedgerSchema.index({ company: 1, ledgerCode: 1 }, { unique: true, partialFilterExpression: { isDeleted: { $eq: false } } })
 CompanyLedgerSchema.index({ company: 1, ledgerType: 1 })
 CompanyLedgerSchema.index({ company: 1, status: 1 })
 CompanyLedgerSchema.index({ company: 1, systemAccount: 1 })

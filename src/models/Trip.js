@@ -235,7 +235,7 @@ const tripSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-tripSchema.index({ company: 1, tripCode: 1 }, { unique: true })
+tripSchema.index({ company: 1, tripCode: 1 }, { unique: true, partialFilterExpression: { isDeleted: { $eq: false } } })
 tripSchema.index({ company: 1, departureDateTime: 1 })
 tripSchema.index({ company: 1, ship: 1 })
 tripSchema.index({ company: 1, departurePort: 1, arrivalPort: 1 })

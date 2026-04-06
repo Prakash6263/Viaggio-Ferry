@@ -87,7 +87,7 @@ const PortSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-PortSchema.index({ company: 1, code: 1 }, { unique: true })
+PortSchema.index({ company: 1, code: 1 }, { unique: true, partialFilterExpression: { isDeleted: { $eq: false } } })
 PortSchema.index({ company: 1, name: "text", code: "text", country: "text" })
 PortSchema.index({ company: 1, status: 1 })
 
