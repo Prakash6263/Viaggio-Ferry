@@ -117,5 +117,11 @@ agentAllocationSchema.index({ company: 1, availability: 1 })
 agentAllocationSchema.index({ company: 1, trip: 1, isDeleted: 1 })
 agentAllocationSchema.index({ parentAgent: 1, trip: 1, isDeleted: 1 })
 agentAllocationSchema.index({ company: 1, agent: 1, isDeleted: 1 })
-
+agentAllocationSchema.index(
+  { company: 1, trip: 1, availability: 1, agent: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isDeleted: false }
+  }
+)
 module.exports = mongoose.model("AvailabilityAgentAllocation", agentAllocationSchema)

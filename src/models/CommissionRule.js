@@ -132,15 +132,21 @@ CommissionRuleSchema.index({ company: 1, "routes.routeFrom": 1, "routes.routeTo"
 CommissionRuleSchema.index({ company: 1, ruleName: "text" })
 
 // Duplicate detection index - now includes routes array
-CommissionRuleSchema.index({
-  company: 1,
-  providerCompany: 1,
-  providerPartner: 1,
-  appliedLayer: 1,
-  "routes.routeFrom": 1,
-  "routes.routeTo": 1,
-  visaType: 1,
-})
+CommissionRuleSchema.index(
+  {
+    company: 1,
+    providerCompany: 1,
+    providerPartner: 1,
+    appliedLayer: 1,
+    "routes.routeFrom": 1,
+    "routes.routeTo": 1,
+    visaType: 1,
+  },
+  {
+    unique: true,
+    partialFilterExpression: { isDeleted: false }
+  }
+)
 
 module.exports = {
   PROVIDER_TYPES,

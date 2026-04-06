@@ -24,7 +24,13 @@ const TaxSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-TaxSchema.index({ company: 1, code: 1 }, { unique: true })
+TaxSchema.index(
+  { company: 1, code: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isDeleted: false }
+  }
+)
 TaxSchema.index({ company: 1, name: "text", code: "text" })
 
 module.exports = {

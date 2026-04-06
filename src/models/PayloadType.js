@@ -112,7 +112,13 @@ const PayloadTypeSchema = new mongoose.Schema(
   { timestamps: true }
 )
 
-PayloadTypeSchema.index({ company: 1, code: 1, category: 1 }, { unique: true })
+PayloadTypeSchema.index(
+  { company: 1, code: 1, category: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isDeleted: false }
+  }
+)
 PayloadTypeSchema.index({ company: 1, name: "text", code: "text", description: "text" })
 PayloadTypeSchema.index({ company: 1, status: 1 })
 

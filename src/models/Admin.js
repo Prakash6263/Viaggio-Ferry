@@ -12,10 +12,10 @@ const adminSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
-      unique: true,
+      // unique: true,
       lowercase: true,
       trim: true,
-      index: true,
+      // index: true,
     },
     passwordHash: {
       type: String,
@@ -109,4 +109,11 @@ adminSchema.methods.toJSON = function () {
   return obj
 }
 
+adminSchema.index(
+  { email: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isDeleted: false }
+  }
+)
 module.exports = mongoose.model("Admin", adminSchema)

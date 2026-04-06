@@ -102,7 +102,13 @@ const CompanyCurrencySchema = new mongoose.Schema(
 
 // Updated compound index to include countryName for proper uniqueness
 // Now a company can have USD from USA and USD from Ecuador as separate entries
-CompanyCurrencySchema.index({ company: 1, currencyCode: 1, countryName: 1 }, { unique: true })
+CompanyCurrencySchema.index(
+  { company: 1, currencyCode: 1, countryName: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isDeleted: false }
+  }
+),
 CompanyCurrencySchema.index({ company: 1, isDefault: 1 })
 CompanyCurrencySchema.index({ company: 1, isActive: 1, isDeleted: 1 })
 CompanyCurrencySchema.index({ company: 1, "exchangeRates.createdAt": -1 })

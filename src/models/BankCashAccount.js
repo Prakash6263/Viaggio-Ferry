@@ -82,8 +82,27 @@ const BankCashAccountSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-BankCashAccountSchema.index({ company: 1, accountName: 1 }, { unique: true })
-BankCashAccountSchema.index({ company: 1, ledgerCode: 1 })
+BankCashAccountSchema.index(
+  { company: 1, accountName: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isDeleted: false }
+  }
+)
+BankCashAccountSchema.index(
+  { company: 1, ledgerCode: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isDeleted: false }
+  }
+)
+BankCashAccountSchema.index(
+  { company: 1, uniqueField: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isDeleted: false }
+  }
+)
 BankCashAccountSchema.index({
   company: 1,
   accountName: "text",

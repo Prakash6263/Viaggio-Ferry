@@ -34,12 +34,11 @@ const CompanySchema = new mongoose.Schema(
     vision: { type: String },
     mission: { type: String },
     purpose: { type: String },
-    companySlug: {
-      type: String,
-      unique: true,
-      lowercase: true,
-      trim: true,
-    },
+companySlug: {
+  type: String,
+  lowercase: true,
+  trim: true,
+},
 
     adminProfileImage: { type: String },
 
@@ -51,7 +50,12 @@ const CompanySchema = new mongoose.Schema(
     skypeId: { type: String },
 
     // Authentication / Status
-    loginEmail: { type: String, required: true, unique: true, lowercase: true, trim: true },
+loginEmail: {
+  type: String,
+  required: true,
+  lowercase: true,
+  trim: true
+},
     passwordHash: { type: String, required: true },
     status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
     isActive: { type: Boolean, default: true },
@@ -79,8 +83,16 @@ const CompanySchema = new mongoose.Schema(
 // Indexes for query optimization
 CompanySchema.index({ companyName: 1 })
 CompanySchema.index({ status: 1 })
-CompanySchema.index({ loginEmail: 1 })
+// CompanySchema.index({ loginEmail: 1 })
+CompanySchema.index(
+  { companySlug: 1 },
+  { unique: true, partialFilterExpression: { isDeleted: false } }
+)
 
+CompanySchema.index(
+  { loginEmail: 1 },
+  { unique: true, partialFilterExpression: { isDeleted: false } }
+)
 async function generateRegistrationNumber() {
   const lastCompany = await mongoose
     .model("Company")

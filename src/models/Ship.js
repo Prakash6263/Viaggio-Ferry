@@ -41,18 +41,16 @@ const ShipSchema = new mongoose.Schema(
       trim: true,
       index: true,
     },
-    imoNumber: {
-      type: String,
-      trim: true,
-      sparse: true,
-      unique: true,
-    },
-    mmsiNumber: {
-      type: String,
-      trim: true,
-      sparse: true,
-      unique: true,
-    },
+imoNumber: {
+  type: String,
+  trim: true,
+  sparse: true
+},
+mmsiNumber: {
+  type: String,
+  trim: true,
+  sparse: true
+},
 
     shipType: {
       type: String,
@@ -173,11 +171,39 @@ const ShipSchema = new mongoose.Schema(
   { timestamps: true }
 )
 
+
+ShipSchema.index(
+  { company: 1, name: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isDeleted: false }
+  }
+)
+ShipSchema.index(
+  { imoNumber: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      isDeleted: false,
+      imoNumber: { $exists: true, $ne: null }
+    }
+  }
+)
+
+ShipSchema.index(
+  { mmsiNumber: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      isDeleted: false,
+      mmsiNumber: { $exists: true, $ne: null }
+    }
+  }
+)
 // Compound indexes
 ShipSchema.index({ company: 1, name: "text", imoNumber: "text", flagState: "text" })
 ShipSchema.index({ company: 1, status: 1 })
 ShipSchema.index({ company: 1, isDeleted: 1 })
-
 module.exports = {
   Ship: mongoose.model("Ship", ShipSchema),
   SHIP_STATUS,

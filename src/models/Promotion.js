@@ -188,7 +188,13 @@ PromotionSchema.index({ company: 1, status: 1 })
 PromotionSchema.index({ company: 1, startDate: 1, endDate: 1 })
 PromotionSchema.index({ company: 1, trip: 1 })
 PromotionSchema.index({ company: 1, isDeleted: 1 })
-
+PromotionSchema.index(
+  { company: 1, promotionName: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isDeleted: false }
+  }
+)
 module.exports = {
   PROMOTION_STATUS,
   PROMOTION_BASIS,

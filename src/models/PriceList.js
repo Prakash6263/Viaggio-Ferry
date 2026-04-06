@@ -96,7 +96,13 @@ const priceListSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-priceListSchema.index({ company: 1, priceListName: 1 })
+priceListSchema.index(
+  { company: 1, priceListName: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isDeleted: false }
+  }
+)
 priceListSchema.index({ company: 1, category: 1 })
 priceListSchema.index({ company: 1, status: 1 })
 priceListSchema.index({ company: 1, currency: 1 })
