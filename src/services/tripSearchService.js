@@ -10,6 +10,7 @@ const { Cabin } = require("../models/Cabin")
 const { Port } = require("../models/Port")
 const Partner = require("../models/Partner")
 const calculateHierarchyRemaining = require("../utils/calculateHierarchyRemaining")
+const { applyPricingRules } = require("../utils/applyPricingRules")
 
 /**
  * Helper function to search trips for a single direction
@@ -20,6 +21,7 @@ const searchTripsForDirection = async (params) => {
     companyId,
     userType,
     partnerId,
+    partnerLayer,   // "Marine" | "Commercial" | "Selling" — resolved from Partner.layer
     category,
     priceListTripType,
     departPort,
@@ -152,13 +154,30 @@ const searchTripsForDirection = async (params) => {
         if (priceResult && priceResult.price) {
           const price = priceResult.price
           const unitTotalPrice = price.totalPrice // includes base + tax
-          const subtotal = unitTotalPrice * passenger.quantity
+
+          // Apply markup/discount/commission rules on top of base price
+          const pricingAdjustment = await applyPricingRules({
+            companyId,
+            userType,
+            partnerId,
+            partnerLayer,
+            category,
+            originPortId: departPort,
+            destinationPortId: arrivePort,
+            cabinId,
+            payloadTypeId: passenger.payloadTypeId,
+            visaType,
+            searchDate,
+            baseUnitPrice: price.basicPrice,
+            unitTotalPrice,
+            quantity: passenger.quantity,
+          })
 
           const taxAmount = (price.totalPrice - price.basicPrice) * passenger.quantity
 
           totalBasicPrice += price.basicPrice * passenger.quantity
           totalTaxes += taxAmount
-          totalPrice += subtotal
+          totalPrice += pricingAdjustment.adjustedSubtotal
 
           currency = price.priceList?.currency
           priceListId = price.priceList?._id
@@ -172,13 +191,26 @@ const searchTripsForDirection = async (params) => {
             },
             quantity: passenger.quantity,
             unitPrice: price.basicPrice,
-            unitTotalPrice: unitTotalPrice,
-            subtotal: Math.round(subtotal * 100) / 100,
+            unitTotalPrice: pricingAdjustment.originalUnitPrice,
+            adjustedUnitPrice: pricingAdjustment.adjustedUnitPrice,
+            subtotal: pricingAdjustment.adjustedSubtotal,
+            originalSubtotal: pricingAdjustment.originalSubtotal,
             taxes: price.taxIds || [],
             allowedLuggagePieces: price.allowedLuggagePieces,
             allowedLuggageWeight: price.allowedLuggageWeight,
             excessLuggagePricePerKg: price.excessLuggagePricePerKg,
             priceType: priceResult.priceType,
+            // Pricing adjustments
+            priceAdjustments: {
+              markup: pricingAdjustment.appliedMarkupRule,
+              discount: pricingAdjustment.appliedDiscountRule,
+              commission: pricingAdjustment.appliedCommissionRule,
+              markupAmount: pricingAdjustment.markupAmount,
+              discountAmount: pricingAdjustment.discountAmount,
+              commissionAmount: pricingAdjustment.commissionAmount,
+              netUnitPrice: pricingAdjustment.netUnitPrice,
+              netSubtotal: pricingAdjustment.netSubtotal,
+            },
           })
         } else {
           // No price found
@@ -224,12 +256,32 @@ const searchTripsForDirection = async (params) => {
         (!trip.departureDateTime || now < trip.departureDateTime) &&
         trip.status === "SCHEDULED"
 
-      // Calculate total price
+      // Calculate totals from breakdown
       const calculatedTotalPrice = pricingBreakdown.reduce((sum, item) => {
         if (item.subtotal !== null && item.subtotal !== undefined) {
           return sum + item.subtotal
         }
         return sum
+      }, 0)
+
+      const calculatedOriginalTotal = pricingBreakdown.reduce((sum, item) => {
+        return sum + (item.originalSubtotal || item.subtotal || 0)
+      }, 0)
+
+      const totalMarkupAmount = pricingBreakdown.reduce((sum, item) => {
+        return sum + (item.priceAdjustments?.markupAmount || 0) * item.quantity
+      }, 0)
+
+      const totalDiscountAmount = pricingBreakdown.reduce((sum, item) => {
+        return sum + (item.priceAdjustments?.discountAmount || 0) * item.quantity
+      }, 0)
+
+      const totalCommissionAmount = pricingBreakdown.reduce((sum, item) => {
+        return sum + (item.priceAdjustments?.commissionAmount || 0) * item.quantity
+      }, 0)
+
+      const totalNetPrice = pricingBreakdown.reduce((sum, item) => {
+        return sum + (item.priceAdjustments?.netSubtotal || item.subtotal || 0)
       }, 0)
 
       cabinOptions.push({
@@ -248,7 +300,13 @@ const searchTripsForDirection = async (params) => {
           breakdown: pricingBreakdown,
           totalBasicPrice: Math.round(totalBasicPrice * 100) / 100,
           totalTaxes: Math.round(totalTaxes * 100) / 100,
+          originalTotalPrice: Math.round(calculatedOriginalTotal * 100) / 100,
           totalPrice: Math.round(calculatedTotalPrice * 100) / 100,
+          // Aggregate adjustments across all passenger types
+          totalMarkupAmount: Math.round(totalMarkupAmount * 100) / 100,
+          totalDiscountAmount: Math.round(totalDiscountAmount * 100) / 100,
+          totalCommissionAmount: Math.round(totalCommissionAmount * 100) / 100,
+          netTotalPrice: Math.round(totalNetPrice * 100) / 100,
           currency,
           priceListId,
           hasMissingPrice,
@@ -610,6 +668,16 @@ const searchTripsWithPricing = async (params) => {
   // Normalize trip type
   const normalizedTripType = tripType.toLowerCase() === "return" ? "return" : "one_way"
 
+  // ===== RESOLVE PARTNER LAYER =====
+  // Fetch partner's layer ("Marine" | "Commercial" | "Selling") for rule matching
+  let partnerLayer = null
+  if (userType === "partner" && partnerId) {
+    const partnerDoc = await Partner.findById(partnerId).select("layer").lean()
+    if (partnerDoc) {
+      partnerLayer = partnerDoc.layer
+    }
+  }
+
   // ===== GET PAYLOAD TYPES =====
   const passengerTypeIds = passengers.map((p) => new mongoose.Types.ObjectId(p.payloadTypeId))
 
@@ -642,6 +710,7 @@ const searchTripsWithPricing = async (params) => {
       companyId,
       userType,
       partnerId,
+      partnerLayer,
       category: normalizedCategory,
       priceListTripType: "one_way", // Use one_way for outbound leg
       departPort: originPort,
@@ -659,6 +728,7 @@ const searchTripsWithPricing = async (params) => {
       companyId,
       userType,
       partnerId,
+      partnerLayer,
       category: normalizedCategory,
       priceListTripType: "one_way", // Use one_way for inbound leg
       departPort: destinationPort,
@@ -669,23 +739,6 @@ const searchTripsWithPricing = async (params) => {
       passengers,
       payloadTypes,
       totalQuantity,
-    })
-
-    // Debug: Log search results
-    console.log("[v0] Outbound trips found:", outboundResult.trips.length)
-    outboundResult.trips.forEach((t, i) => {
-      console.log(`[v0]   Outbound ${i}: ${t.trip.tripCode}, cabinOptions: ${t.cabinOptions.length}`)
-      t.cabinOptions.forEach((c, j) => {
-        console.log(`[v0]     Cabin ${j}: ${c.cabin.name}, seats: ${c.availability.finalAvailableSeats}`)
-      })
-    })
-
-    console.log("[v0] Inbound trips found:", inboundResult.trips.length)
-    inboundResult.trips.forEach((t, i) => {
-      console.log(`[v0]   Inbound ${i}: ${t.trip.tripCode}, cabinOptions: ${t.cabinOptions.length}`)
-      t.cabinOptions.forEach((c, j) => {
-        console.log(`[v0]     Cabin ${j}: ${c.cabin.name}, seats: ${c.availability.finalAvailableSeats}`)
-      })
     })
 
     // Combine outbound and inbound trips
@@ -702,16 +755,10 @@ const searchTripsWithPricing = async (params) => {
           )
 
           // Skip if cabin doesn't exist in inbound trip
-          if (!matchingInboundCabin) {
-            console.log(`[v0] Skipping combination: cabin ${outboundCabin.cabin.name} not found in inbound trip ${inboundTrip.trip.tripCode}`)
-            continue
-          }
+          if (!matchingInboundCabin) continue
 
           // Check if both cabins have pricing
-          if (!outboundCabin.pricing || !matchingInboundCabin.pricing) {
-            console.log(`[v0] Skipping combination: missing pricing for cabin ${outboundCabin.cabin.name}`)
-            continue
-          }
+          if (!outboundCabin.pricing || !matchingInboundCabin.pricing) continue
 
           // Combine pricing: total price = outbound price + inbound price
           const combinedPricingBreakdown = []
@@ -866,8 +913,6 @@ const searchTripsWithPricing = async (params) => {
       }
     }
 
-    console.log("[v0] Combined return trip combinations:", combinedReturnTrips.length)
-
     const successMessage = combinedReturnTrips.length === 0
       ? "No return trip combinations found matching your search criteria"
       : `Found ${outboundResult.trips.length} outbound trip(s) and ${inboundResult.trips.length} inbound trip(s) = ${combinedReturnTrips.length} return combination(s)`
@@ -907,6 +952,7 @@ const searchTripsWithPricing = async (params) => {
       companyId,
       userType,
       partnerId,
+      partnerLayer,
       category: normalizedCategory,
       priceListTripType,
       departPort: originPort,

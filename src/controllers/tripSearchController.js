@@ -28,7 +28,6 @@ const getUserTypeAndPartnerId = async (req) => {
     }
 
     partnerId = userRecord.agent
-    console.log("[Trip Search] Partner resolved from DB:", partnerId)
   }
 
   return { userType, partnerId }
