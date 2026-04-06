@@ -11,7 +11,6 @@ const vehicleBookingSchema = new mongoose.Schema(
     // Booking Header
     bookingReference: {
       type: String,
-      unique: true,
       uppercase: true,
       required: true,
       index: true,
@@ -204,7 +203,7 @@ const vehicleBookingSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-vehicleBookingSchema.index({ company: 1, bookingReference: 1 }, { unique: true })
+vehicleBookingSchema.index({ company: 1, bookingReference: 1 }, { unique: true, partialFilterExpression: { isDeleted: { $eq: false } } })
 vehicleBookingSchema.index({ company: 1, bookingStatus: 1 })
 vehicleBookingSchema.index({ company: 1, departureDate: 1 })
 vehicleBookingSchema.index({ company: 1, outboundTrip: 1 })

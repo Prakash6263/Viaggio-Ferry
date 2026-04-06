@@ -120,7 +120,6 @@ const passengerCheckinSchema = new mongoose.Schema(
     excessLuggageTicket: {
       ticketNumber: {
         type: String,
-        unique: true,
         sparse: true,
         trim: true,
       },
@@ -214,7 +213,7 @@ const passengerCheckinSchema = new mongoose.Schema(
 )
 
 passengerCheckinSchema.index({ company: 1, trip: 1, checkInStatus: 1 })
-passengerCheckinSchema.index({ company: 1, booking: 1 }, { unique: true })
+passengerCheckinSchema.index({ company: 1, booking: 1 }, { unique: true, partialFilterExpression: { isDeleted: { $eq: false } } })
 passengerCheckinSchema.index({ company: 1, "documentScanData.documentNumber": 1 })
 passengerCheckinSchema.index({ company: 1, createdAt: -1 })
 passengerCheckinSchema.index({ company: 1, isDeleted: 1 })
