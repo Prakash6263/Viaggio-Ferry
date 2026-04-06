@@ -128,9 +128,9 @@ const passengerBoardingSchema = new mongoose.Schema(
 )
 
 passengerBoardingSchema.index({ company: 1, trip: 1, boardingStatus: 1 })
-passengerBoardingSchema.index({ company: 1, boardingPassNumber: 1 }, { unique: true, partialFilterExpression: { isDeleted: { $eq: false } } })
+passengerBoardingSchema.index({ company: 1, boardingPassNumber: 1 }, { unique: true })
 passengerBoardingSchema.index({ company: 1, seatNumber: 1, trip: 1 })
-passengerBoardingSchema.index({ company: 1, checkin: 1 }, { unique: true, partialFilterExpression: { isDeleted: { $eq: false } } })
+passengerBoardingSchema.index({ company: 1, checkin: 1 }, { unique: true })
 passengerBoardingSchema.index({ company: 1, boardedAt: -1 })
 
 module.exports = mongoose.model("PassengerBoarding", passengerBoardingSchema)

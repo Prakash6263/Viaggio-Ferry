@@ -45,11 +45,13 @@ const ShipSchema = new mongoose.Schema(
       type: String,
       trim: true,
       sparse: true,
+      unique: true,
     },
     mmsiNumber: {
       type: String,
       trim: true,
       sparse: true,
+      unique: true,
     },
 
     shipType: {
@@ -175,8 +177,6 @@ const ShipSchema = new mongoose.Schema(
 ShipSchema.index({ company: 1, name: "text", imoNumber: "text", flagState: "text" })
 ShipSchema.index({ company: 1, status: 1 })
 ShipSchema.index({ company: 1, isDeleted: 1 })
-ShipSchema.index({ imoNumber: 1 }, { unique: true, sparse: true, partialFilterExpression: { isDeleted: { $eq: false }, imoNumber: { $exists: true } } })
-ShipSchema.index({ mmsiNumber: 1 }, { unique: true, sparse: true, partialFilterExpression: { isDeleted: { $eq: false }, mmsiNumber: { $exists: true } } })
 
 module.exports = {
   Ship: mongoose.model("Ship", ShipSchema),

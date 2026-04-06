@@ -11,6 +11,7 @@ const passengerBookingSchema = new mongoose.Schema(
     // Booking Header
     bookingReference: {
       type: String,
+      unique: true,
       uppercase: true,
       required: true,
       index: true,
@@ -263,7 +264,7 @@ const passengerBookingSchema = new mongoose.Schema(
 )
 
 // Indexes for efficient querying
-passengerBookingSchema.index({ company: 1, bookingReference: 1 }, { unique: true, partialFilterExpression: { isDeleted: { $eq: false } } })
+passengerBookingSchema.index({ company: 1, bookingReference: 1 }, { unique: true })
 passengerBookingSchema.index({ company: 1, bookingStatus: 1 })
 passengerBookingSchema.index({ company: 1, departureDate: 1 })
 passengerBookingSchema.index({ company: 1, outboundTrip: 1 })

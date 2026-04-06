@@ -129,8 +129,8 @@ const cargoBoardingSchema = new mongoose.Schema(
 )
 
 cargoBoardingSchema.index({ company: 1, trip: 1, boardingStatus: 1 })
-cargoBoardingSchema.index({ company: 1, manifestNumber: 1 }, { unique: true, partialFilterExpression: { isDeleted: { $eq: false } } })
-cargoBoardingSchema.index({ company: 1, checkin: 1 }, { unique: true, partialFilterExpression: { isDeleted: { $eq: false } } })
+cargoBoardingSchema.index({ company: 1, manifestNumber: 1 }, { unique: true })
+cargoBoardingSchema.index({ company: 1, checkin: 1 }, { unique: true })
 cargoBoardingSchema.index({ company: 1, boardedAt: -1 })
 
 module.exports = mongoose.model("CargoBoarding", cargoBoardingSchema)

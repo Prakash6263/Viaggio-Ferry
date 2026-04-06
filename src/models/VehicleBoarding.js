@@ -100,8 +100,8 @@ const vehicleBoardingSchema = new mongoose.Schema(
 )
 
 vehicleBoardingSchema.index({ company: 1, trip: 1, boardingStatus: 1 })
-vehicleBoardingSchema.index({ company: 1, boardingTicketNumber: 1 }, { unique: true, partialFilterExpression: { isDeleted: { $eq: false } } })
-vehicleBoardingSchema.index({ company: 1, checkin: 1 }, { unique: true, partialFilterExpression: { isDeleted: { $eq: false } } })
+vehicleBoardingSchema.index({ company: 1, boardingTicketNumber: 1 }, { unique: true })
+vehicleBoardingSchema.index({ company: 1, checkin: 1 }, { unique: true })
 vehicleBoardingSchema.index({ company: 1, parkingSlot: 1, trip: 1 })
 vehicleBoardingSchema.index({ company: 1, boardedAt: -1 })
 
