@@ -59,6 +59,7 @@ const LAYER_PRIORITY = {
 const getMarkupDiscountRule = async (params) => {
   const {
     companyId,
+    partnerHierarchy,
     layer,
     category,
     partnerId,
@@ -78,34 +79,78 @@ const getMarkupDiscountRule = async (params) => {
     isDeleted: false,
     // CHECK EFFECTIVE AND EXPIRY DATES
     effectiveDate: { $lte: currentDate },
-    expiryDate: { $gte: currentDate },
+    $or: [
+  { expiryDate: null },
+  { expiryDate: { $gte: currentDate } }
+],
   };
 
   // COMPULSORY ROUTE MATCHING - must match (route, payload, cabin)
-  query.routes = {
-    $elemMatch: {
-      routeFrom: new mongoose.Types.ObjectId(originPort),
-      routeTo: new mongoose.Types.ObjectId(destinationPort),
+  // Handle both directions: some rules may have routes stored in reverse order
+  const routeConditions = [
+    {
+      routes: {
+        $elemMatch: {
+          routeFrom: new mongoose.Types.ObjectId(originPort),
+          routeTo: new mongoose.Types.ObjectId(destinationPort),
+        },
+      },
     },
-  };
+    {
+      routes: {
+        $elemMatch: {
+          routeFrom: new mongoose.Types.ObjectId(destinationPort),
+          routeTo: new mongoose.Types.ObjectId(originPort),
+        },
+      },
+    },
+  ];
+
+  // Build AND conditions array with all mandatory filters
+  const andConditions = [
+    {
+      $or: routeConditions, // Routes must match (in either direction)
+    },
+  ];
 
   // Partner scope - if not company layer, filter by partner
-  if (layer !== "company" && partnerId) {
-    query.$or = [
+if (layer !== "company" && partnerHierarchy?.length) {
+  andConditions.push({
+    $or: [
       {
         partnerScope: "AllChildPartners",
       },
       {
         partnerScope: "SpecificPartner",
-        partner: new mongoose.Types.ObjectId(partnerId),
+        partner: {
+          $in: partnerHierarchy.map(
+            (id) => new mongoose.Types.ObjectId(id)
+          ),
+        },
       },
-    ];
+    ],
+  });
+}
+
+  // Visa type filter - include rules that match visa type OR have null visa type (applies to all)
+  if (visaType) {
+    andConditions.push({
+      $or: [
+        { visaType: null },
+        { visaType: visaType },
+      ],
+    });
   }
 
-  // Visa type filter (compulsory if specified)
-  if (visaType) {
-    query.visaType = visaType;
+  // Apply all conditions via $and
+  if (andConditions.length > 1) {
+    query.$and = andConditions;
+  } else {
+    // Only route condition, apply directly
+    query.$or = routeConditions;
   }
+
+  console.log(`[v0] ${layer} MARKUP QUERY:`, JSON.stringify(query, null, 2));
 
   const rules = await MarkupDiscountRule.find(query)
     .populate("serviceDetails.passenger.payloadTypeId")
@@ -117,6 +162,8 @@ const getMarkupDiscountRule = async (params) => {
     // SORT BY PRIORITY (highest first)
     .sort({ priority: -1 })
     .lean();
+
+  console.log(`[v0] Found ${rules.length} rules by route/status/dates for ${layer}. Now checking service details...`);
 
   // COMPULSORY PAYLOAD + CABIN MATCHING
   const applicableRules = rules.filter((rule) => {
@@ -131,6 +178,11 @@ const getMarkupDiscountRule = async (params) => {
         detail.cabinId._id?.toString() === cabinId?.toString()
     );
   });
+
+  console.log(`[v0] ${layer} - Found ${applicableRules.length} rules matching service details (payload+cabin)`);
+  if (applicableRules.length > 0) {
+    console.log(`[v0] ${layer} - Selected rule: "${applicableRules[0].ruleName}" (priority: ${applicableRules[0].priority})`);
+  }
 
   // Return FIRST rule (highest priority)
   return applicableRules.length > 0 ? applicableRules[0] : null;
@@ -148,6 +200,7 @@ const getMarkupDiscountRule = async (params) => {
 const getCommissionRule = async (params) => {
   const {
     companyId,
+    partnerHierarchy,
     layer,
     category,
     partnerId,
@@ -167,34 +220,74 @@ const getCommissionRule = async (params) => {
     isDeleted: false,
     // CHECK EFFECTIVE AND EXPIRY DATES
     effectiveDate: { $lte: currentDate },
-    expiryDate: { $gte: currentDate },
+    $or: [
+  { expiryDate: null },
+  { expiryDate: { $gte: currentDate } }
+],
   };
 
   // COMPULSORY ROUTE MATCHING - must match (route, payload, cabin)
-  query.routes = {
-    $elemMatch: {
-      routeFrom: new mongoose.Types.ObjectId(originPort),
-      routeTo: new mongoose.Types.ObjectId(destinationPort),
+  // Handle both directions: some rules may have routes stored in reverse order
+  const routeConditions = [
+    {
+      routes: {
+        $elemMatch: {
+          routeFrom: new mongoose.Types.ObjectId(originPort),
+          routeTo: new mongoose.Types.ObjectId(destinationPort),
+        },
+      },
     },
-  };
+    {
+      routes: {
+        $elemMatch: {
+          routeFrom: new mongoose.Types.ObjectId(destinationPort),
+          routeTo: new mongoose.Types.ObjectId(originPort),
+        },
+      },
+    },
+  ];
 
-  // Partner scope
-  if (layer !== "company" && partnerId) {
-    query.$or = [
+  // Build AND conditions array with all mandatory filters
+  const andConditions = [
+    {
+      $or: routeConditions, // Routes must match (in either direction)
+    },
+  ];
+
+  // Partner scope - if not company layer, filter by partner
+ if (layer !== "company" && partnerHierarchy?.length) {
+  andConditions.push({
+    $or: [
       {
         partnerScope: "AllChildPartners",
       },
       {
         partnerScope: "SpecificPartner",
-        partner: new mongoose.Types.ObjectId(partnerId),
+        partner: { $in: partnerHierarchy.map(id => new mongoose.Types.ObjectId(id)) },
       },
-    ];
+    ],
+  });
+}
+
+  // Visa type filter - include rules that match visa type OR have null visa type (applies to all)
+  if (visaType) {
+    andConditions.push({
+      $or: [
+        { visaType: null },
+        { visaType: visaType },
+      ],
+    });
   }
 
-  // Visa type filter (compulsory if specified)
-  if (visaType) {
-    query.visaType = visaType;
+  // Apply all conditions via $and
+  if (andConditions.length > 1) {
+    query.$and = andConditions;
+  } else {
+    // Only route condition, apply directly
+    query.$or = routeConditions;
   }
+
+  console.log(`[v0] ${layer} COMMISSION QUERY:`, JSON.stringify(query, null, 2));
 
   const rules = await CommissionRule.find(query)
     .populate("serviceDetails.passenger.payloadTypeId")
@@ -206,6 +299,8 @@ const getCommissionRule = async (params) => {
     // SORT BY PRIORITY (highest first)
     .sort({ priority: -1 })
     .lean();
+
+  console.log(`[v0] Found ${rules.length} commission rules by route/status/dates for ${layer}. Now checking service details...`);
 
   // COMPULSORY PAYLOAD + CABIN MATCHING
   const applicableRules = rules.filter((rule) => {
@@ -220,6 +315,11 @@ const getCommissionRule = async (params) => {
         detail.cabinId._id?.toString() === cabinId?.toString()
     );
   });
+
+  console.log(`[v0] ${layer} - Found ${applicableRules.length} commission rules matching service details (payload+cabin)`);
+  if (applicableRules.length > 0) {
+    console.log(`[v0] ${layer} - Selected commission rule: "${applicableRules[0].ruleName}" (priority: ${applicableRules[0].priority})`);
+  }
 
   // Return FIRST rule (highest priority)
   return applicableRules.length > 0 ? applicableRules[0] : null;
@@ -272,12 +372,24 @@ const getPromotionRule = async (params) => {
 
     // COMPULSORY ROUTE MATCHING for trip-based too
     if (originPort && destinationPort) {
-      tripQuery.routes = {
-        $elemMatch: {
-          routeFrom: new mongoose.Types.ObjectId(originPort),
-          routeTo: new mongoose.Types.ObjectId(destinationPort),
-        },
-      };
+     tripQuery.$or = [
+  {
+    routes: {
+      $elemMatch: {
+        routeFrom: originPort,
+        routeTo: destinationPort,
+      },
+    },
+  },
+  {
+    routes: {
+      $elemMatch: {
+        routeFrom: destinationPort,
+        routeTo: originPort,
+      },
+    },
+  },
+];
     }
 
     const tripPromo = await Promotion.findOne(tripQuery).lean();
@@ -320,36 +432,37 @@ const getPromotionRule = async (params) => {
  * Helper function to check if promotion matches category and payload+cabin eligibility
  */
 const matchesPromotionEligibility = (promotion, category, payloadTypeId, cabinId) => {
+  const service = promotion.servicePromotions?.[category];
+
+  if (!service || !service.isEnabled) {
+    return false;
+  }
+
+  // ✅ Passenger (needs payload + cabin)
   if (category === "passenger") {
-    return (
-      promotion.passenger &&
-      promotion.passenger.isEnabled &&
-      promotion.passenger.eligibility &&
-      promotion.passenger.eligibility.some(
-        (e) =>
-          e.passengerTypeId?.toString() === payloadTypeId?.toString() &&
-          e.cabinId?.toString() === cabinId?.toString()
-      )
-    );
-  } else if (category === "cargo") {
-    return (
-      promotion.cargo &&
-      promotion.cargo.isEnabled &&
-      promotion.cargo.eligibility &&
-      promotion.cargo.eligibility.some(
-        (e) => e.payloadId?.toString() === payloadTypeId?.toString()
-      )
-    );
-  } else if (category === "vehicle") {
-    return (
-      promotion.vehicle &&
-      promotion.vehicle.isEnabled &&
-      promotion.vehicle.eligibility &&
-      promotion.vehicle.eligibility.some(
-        (e) => e.payloadId?.toString() === payloadTypeId?.toString()
-      )
+    return service.eligibility?.some(
+      (e) =>
+        e.passengerTypeId?.toString() === payloadTypeId?.toString() &&
+        e.cabinId?.toString() === cabinId?.toString()
     );
   }
+
+  // ✅ Cargo
+  if (category === "cargo") {
+    return service.eligibility?.some(
+      (e) =>
+        e.payloadTypeId?.toString() === payloadTypeId?.toString()
+    );
+  }
+
+  // ✅ Vehicle
+  if (category === "vehicle") {
+    return service.eligibility?.some(
+      (e) =>
+        e.payloadTypeId?.toString() === payloadTypeId?.toString()
+    );
+  }
+
   return false;
 };
 
@@ -396,7 +509,7 @@ const calculatePromotionDiscount = (promotionRules, basePrice, quantity, categor
   let totalDiscount = 0;
 
   for (const promo of promotionRules) {
-    const servicePromo = promo[category];
+    const servicePromo = promo.servicePromotions?.[category];
     if (!servicePromo || !servicePromo.isEnabled) continue;
 
     let discountValue = 0;
@@ -451,9 +564,13 @@ const calculatePromotionDiscount = (promotionRules, basePrice, quantity, categor
  * @param {Object} params
  * @returns {Object} Pricing breakdown for all layers
  */
+
+
+
 const calculateHierarchicalPricing = async (params) => {
   const {
     basePrice,
+    partnerHierarchy,
     quantity,
     companyId,
     category,
@@ -463,17 +580,17 @@ const calculateHierarchicalPricing = async (params) => {
     destinationPort,
     payloadTypeId,
     cabinId,
+    tripId,
   } = params;
 
   const breakdown = {};
   let currentPrice = basePrice;
-  let promotionValue = 0; // Company-level promotion applied once
+  let promotionValue = 0;
 
-  // Validate inputs
   if (basePrice < 0) throw new Error("Base price cannot be negative");
   if (quantity < 1) throw new Error("Quantity must be at least 1");
 
-  // STEP 1: Fetch promotion rule (Company level only) - DONE ONCE
+  // 🔥 STEP 1: APPLY PROMOTION (ONLY ONCE - BEFORE ALL LAYERS)
   const promotionRule = await getPromotionRule({
     companyId,
     category,
@@ -481,7 +598,7 @@ const calculateHierarchicalPricing = async (params) => {
     cabinId,
     originPort,
     destinationPort,
-    tripId: params.tripId || null, // Optional trip ID
+    tripId,
   });
 
   if (promotionRule) {
@@ -491,29 +608,34 @@ const calculateHierarchicalPricing = async (params) => {
       quantity,
       category
     );
-    promotionValue = promoDiscount;
-    console.log("[v0] PROMOTION FOUND:", {
-      ruleName: promotionRule?.ruleName,
-      basis: promotionRule?.promotionBasis,
-      category,
-      promotionValue: Math.round(promotionValue * 100) / 100,
-      basePrice,
+
+   promotionValue = Math.abs(promoDiscount); // ✅ FIX
+currentPrice -= promotionValue;
+
+    console.log("[v0] PROMOTION APPLIED:", {
+      ruleName: promotionRule?.promotionName,
+      discount: Math.round(promotionValue * 100) / 100,
+      priceAfterPromotion: Math.round(currentPrice * 100) / 100,
     });
   } else {
-    console.log("[v0] NO PROMOTION FOUND for:", { category, payloadTypeId, cabinId });
+    console.log("[v0] NO PROMOTION FOUND for:", {
+      category,
+      payloadTypeId,
+      cabinId,
+    });
   }
 
-  // STEP 2: Calculate for each layer sequentially
-  console.log("[v0] ========== STARTING HIERARCHICAL PRICING CALCULATION ==========");
-  console.log("[v0] Base Price:", basePrice, "Quantity:", quantity, "Promotion Applied:", Math.round(promotionValue * 100) / 100);
-  console.log("[v0] Route:", originPort, "→", destinationPort, "| Category:", category);
+  console.log("[v0] ========== STARTING HIERARCHICAL PRICING ==========");
+  console.log("[v0] Base Price:", basePrice);
+  console.log("[v0] After Promotion:", Math.round(currentPrice * 100) / 100);
 
+  // 🔁 STEP 2: APPLY ALL LAYERS
   for (const level of HIERARCHY_LEVELS) {
-    console.log(`\n[v0] --- CALCULATING ${level.toUpperCase()} LAYER ---`);
+    console.log(`\n[v0] --- ${level.toUpperCase()} LAYER ---`);
 
-    // Fetch markup/discount rule for THIS LAYER (highest priority only)
     const markupDiscountRule = await getMarkupDiscountRule({
       companyId,
+      partnerHierarchy,
       layer: level,
       category,
       partnerId: level !== "company" ? partnerId : null,
@@ -524,9 +646,9 @@ const calculateHierarchicalPricing = async (params) => {
       cabinId,
     });
 
-    // Fetch commission rule for THIS LAYER (highest priority only)
     const commissionRule = await getCommissionRule({
       companyId,
+      partnerHierarchy,
       layer: level,
       category,
       partnerId: level !== "company" ? partnerId : null,
@@ -537,106 +659,56 @@ const calculateHierarchicalPricing = async (params) => {
       cabinId,
     });
 
-    // Calculate markup/discount on current price (or 0 if no rule)
-    const markupDiscountValue = markupDiscountRule
+    const markupValue = markupDiscountRule
       ? calculateMarkupDiscount(markupDiscountRule, currentPrice)
       : 0;
 
-    // Calculate adjusted price after markup/discount
-    const priceAfterMarkupDiscount = currentPrice + markupDiscountValue;
+    const priceAfterMarkup = currentPrice + markupValue;
 
-    // Calculate commission on adjusted price (or 0 if no rule)
     const commissionValue = commissionRule
-      ? calculateCommission(commissionRule, priceAfterMarkupDiscount)
+      ? calculateCommission(commissionRule, priceAfterMarkup)
       : 0;
 
-    // Visible price for this layer is price after markup but before commission
-    const visiblePrice = priceAfterMarkupDiscount;
+    const finalPrice = priceAfterMarkup - commissionValue;
 
-    // Final price for this layer (what gets passed to next layer)
-    const finalPrice = priceAfterMarkupDiscount - commissionValue;
-
-    // DEBUG: Print layer-wise calculation
-    console.log(`[v0] ${level} Incoming Base Price:`, Math.round(currentPrice * 100) / 100);
-    console.log(`[v0] ${level} Markup/Discount Rule:`, {
-      name: markupDiscountRule?.ruleName || "NO RULE",
-      type: markupDiscountRule?.ruleType || "-",
-      value: markupDiscountRule?.ruleValue || 0,
-      calculated: Math.round(markupDiscountValue * 100) / 100,
-    });
-    console.log(`[v0] ${level} Price After Markup/Discount:`, Math.round(priceAfterMarkupDiscount * 100) / 100);
-    console.log(`[v0] ${level} Commission Rule:`, {
-      name: commissionRule?.ruleName || "NO RULE",
-      type: commissionRule?.commissionType || "-",
-      value: commissionRule?.commissionValue || 0,
-      calculated: Math.round(commissionValue * 100) / 100,
-    });
-    console.log(`[v0] ${level} Final Price (after commission):`, Math.round(finalPrice * 100) / 100);
-    console.log(`[v0] ${level} Visible Price to Customer:`, Math.round(visiblePrice * 100) / 100);
-    console.log(`[v0] ${level} Net Earning/Commission:`, Math.round(commissionValue * 100) / 100);
-
-    // Store breakdown for this layer
     breakdown[level] = {
-      basePrice: Math.round(currentPrice * 100) / 100,
-      markupDiscount: {
-        ruleName: markupDiscountRule?.ruleName || null,
-        ruleType: markupDiscountRule?.ruleType || null,
-        value: Math.round(markupDiscountValue * 100) / 100,
-      },
-      commission: {
-        ruleName: commissionRule?.ruleName || null,
-        commissionType: commissionRule?.commissionType || null,
-        value: Math.round(commissionValue * 100) / 100,
-      },
-      promotion: {
-        // Show promotion in all layers for visibility
-        value: Math.round(promotionValue * 100) / 100,
-      },
-      priceBeforeCommission: Math.round(visiblePrice * 100) / 100,
-      finalPrice: Math.round(finalPrice * 100) / 100,
-      visiblePrice: Math.round(visiblePrice * 100) / 100, // Price customer of this tier pays
-      netEarning: Math.round(commissionValue * 100) / 100, // Commission earned
+      basePrice: round(currentPrice),
+      markup: round(markupValue),
+      commission: round(commissionValue),
+      promotion: round(promotionValue), // shown in all layers
+      visiblePrice: round(priceAfterMarkup),
+      finalPrice: round(finalPrice),
+      netEarning: round(commissionValue),
     };
 
-    // Update current price for NEXT layer (reduced by commission)
+    console.log(`[v0] ${level} → Base: ${round(currentPrice)}`);
+    console.log(`[v0] ${level} → Markup: ${round(markupValue)}`);
+    console.log(`[v0] ${level} → Commission: ${round(commissionValue)}`);
+    console.log(`[v0] ${level} → Final: ${round(finalPrice)}`);
+
     currentPrice = finalPrice;
   }
 
-  console.log(`\n[v0] ========== HIERARCHICAL PRICING CALCULATION COMPLETE ==========`);
-  console.log(`[v0] FINAL CUSTOMER PRICE: ${Math.round(currentPrice * 100) / 100}`);
-
-  // Final summary debug log
-  console.log(`[v0] FINAL PRICING SUMMARY:`);
-  console.log(`[v0] Base Price: ${Math.round(basePrice * 100) / 100}`);
-  console.log(`[v0] Total Promotion Applied: ${Math.round(promotionValue * 100) / 100}`);
-  console.log(`[v0] Visible Price by Role:`, {
-    company: Math.round(breakdown.company.visiblePrice * 100) / 100,
-    marine: Math.round(breakdown.marine.visiblePrice * 100) / 100,
-    commercial: Math.round(breakdown.commercial.visiblePrice * 100) / 100,
-    selling: Math.round(breakdown.selling.visiblePrice * 100) / 100,
-  });
-  console.log(`[v0] Total Commissions by Layer:`, {
-    company: Math.round(breakdown.company.netEarning * 100) / 100,
-    marine: Math.round(breakdown.marine.netEarning * 100) / 100,
-    commercial: Math.round(breakdown.commercial.netEarning * 100) / 100,
-    selling: Math.round(breakdown.selling.netEarning * 100) / 100,
-    totalEarnings: Math.round((breakdown.company.netEarning + breakdown.marine.netEarning + breakdown.commercial.netEarning + breakdown.selling.netEarning) * 100) / 100,
-  });
-  console.log(`[v0] ========================================\n`);
+  console.log("\n[v0] FINAL PRICE:", round(currentPrice));
 
   return {
-    basePrice: Math.round(basePrice * 100) / 100,
-    promotionApplied: Math.round(promotionValue * 100) / 100,
+    basePrice: round(basePrice),
+    promotionApplied: round(promotionValue),
+    finalPrice: round(currentPrice),
     breakdown,
-    finalPrice: Math.round(currentPrice * 100) / 100,
     visiblePriceByRole: {
-      company: Math.round(breakdown.company.visiblePrice * 100) / 100,
-      marine: Math.round(breakdown.marine.visiblePrice * 100) / 100,
-      commercial: Math.round(breakdown.commercial.visiblePrice * 100) / 100,
-      selling: Math.round(breakdown.selling.visiblePrice * 100) / 100,
+      company: breakdown.company.visiblePrice,
+      marine: breakdown.marine.visiblePrice,
+      commercial: breakdown.commercial.visiblePrice,
+      selling: breakdown.selling.visiblePrice,
     },
   };
 };
+
+// helper
+function round(val) {
+  return Math.round(val * 100) / 100;
+}
 
 /**
  * Get visible price based on user role

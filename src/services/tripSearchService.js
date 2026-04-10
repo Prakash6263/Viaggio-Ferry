@@ -18,6 +18,7 @@ const { calculateHierarchicalPricing, getVisiblePrice } = require("../utils/hier
  */
 const searchTripsForDirection = async (params) => {
   const {
+     partnerHierarchy,
     companyId,
     userType,
     partnerId,
@@ -299,6 +300,7 @@ const searchTripsForDirection = async (params) => {
               companyId,
               category,
               partnerId: userType === "partner" ? partnerId : null,
+partnerHierarchy: userType === "partner" ? partnerHierarchy : [],
               visaType,
               originPort: departPort,
               destinationPort: arrivePort,
@@ -327,6 +329,7 @@ const searchTripsForDirection = async (params) => {
               companyId,
               category,
               partnerId: userType === "partner" ? partnerId : null,
+partnerHierarchy: userType === "partner" ? partnerHierarchy : [],
               visaType,
               originPort: departPort,
               destinationPort: arrivePort,
@@ -710,7 +713,8 @@ const findBestPrice = async (params) => {
 const searchTripsWithPricing = async (params) => {
   const {
     companyId,
-    userType = "company",
+    userType ,
+    partnerHierarchy, // ✅ ADD THIS
     partnerId,
     category,
     tripType,

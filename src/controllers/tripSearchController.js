@@ -3,6 +3,7 @@ const mongoose = require("mongoose")
 const { searchTripsWithPricing } = require("../services/tripSearchService")
 const connectDB = require("../config/db")
 const User = require("../models/User")
+const { getPartnerHierarchy } = require("../utils/getPartnerHierarchy")
 /**
  * Helper to determine user type and partner ID from request
  * 
@@ -188,10 +189,16 @@ const searchTrips = async (req, res, next) => {
     // Get user type and partner ID from JWT
     const { userType, partnerId } = await getUserTypeAndPartnerId(req)
 
+    let partnerHierarchy = []
+
+if (partnerId) {
+  partnerHierarchy = await getPartnerHierarchy(partnerId)
+}
     // Perform search
     const result = await searchTripsWithPricing({
       companyId,
       userType,
+       partnerHierarchy, // ✅ ADD THIS
       partnerId,
       category: category.toLowerCase(),
       tripType: tripType.toLowerCase(),
@@ -339,11 +346,17 @@ const searchTripsGet = async (req, res, next) => {
 
     // Get user type and partner ID from JWT
     const { userType, partnerId } = await getUserTypeAndPartnerId(req)
+    let partnerHierarchy = []
+
+if (partnerId) {
+  partnerHierarchy = await getPartnerHierarchy(partnerId)
+}
 
     // Perform search
     const result = await searchTripsWithPricing({
       companyId,
       userType,
+       partnerHierarchy, // ✅ ADD THIS
       partnerId,
       category: category.toLowerCase(),
       tripType: tripType.toLowerCase(),
