@@ -45,12 +45,21 @@ const priceListSchema = new mongoose.Schema(
       enum: PRICE_LIST_STATUS,
       default: "active",
     },
-    partners: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Partner",
+    partners: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Partner",
+        },
+      ],
+      required: true,
+      validate: {
+        validator: function (v) {
+          return Array.isArray(v) && v.length > 0
+        },
+        message: "Partners field is mandatory and must contain at least one partner",
       },
-    ],
+    },
     createdBy: {
       id: {
         type: mongoose.Schema.Types.ObjectId,

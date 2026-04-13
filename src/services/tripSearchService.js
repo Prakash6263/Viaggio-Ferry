@@ -1137,21 +1137,22 @@ const { calculateHierarchicalPricing, getVisiblePrice } = require("../utils/hier
  */
 const searchTripsForDirection = async (params) => {
   const {
-     partnerHierarchy,
-    companyId,
-    userType,
-    partnerId,
-    category,
-    priceListTripType,
-    departPort,
-    arrivePort,
-    searchDate,
-    searchWindowDays = 5, // Default to ±5 days, can be overridden
-    cabin,
-    visaType,
-    passengers,
-    payloadTypes,
-    totalQuantity,
+  partnerHierarchy,
+  companyId,
+  userType,
+  partnerId,
+  grandparentId, // ✅ ADD THIS - grandparent ID for price filtering
+  category,
+  priceListTripType,
+  departPort,
+  arrivePort,
+  searchDate,
+  searchWindowDays = 5, // Default to ±5 days, can be overridden
+  cabin,
+  visaType,
+  passengers,
+  payloadTypes,
+  totalQuantity,
   } = params
 
   // Parse search date - search for trips within searchWindowDays before and after
@@ -1265,19 +1266,21 @@ const searchTripsForDirection = async (params) => {
         )
 
         // findBestPrice now returns { refundable, nonRefundable }
-        const priceResults = await findBestPrice({
-          companyId,
-          tripId: trip._id,
-          category,
-          ticketType: priceListTripType,
-          originPort: departPort,
-          destinationPort: arrivePort,
-          cabinId,
-          passengerTypeId: passenger.payloadTypeId,
-          visaType,
-          partnerId,
-          departureDate: searchDate,
-        })
+    const priceResults = await findBestPrice({
+  companyId,
+  tripId: trip._id,
+  category,
+  ticketType: priceListTripType,
+  originPort,
+  destinationPort,
+  cabinId,
+  passengerTypeId,
+  visaType,
+  partnerId,
+  partnerHierarchy,     // ✅ ADD
+  grandparentId,        // ✅ ADD
+  departureDate,
+})
 
         const passengerTypeInfo = {
           _id: payloadType._id,
@@ -1709,7 +1712,7 @@ const calculateAvailableSeats = async (params) => {
  */
 const findBestPrice = async (params) => {
   const {
-    companyId,
+     companyId,
     tripId,
     category,
     ticketType,
@@ -1719,8 +1722,16 @@ const findBestPrice = async (params) => {
     passengerTypeId,
     visaType,
     partnerId,
+    partnerHierarchy,   // ✅ ADD
+    grandparentId,      // ✅ ADD
     departureDate,
   } = params
+
+const hierarchyIds = [
+  partnerId,
+  ...(partnerHierarchy || []),
+  grandparentId,
+].filter(Boolean)
 
   const basePriceQuery = {
     originPort: new mongoose.Types.ObjectId(originPort),
@@ -1746,13 +1757,31 @@ const findBestPrice = async (params) => {
 
   // Helper to find the best price for a given taxForm and optional extra priceList conditions
   const findPriceByTaxForm = async (taxForm, extraPriceListQuery = {}) => {
-    const priceDetails = await PriceListDetail.find({
+    // First, find all matching PriceLists based on base query and extra filters
+    const priceListQuery = { ...basePriceListQuery, ...extraPriceListQuery }
+    console.log("[v0] PriceList Query:", JSON.stringify(priceListQuery, null, 2))
+    const matchingPriceLists = await PriceList.find(priceListQuery).lean()
+    console.log("[v0] Matching PriceLists found:", matchingPriceLists.length)
+
+    if (matchingPriceLists.length === 0) {
+      console.log("[v0] No PriceLists found, returning null")
+      return null
+    }
+
+    const priceListIds = matchingPriceLists.map((pl) => new mongoose.Types.ObjectId(pl._id))
+    console.log("[v0] PriceList IDs:", priceListIds)
+
+    // Now find PriceListDetails that reference these PriceLists
+    const priceDetailQuery = {
       ...basePriceQuery,
       taxForm,
-    })
+      priceList: { $in: priceListIds },
+    }
+    console.log("[v0] PriceListDetail Query:", JSON.stringify(priceDetailQuery, null, 2))
+    
+    const priceDetails = await PriceListDetail.find(priceDetailQuery)
       .populate({
         path: "priceList",
-        match: { ...basePriceListQuery, ...extraPriceListQuery },
         populate: {
           path: "currency",
           select: "currencyCode currencyName currentRate",
@@ -1764,46 +1793,47 @@ const findBestPrice = async (params) => {
       .sort({ "priceList.effectiveDateTime": -1 })
       .lean()
 
-    // Filter where priceList matched
-    const validPrices = priceDetails.filter((pd) => pd.priceList !== null)
+    console.log("[v0] PriceListDetails found:", priceDetails.length)
 
     // Sort by effectiveDateTime descending and return the most recent
-    if (validPrices.length > 0) {
-      validPrices.sort(
+    if (priceDetails.length > 0) {
+      priceDetails.sort(
         (a, b) =>
           new Date(b.priceList.effectiveDateTime) -
           new Date(a.priceList.effectiveDateTime)
       )
-      return validPrices[0]
+      console.log("[v0] Returning price from PriceList:", priceDetails[0].priceList._id)
+      return priceDetails[0]
     }
+    console.log("[v0] No PriceListDetails found")
     return null
   }
 
   // For each taxForm, apply the same partner → default priority
-  const resolvePriceForTaxForm = async (taxForm) => {
-    // Priority 1: Partner-specific price (only if partnerId is provided)
-    // Use $in operator for proper MongoDB array matching
-    if (partnerId) {
-      const partnerPrice = await findPriceByTaxForm(taxForm, {
-        partners: { $in: [new mongoose.Types.ObjectId(partnerId)] },
-      })
-      if (partnerPrice) {
-        return { price: partnerPrice, priorityLevel: 1, priceType: "partner" }
-      }
-    }
+const resolvePriceForTaxForm = async (taxForm) => {
 
-    // Priority 2: Default/Company-wide price (with NO partner assignment)
-    // Only get prices with completely empty partners array (company-wide prices)
-    // Use $size: 0 for explicit empty array matching in MongoDB
-    const defaultPrice = await findPriceByTaxForm(taxForm, {
-      partners: { $size: 0 },
+  // ✅ 1. Check hierarchy one by one (priority)
+  for (const id of hierarchyIds) {
+    const price = await findPriceByTaxForm(taxForm, {
+      partners: new mongoose.Types.ObjectId(id),
     })
-    if (defaultPrice) {
-      return { price: defaultPrice, priorityLevel: 2, priceType: "default" }
-    }
 
-    return null
+    if (price) {
+      return { price, priceType: "hierarchy" }
+    }
   }
+
+  // ✅ 2. Default company price
+  const defaultPrice = await findPriceByTaxForm(taxForm, {
+    partners: { $eq: [] },
+  })
+
+  if (defaultPrice) {
+    return { price: defaultPrice, priceType: "default" }
+  }
+
+  return null
+}
 
   // Resolve both taxForm variants in parallel
   const [refundableResult, nonRefundableResult] = await Promise.all([
@@ -1838,8 +1868,9 @@ const searchTripsWithPricing = async (params) => {
   const {
     companyId,
     userType ,
-    partnerHierarchy, // ✅ ADD THIS
+    partnerHierarchy,
     partnerId,
+    grandparentId, // ✅ ADD THIS - grandparent ID from token for price filtering
     category,
     tripType,
     originPort,
@@ -1936,6 +1967,7 @@ const searchTripsWithPricing = async (params) => {
       companyId,
       userType,
       partnerId,
+      grandparentId, // ✅ Pass grandparent ID for price filtering
       category: normalizedCategory,
       priceListTripType: "one_way", // Use one_way for outbound leg
       departPort: originPort,
@@ -1953,6 +1985,7 @@ const searchTripsWithPricing = async (params) => {
       companyId,
       userType,
       partnerId,
+      grandparentId, // ✅ Pass grandparent ID for price filtering
       category: normalizedCategory,
       priceListTripType: "one_way", // Use one_way for inbound leg
       departPort: destinationPort,
@@ -2187,6 +2220,7 @@ const searchTripsWithPricing = async (params) => {
       companyId,
       userType,
       partnerId,
+      grandparentId, // ✅ Pass grandparent ID for price filtering
       category: normalizedCategory,
       priceListTripType,
       departPort: originPort,

@@ -190,16 +190,26 @@ const searchTrips = async (req, res, next) => {
     const { userType, partnerId } = await getUserTypeAndPartnerId(req)
 
     let partnerHierarchy = []
+    let grandparentId = null
 
-if (partnerId) {
-  partnerHierarchy = await getPartnerHierarchy(partnerId)
-}
+    // For selling-agent users, extract grandparent IDs from token
+    if (req.user && req.user.layer === "selling-agent") {
+      // Get grandparent ID based on the agent's hierarchy
+      // Priority: marineParentId > commercialParentId > companyParentId
+      grandparentId = req.user.marineParentId || req.user.commercialParentId || req.user.companyParentId
+    }
+
+    if (partnerId) {
+      partnerHierarchy = await getPartnerHierarchy(partnerId)
+    }
+    
     // Perform search
     const result = await searchTripsWithPricing({
       companyId,
       userType,
-       partnerHierarchy, // ✅ ADD THIS
+      partnerHierarchy,
       partnerId,
+      grandparentId, // ✅ Pass grandparent ID for price filtering
       category: category.toLowerCase(),
       tripType: tripType.toLowerCase(),
       originPort,
@@ -347,17 +357,26 @@ const searchTripsGet = async (req, res, next) => {
     // Get user type and partner ID from JWT
     const { userType, partnerId } = await getUserTypeAndPartnerId(req)
     let partnerHierarchy = []
+    let grandparentId = null
 
-if (partnerId) {
-  partnerHierarchy = await getPartnerHierarchy(partnerId)
-}
+    // For selling-agent users, extract grandparent IDs from token
+    if (req.user && req.user.layer === "selling-agent") {
+      // Get grandparent ID based on the agent's hierarchy
+      // Priority: marineParentId > commercialParentId > companyParentId
+      grandparentId = req.user.marineParentId || req.user.commercialParentId || req.user.companyParentId
+    }
+
+    if (partnerId) {
+      partnerHierarchy = await getPartnerHierarchy(partnerId)
+    }
 
     // Perform search
     const result = await searchTripsWithPricing({
       companyId,
       userType,
-       partnerHierarchy, // ✅ ADD THIS
+      partnerHierarchy,
       partnerId,
+      grandparentId, // ✅ Pass grandparent ID for price filtering
       category: category.toLowerCase(),
       tripType: tripType.toLowerCase(),
       originPort,

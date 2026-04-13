@@ -25,6 +25,10 @@ const verifyToken = (req, res, next) => {
       layer: decoded.layer || undefined,
       moduleAccess: decoded.moduleAccess || [],
       agent: decoded.agent || undefined, // Agent/Partner ID for user role
+      // Parent IDs for selling-agent users (from grandparent hierarchy)
+      companyParentId: decoded.companyParentId || undefined,
+      marineParentId: decoded.marineParentId || undefined,
+      commercialParentId: decoded.commercialParentId || undefined,
     }
     
     // Attach companyId separately for backward compatibility (may be undefined for admins)

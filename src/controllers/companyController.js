@@ -236,17 +236,67 @@ const loginCompany = async (req, res, next) => {
       // Build moduleAccess array for JWT
       const moduleAccess = user.moduleAccess || []
 
+      // Build JWT payload with parent IDs for selling-agent users
+      const tokenPayload = {
+        id: user._id,
+        role: "user",
+        email: user.email,
+        companyId: user.company._id,
+        layer: user.layer,
+        moduleAccess: moduleAccess,
+        agent: user.agent, // Include agent ID in token for permission checks
+      }
+
+      // For selling-agent users, fetch and include parent hierarchy IDs
+      if (user.layer === "selling-agent" && user.agent) {
+        try {
+          const agent = await Partner.findById(user.agent)
+          
+          if (agent) {
+            // Initialize parent IDs object
+            const parentIds = {
+              companyParentId: null,
+              marineParentId: null,
+              commercialParentId: null,
+            }
+
+            // Fetch parent hierarchy for the agent
+            let currentAgent = agent
+            const visitedIds = new Set()
+
+            while (currentAgent && currentAgent.parentAccount && !visitedIds.has(currentAgent.parentAccount.toString())) {
+              visitedIds.add(currentAgent.parentAccount.toString())
+              const parentAgent = await Partner.findById(currentAgent.parentAccount)
+              
+              if (!parentAgent) break
+
+              // Map parent IDs based on their layer
+              if (parentAgent.layer === "Marine") {
+                parentIds.marineParentId = parentAgent._id
+              } else if (parentAgent.layer === "Commercial") {
+                parentIds.commercialParentId = parentAgent._id
+              }
+
+              currentAgent = parentAgent
+            }
+
+            // Fetch company parent if it exists
+            if (agent.parentCompany) {
+              parentIds.companyParentId = agent.parentCompany
+            }
+
+            // Add parent IDs to token payload
+            Object.assign(tokenPayload, parentIds)
+          }
+        } catch (hierarchyError) {
+          console.warn("[v0] Warning: Could not fetch agent hierarchy for token:", hierarchyError.message)
+          // Continue with login even if hierarchy fetch fails
+        }
+      }
+
       // Generate STANDARD JWT TOKEN
       const token = jwt.sign(
-        {
-          id: user._id,
-          role: "user",
-          email: user.email,
-          companyId: user.company._id,
-          layer: user.layer,
-          moduleAccess: moduleAccess,
-          agent: user.agent, // Include agent ID in token for permission checks
-        },
+        tokenPayload,
         process.env.JWT_SECRET || "your-secret-key",
         { expiresIn: "24h" },
       )
