@@ -1266,21 +1266,21 @@ const searchTripsForDirection = async (params) => {
         )
 
         // findBestPrice now returns { refundable, nonRefundable }
-    const priceResults = await findBestPrice({
-  companyId,
-  tripId: trip._id,
-  category,
-  ticketType: priceListTripType,
-  originPort,
-  destinationPort,
-  cabinId,
-  passengerTypeId,
-  visaType,
-  partnerId,
-  partnerHierarchy,     // ✅ ADD
-  grandparentId,        // ✅ ADD
-  departureDate,
-})
+        const priceResults = await findBestPrice({
+          companyId,
+          tripId: trip._id,
+          category,
+          ticketType: priceListTripType,
+          originPort: departPort,
+          destinationPort: arrivePort,
+          cabinId,
+          passengerTypeId: passenger.payloadTypeId,
+          visaType,
+          partnerId,
+          partnerHierarchy,     // ✅ ADD
+          grandparentId,        // ✅ ADD
+          departureDate: searchDate,
+        })
 
         const passengerTypeInfo = {
           _id: payloadType._id,
