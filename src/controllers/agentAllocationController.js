@@ -160,22 +160,14 @@ exports.createAgentAllocation = async (req, res) => {
   try {
     const { companyId, user } = req
     const { tripId } = req.params
-    let agents = []
 
+    let agents = []
     if (Array.isArray(req.body)) {
       agents = req.body
     } else {
       const { agent, allocations } = req.body
       agents = [{ agent, allocations }]
     }
-
-    const trip = await Trip.findOne({
-      _id: tripId,
-      company: companyId,
-      isDeleted: false,
-    }).session(session)
-
-    if (!trip) throw createHttpError(404, "Trip not found")
 
     const availability = await TripAvailability.findOne({
       trip: tripId,
@@ -190,7 +182,6 @@ exports.createAgentAllocation = async (req, res) => {
     for (const agentData of agents) {
       const { agent, allocations } = agentData
 
-      // ✅ FIX: parentAgent logic
       let parentAgent = null
       if (user.layer !== "company") {
         parentAgent = user.agent
@@ -200,19 +191,43 @@ exports.createAgentAllocation = async (req, res) => {
         company: companyId,
         trip: tripId,
         availability: availability._id,
-
-        // ✅ FIXED
-        agent: agent,
-
-        // ✅ CRITICAL
+        agent,
         parentAgent,
-
         allocations,
         createdBy: buildActor(user),
       })
 
       await allocationDoc.save({ session })
       createdAllocations.push(allocationDoc)
+
+      // ============================================================
+      // 🔥 IMPORTANT: UPDATE TripAvailability
+      // ============================================================
+
+      for (const alloc of allocations) {
+        for (const cabin of alloc.cabins) {
+          await TripAvailability.updateOne(
+            {
+              _id: availability._id,
+              "availabilityTypes.type": alloc.type,
+              "availabilityTypes.cabins.cabin": cabin.cabin,
+            },
+            {
+              $inc: {
+                "availabilityTypes.$[type].cabins.$[cabin].allocatedSeats":
+                  cabin.allocatedSeats,
+              },
+            },
+            {
+              arrayFilters: [
+                { "type.type": alloc.type },
+                { "cabin.cabin": cabin.cabin },
+              ],
+              session,
+            }
+          )
+        }
+      }
     }
 
     await session.commitTransaction()
