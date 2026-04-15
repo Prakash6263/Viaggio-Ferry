@@ -280,9 +280,12 @@ const loginCompany = async (req, res, next) => {
               currentAgent = parentAgent
             }
 
-            // Fetch company parent if it exists
+            // Derive companyParentId from the company that owns the topmost parent agent
+            // Falls back to agent.parentCompany if explicitly set, otherwise uses the top of the chain
             if (agent.parentCompany) {
               parentIds.companyParentId = agent.parentCompany
+            } else if (currentAgent && currentAgent.company) {
+              parentIds.companyParentId = currentAgent.company
             }
 
             // Add parent IDs to token payload

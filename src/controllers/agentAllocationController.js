@@ -358,6 +358,7 @@ exports.updateAgentAllocation = async (req, res) => {
       const children = await AvailabilityAgentAllocation.find({
         parentAgent: parentId,
         company: companyId,
+        trip: allocation.trip,
         isDeleted: false,
       }).session(session)
 
@@ -370,6 +371,8 @@ exports.updateAgentAllocation = async (req, res) => {
           })),
           totalAllocatedSeats: 0,
         }))
+
+        child.updatedBy = buildActor(user)
 
         await child.save({ session })
 
@@ -453,6 +456,28 @@ exports.deleteAgentAllocation = async (req, res) => {
     allocation.isDeleted = true
     allocation.updatedBy = buildActor(user)
     await allocation.save({ session })
+
+    // ============================================================
+    // ✅ DELETE CHILDREN (ensure bounded by trip)
+    // ============================================================
+    const deleteChildren = async (parentId) => {
+      const children = await AvailabilityAgentAllocation.find({
+        parentAgent: parentId,
+        company: companyId,
+        trip: tripId,
+        isDeleted: false,
+      }).session(session)
+
+      for (const child of children) {
+        child.isDeleted = true
+        child.updatedBy = buildActor(user)
+        await child.save({ session })
+
+        await deleteChildren(child.agent)
+      }
+    }
+
+    await deleteChildren(allocation.agent)
 
     // Commit transaction
     await session.commitTransaction()

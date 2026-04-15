@@ -773,35 +773,37 @@ const deleteAllocation = async (req, res, next) => {
       throw createHttpError(404, "Allocation not found or you do not have permission to delete it")
     }
 
-    // Fetch trip availability to return seats
-    const tripAvailability = await TripAvailability.findOne({
-      trip: allocation.trip,
-      company: companyId,
-      isDeleted: false,
-    }).session(session)
-
-    if (tripAvailability) {
-      // Return all allocated seats back to TripAvailability
-      for (const alloc of allocation.allocations || []) {
-        const availType = (tripAvailability.availabilityTypes || []).find((at) => at.type === alloc.type)
-        if (availType) {
-          for (const cabinEntry of alloc.cabins || []) {
-            const availCabin = (availType.cabins || []).find(
-              (c) => c.cabin.toString() === cabinEntry.cabin.toString()
-            )
-            if (availCabin) {
-              availCabin.allocatedSeats = Math.max(0, (availCabin.allocatedSeats || 0) - cabinEntry.allocatedSeats)
-            }
-          }
-        }
-      }
-      await tripAvailability.save({ session })
-    }
-
     // Soft delete the allocation
     allocation.isDeleted = true
     allocation.updatedBy = buildAuditTrail(req)
     await allocation.save({ session })
+
+    // Recursively soft-delete all child allocations (descendants)
+    const deleteDescendantAllocations = async (parentAgentId, tripId, compId, currentSession) => {
+      const childAllocations = await AvailabilityAgentAllocation.find({
+        parentAgent: parentAgentId,
+        trip: tripId,
+        company: compId,
+        isDeleted: false,
+      }).session(currentSession)
+
+      for (const childAlloc of childAllocations) {
+        childAlloc.isDeleted = true
+        childAlloc.updatedBy = buildAuditTrail(req)
+        await childAlloc.save({ session: currentSession })
+
+        // Recursively delete this child's children
+        await deleteDescendantAllocations(childAlloc.agent, tripId, compId, currentSession)
+      }
+    }
+
+    // Delete all descendants of the agent whose allocation was just deleted
+    await deleteDescendantAllocations(
+      allocation.agent,
+      allocation.trip,
+      companyId,
+      session
+    )
 
     await session.commitTransaction()
     session.endSession()
