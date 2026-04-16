@@ -121,20 +121,22 @@ const validateCommissionRule = async (req, res, next) => {
       }
 
       // Check if cabins exist in database (only if any cabin IDs provided)
-      if (errors.length === 0 && companyId) {
-        const allCabinIds = [
+      if (errors.length === 0) {
+        const rawCabinIds = [
           ...(passenger || []).map((s) => s.cabinId),
           ...(cargo || []).map((s) => s.cabinId),
           ...(vehicle || []).map((s) => s.cabinId),
-        ]
+        ].filter(Boolean) // remove null/undefined
 
-        if (allCabinIds.length > 0) {
+        // Deduplicate using Set — $in also deduplicates, so we must compare unique counts
+        const uniqueCabinIds = [...new Set(rawCabinIds.map(String))]
+
+        if (uniqueCabinIds.length > 0) {
           const existingCabins = await Cabin.countDocuments({
-            _id: { $in: allCabinIds },
-            company: companyId,
+            _id: { $in: uniqueCabinIds },
             isDeleted: false,
           })
-          if (existingCabins !== allCabinIds.length) {
+          if (existingCabins !== uniqueCabinIds.length) {
             errors.push("One or more cabins do not exist or are deleted")
           }
         }

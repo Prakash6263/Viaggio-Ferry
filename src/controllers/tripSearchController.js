@@ -191,12 +191,20 @@ const searchTrips = async (req, res, next) => {
 
     let partnerHierarchy = []
     let grandparentId = null
+    let pricingHierarchy = null
 
-    // For selling-agent users, extract grandparent IDs from token
+    // For selling-agent users, extract parent IDs from token
     if (req.user && req.user.layer === "selling-agent") {
-      // Get grandparent ID based on the agent's hierarchy
+      // grandparentId: used for price-list partner filtering (existing logic)
       // Priority: marineParentId > commercialParentId > companyParentId
       grandparentId = req.user.marineParentId || req.user.commercialParentId || req.user.companyParentId
+
+      // pricingHierarchy: used for markup/discount/commission rule lookup (new)
+      pricingHierarchy = {
+        companyParentId: req.user.companyParentId || null,
+        marineParentId: req.user.marineParentId || null,
+        commercialParentId: req.user.commercialParentId || null,
+      }
     }
 
     if (partnerId) {
@@ -209,7 +217,8 @@ const searchTrips = async (req, res, next) => {
       userType,
       partnerHierarchy,
       partnerId,
-      grandparentId, // ✅ Pass grandparent ID for price filtering
+      grandparentId,    // for price-list partner filtering
+      pricingHierarchy, // ✅ for markup/discount/commission rules
       category: category.toLowerCase(),
       tripType: tripType.toLowerCase(),
       originPort,
@@ -358,12 +367,19 @@ const searchTripsGet = async (req, res, next) => {
     const { userType, partnerId } = await getUserTypeAndPartnerId(req)
     let partnerHierarchy = []
     let grandparentId = null
+    let pricingHierarchy = null
 
-    // For selling-agent users, extract grandparent IDs from token
+    // For selling-agent users, extract parent IDs from token
     if (req.user && req.user.layer === "selling-agent") {
-      // Get grandparent ID based on the agent's hierarchy
-      // Priority: marineParentId > commercialParentId > companyParentId
+      // grandparentId: price-list partner filtering (existing)
       grandparentId = req.user.marineParentId || req.user.commercialParentId || req.user.companyParentId
+
+      // pricingHierarchy: markup/discount/commission rule lookup (new)
+      pricingHierarchy = {
+        companyParentId: req.user.companyParentId || null,
+        marineParentId: req.user.marineParentId || null,
+        commercialParentId: req.user.commercialParentId || null,
+      }
     }
 
     if (partnerId) {
@@ -376,7 +392,8 @@ const searchTripsGet = async (req, res, next) => {
       userType,
       partnerHierarchy,
       partnerId,
-      grandparentId, // ✅ Pass grandparent ID for price filtering
+      grandparentId,    // for price-list partner filtering
+      pricingHierarchy, // ✅ for markup/discount/commission rules
       category: category.toLowerCase(),
       tripType: tripType.toLowerCase(),
       originPort,

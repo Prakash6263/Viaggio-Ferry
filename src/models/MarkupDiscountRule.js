@@ -122,12 +122,13 @@ MarkupDiscountRuleSchema.index({
 MarkupDiscountRuleSchema.index({ company: 1, "routes.routeFrom": 1, "routes.routeTo": 1 })
 MarkupDiscountRuleSchema.index({ company: 1, ruleName: "text" })
 
-// Duplicate detection index - now includes routes array
+// Duplicate detection index - includes partner so same rule can exist for different partners
 MarkupDiscountRuleSchema.index({
   company: 1,
   providerCompany: 1,
   providerPartner: 1,
   appliedLayer: 1,
+  partner: 1,
   "routes.routeFrom": 1,
   "routes.routeTo": 1,
   visaType: 1,

@@ -85,8 +85,8 @@ async function sumChildAllocations(agentId, tripId, companyId, type, cabinId, ex
   // Always cast to ObjectId so aggregation $match works correctly
   const matchFilter = {
     parentAgent: new mongoose.Types.ObjectId(agentId.toString()),
-    trip:        new mongoose.Types.ObjectId(tripId.toString()),
-    company:     new mongoose.Types.ObjectId(companyId.toString()),
+    trip: new mongoose.Types.ObjectId(tripId.toString()),
+    company: new mongoose.Types.ObjectId(companyId.toString()),
     isDeleted: false,
   }
   if (excludeId) {
@@ -747,9 +747,10 @@ const updateAllocation = async (req, res, next) => {
  */
 const deleteAllocation = async (req, res, next) => {
   const session = await mongoose.startSession()
-  session.startTransaction()
 
   try {
+    session.startTransaction()
+
     const companyId = req.user.companyId || req.user.id
     const { allocationId } = req.params
 
@@ -758,64 +759,94 @@ const deleteAllocation = async (req, res, next) => {
     }
 
     const agentPartner = await resolveAgentPartner(req)
-    if (!agentPartner) {
-      throw createHttpError(403, "Company admin cannot use this endpoint")
-    }
 
     const allocation = await AvailabilityAgentAllocation.findOne({
       _id: allocationId,
-      parentAgent: agentPartner._id,
+      company: companyId,
+      isDeleted: false,
+      ...(agentPartner && { parentAgent: agentPartner._id })
+    }).session(session)
+
+    if (!allocation) {
+      throw createHttpError(404, "Allocation not found or no permission")
+    }
+
+    const tripAvailability = await TripAvailability.findOne({
+      trip: allocation.trip,
       company: companyId,
       isDeleted: false,
     }).session(session)
 
-    if (!allocation) {
-      throw createHttpError(404, "Allocation not found or you do not have permission to delete it")
-    }
+    const deleteWithChildren = async (alloc) => {
+      // ✅ Prevent double execution
+      if (alloc.isDeleted) return
 
-    // Soft delete the allocation
-    allocation.isDeleted = true
-    allocation.updatedBy = buildAuditTrail(req)
-    await allocation.save({ session })
+      // 1️⃣ RETURN SEATS
+      if (tripAvailability) {
+        for (const a of alloc.allocations || []) {
+          for (const cabinEntry of a.cabins || []) {
 
-    // Recursively soft-delete all child allocations (descendants)
-    const deleteDescendantAllocations = async (parentAgentId, tripId, compId, currentSession) => {
-      const childAllocations = await AvailabilityAgentAllocation.find({
-        parentAgent: parentAgentId,
-        trip: tripId,
-        company: compId,
-        isDeleted: false,
-      }).session(currentSession)
+            const result = await TripAvailability.updateOne(
+              {
+                _id: tripAvailability._id,
+                "availabilityTypes.type": a.type,
+                "availabilityTypes.cabins.cabin": cabinEntry.cabin,
+              },
+              {
+                $inc: {
+                  "availabilityTypes.$[type].cabins.$[cabin].allocatedSeats":
+                    -cabinEntry.allocatedSeats,
+                },
+              },
+              {
+                arrayFilters: [
+                  { "type.type": a.type },
+                  { "cabin.cabin": cabinEntry.cabin },
+                ],
+                session,
+              }
+            )
 
-      for (const childAlloc of childAllocations) {
-        childAlloc.isDeleted = true
-        childAlloc.updatedBy = buildAuditTrail(req)
-        await childAlloc.save({ session: currentSession })
-
-        // Recursively delete this child's children
-        await deleteDescendantAllocations(childAlloc.agent, tripId, compId, currentSession)
+            // ✅ Optional safety
+            if (result.matchedCount === 0) {
+              throw new Error("Cabin/type mismatch during delete")
+            }
+          }
+        }
       }
+
+      // 2️⃣ CHILDREN
+      const children = await AvailabilityAgentAllocation.find({
+        parentAgent: alloc.agent,
+        company: companyId,
+        isDeleted: false,
+      }).session(session)
+
+      // 3️⃣ RECURSION
+      for (const child of children) {
+        await deleteWithChildren(child)
+      }
+
+      // 4️⃣ DELETE SELF
+      alloc.isDeleted = true
+      alloc.updatedBy = buildAuditTrail(req)
+      await alloc.save({ session })
     }
 
-    // Delete all descendants of the agent whose allocation was just deleted
-    await deleteDescendantAllocations(
-      allocation.agent,
-      allocation.trip,
-      companyId,
-      session
-    )
+    await deleteWithChildren(allocation)
 
     await session.commitTransaction()
-    session.endSession()
 
     res.json({
       success: true,
-      message: "Allocation deleted and seats returned to parent successfully",
+      message: "Allocation and subtree deleted successfully",
     })
+
   } catch (error) {
     await session.abortTransaction()
-    session.endSession()
     next(error)
+  } finally {
+    session.endSession()
   }
 }
 

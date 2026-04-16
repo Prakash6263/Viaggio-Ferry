@@ -1130,6 +1130,7 @@ const { Port } = require("../models/Port")
 const Partner = require("../models/Partner")
 const calculateHierarchyRemaining = require("../utils/calculateHierarchyRemaining")
 const { calculateHierarchicalPricing, getVisiblePrice } = require("../utils/hierarchicalPricingCalculator")
+const { applyPricingRules } = require("../utils/applyPricingRules")
 
 /**
  * Helper function to search trips for a single direction
@@ -1141,7 +1142,8 @@ const searchTripsForDirection = async (params) => {
   companyId,
   userType,
   partnerId,
-  grandparentId, // ✅ ADD THIS - grandparent ID for price filtering
+  grandparentId,
+  pricingHierarchy,   // ✅ For markup/discount/commission rules (selling-agent only)
   category,
   priceListTripType,
   departPort,
@@ -1154,6 +1156,13 @@ const searchTripsForDirection = async (params) => {
   payloadTypes,
   totalQuantity,
   } = params
+
+  // Pricing rules apply only when a selling-agent hierarchy is provided (token has parent IDs)
+  const hasPricingHierarchy =
+    pricingHierarchy &&
+    (pricingHierarchy.companyParentId ||
+      pricingHierarchy.marineParentId ||
+      pricingHierarchy.commercialParentId)
 
   // Parse search date - search for trips within searchWindowDays before and after
   const searchStartDate = new Date(searchDate)
@@ -1260,6 +1269,10 @@ const searchTripsForDirection = async (params) => {
       let nonRefCurrency = null
       let nonRefPriceListId = null
 
+      // Commission totals per taxForm (does not change price — informational)
+      let refCommissionAmount = 0
+      let nonRefCommissionAmount = 0
+
       for (const passenger of passengers) {
         const payloadType = payloadTypes.find(
           (pt) => pt._id.toString() === passenger.payloadTypeId
@@ -1293,7 +1306,39 @@ const searchTripsForDirection = async (params) => {
         const refResult = priceResults.refundable
         if (refResult && refResult.price) {
           const price = refResult.price
-          const unitTotalPrice = price.totalPrice
+          let unitTotalPrice = price.totalPrice
+          let pricingRulesInfo = null
+
+          // ✅ Apply markup/discount/commission for selling-agent users ONLY
+          if (hasPricingHierarchy && passenger.quantity > 0) {
+            try {
+              const pricingResult = await applyPricingRules({
+                basePrice: price.totalPrice,
+                companyId,
+                category,
+                cabinId: cabinId.toString(),
+                payloadTypeId: passenger.payloadTypeId,
+                originPort: departPort,
+                destinationPort: arrivePort,
+                visaType,
+                pricingHierarchy,
+              })
+              unitTotalPrice = pricingResult.finalPrice
+              pricingRulesInfo = {
+                baseUnitPrice: price.totalPrice,
+                finalUnitPrice: pricingResult.finalPrice,
+                appliedRules: pricingResult.appliedRules,
+                commissionPerUnit: pricingResult.totalCommission,
+                commissionBreakdown: pricingResult.commissionBreakdown,
+                layerDebug: pricingResult.layerDebug,
+              }
+              refCommissionAmount += pricingResult.totalCommission * passenger.quantity
+            } catch (pricingErr) {
+              console.error("[TripSearch] Pricing rules error (refundable):", pricingErr.message)
+              // Fallback: keep raw price on error
+            }
+          }
+
           const subtotal = unitTotalPrice * passenger.quantity
           const taxAmount = (price.totalPrice - price.basicPrice) * passenger.quantity
 
@@ -1306,8 +1351,9 @@ const searchTripsForDirection = async (params) => {
           refundableBreakdown.push({
             payloadType: passengerTypeInfo,
             quantity: passenger.quantity,
-            unitPrice: price.basicPrice,
-            unitTotalPrice,
+            unitPrice: price.basicPrice,            // fare only (unchanged)
+            baseUnitTotalPrice: price.totalPrice,   // raw price from price list (reference)
+            unitTotalPrice,                          // final price after markup/discount
             subtotal: Math.round(subtotal * 100) / 100,
             taxes: price.taxIds || [],
             taxForm: "refundable",
@@ -1315,6 +1361,7 @@ const searchTripsForDirection = async (params) => {
             allowedLuggageWeight: price.allowedLuggageWeight,
             excessLuggagePricePerKg: price.excessLuggagePricePerKg,
             priceType: refResult.priceType,
+            ...(pricingRulesInfo ? { pricingRules: pricingRulesInfo } : {}),
           })
         } else {
           if (passenger.quantity > 0) refHasMissingPrice = true
@@ -1336,7 +1383,39 @@ const searchTripsForDirection = async (params) => {
         const nonRefResult = priceResults.nonRefundable
         if (nonRefResult && nonRefResult.price) {
           const price = nonRefResult.price
-          const unitTotalPrice = price.totalPrice
+          let unitTotalPrice = price.totalPrice
+          let pricingRulesInfo = null
+
+          // ✅ Apply markup/discount/commission for selling-agent users ONLY
+          if (hasPricingHierarchy && passenger.quantity > 0) {
+            try {
+              const pricingResult = await applyPricingRules({
+                basePrice: price.totalPrice,
+                companyId,
+                category,
+                cabinId: cabinId.toString(),
+                payloadTypeId: passenger.payloadTypeId,
+                originPort: departPort,
+                destinationPort: arrivePort,
+                visaType,
+                pricingHierarchy,
+              })
+              unitTotalPrice = pricingResult.finalPrice
+              pricingRulesInfo = {
+                baseUnitPrice: price.totalPrice,
+                finalUnitPrice: pricingResult.finalPrice,
+                appliedRules: pricingResult.appliedRules,
+                commissionPerUnit: pricingResult.totalCommission,
+                commissionBreakdown: pricingResult.commissionBreakdown,
+                layerDebug: pricingResult.layerDebug,
+              }
+              nonRefCommissionAmount += pricingResult.totalCommission * passenger.quantity
+            } catch (pricingErr) {
+              console.error("[TripSearch] Pricing rules error (non-refundable):", pricingErr.message)
+              // Fallback: keep raw price on error
+            }
+          }
+
           const subtotal = unitTotalPrice * passenger.quantity
           const taxAmount = (price.totalPrice - price.basicPrice) * passenger.quantity
 
@@ -1349,8 +1428,9 @@ const searchTripsForDirection = async (params) => {
           nonRefundableBreakdown.push({
             payloadType: passengerTypeInfo,
             quantity: passenger.quantity,
-            unitPrice: price.basicPrice,
-            unitTotalPrice,
+            unitPrice: price.basicPrice,            // fare only (unchanged)
+            baseUnitTotalPrice: price.totalPrice,   // raw price from price list (reference)
+            unitTotalPrice,                          // final price after markup/discount
             subtotal: Math.round(subtotal * 100) / 100,
             taxes: price.taxIds || [],
             taxForm: "non_refundable",
@@ -1358,6 +1438,7 @@ const searchTripsForDirection = async (params) => {
             allowedLuggageWeight: price.allowedLuggageWeight,
             excessLuggagePricePerKg: price.excessLuggagePricePerKg,
             priceType: nonRefResult.priceType,
+            ...(pricingRulesInfo ? { pricingRules: pricingRulesInfo } : {}),
           })
         } else {
           if (passenger.quantity > 0) nonRefHasMissingPrice = true
@@ -1397,7 +1478,7 @@ const searchTripsForDirection = async (params) => {
 
       const bookingAllowed = baseBookingConditions && (!refHasMissingPrice || !nonRefHasMissingPrice)
 
-      // Calculate totals per taxForm
+      // Calculate totals per taxForm — subtotals already reflect post-rule final prices
       const refCalculatedTotal = refundableBreakdown.reduce((sum, item) => {
         return item.subtotal !== null && item.subtotal !== undefined ? sum + item.subtotal : sum
       }, 0)
@@ -1405,71 +1486,10 @@ const searchTripsForDirection = async (params) => {
         return item.subtotal !== null && item.subtotal !== undefined ? sum + item.subtotal : sum
       }, 0)
 
-      // APPLY HIERARCHICAL PRICING to both refundable and non-refundable
-      let refundableHierarchicalPricing = null
-      let nonRefundableHierarchicalPricing = null
-
-      // Build hierarchical pricing for each passenger type
-      const refundableHierarchies = []
-      const nonRefundableHierarchies = []
-
-      for (const breakdownItem of refundableBreakdown) {
-        if (breakdownItem.subtotal !== null && breakdownItem.subtotal !== undefined && breakdownItem.subtotal > 0) {
-          try {
-            const hierarchy = await calculateHierarchicalPricing({
-              basePrice: breakdownItem.unitPrice || 0,
-              quantity: breakdownItem.quantity,
-              companyId,
-              category,
-              partnerId: userType === "partner" ? partnerId : null,
-partnerHierarchy: userType === "partner" ? partnerHierarchy : [],
-              visaType,
-              originPort: departPort,
-              destinationPort: arrivePort,
-              payloadTypeId: breakdownItem.payloadType._id,
-              cabinId,
-              tripId: trip._id,
-            })
-            refundableHierarchies.push({
-              payloadType: breakdownItem.payloadType.name,
-              quantity: breakdownItem.quantity,
-              unitPrice: breakdownItem.unitPrice,
-              hierarchicalPricing: hierarchy,
-            })
-          } catch (e) {
-            console.error("[v0] Error calculating hierarchical pricing for refundable:", e.message)
-          }
-        }
-      }
-
-      for (const breakdownItem of nonRefundableBreakdown) {
-        if (breakdownItem.subtotal !== null && breakdownItem.subtotal !== undefined && breakdownItem.subtotal > 0) {
-          try {
-            const hierarchy = await calculateHierarchicalPricing({
-              basePrice: breakdownItem.unitPrice || 0,
-              quantity: breakdownItem.quantity,
-              companyId,
-              category,
-              partnerId: userType === "partner" ? partnerId : null,
-partnerHierarchy: userType === "partner" ? partnerHierarchy : [],
-              visaType,
-              originPort: departPort,
-              destinationPort: arrivePort,
-              payloadTypeId: breakdownItem.payloadType._id,
-              cabinId,
-              tripId: trip._id,
-            })
-            nonRefundableHierarchies.push({
-              payloadType: breakdownItem.payloadType.name,
-              quantity: breakdownItem.quantity,
-              unitPrice: breakdownItem.unitPrice,
-              hierarchicalPricing: hierarchy,
-            })
-          } catch (e) {
-            console.error("[v0] Error calculating hierarchical pricing for non-refundable:", e.message)
-          }
-        }
-      }
+      // ✅ NOTE: calculateHierarchicalPricing calls removed.
+      // Markup/discount/commission are now applied per breakdown item above via applyPricingRules().
+      // The totals (refCalculatedTotal / nonRefCalculatedTotal) and commissionAmounts
+      // already reflect the final correct values.
 
       cabinOptions.push({
         cabin: cabinDetails,
@@ -1488,23 +1508,23 @@ partnerHierarchy: userType === "partner" ? partnerHierarchy : [],
             breakdown: refundableBreakdown,
             totalBasicPrice: Math.round(refTotalBasicPrice * 100) / 100,
             totalTaxes: Math.round(refTotalTaxes * 100) / 100,
-            totalPrice: Math.round(refCalculatedTotal * 100) / 100,
+            totalPrice: Math.round(refCalculatedTotal * 100) / 100,   // ✅ FINAL price after all markup/discount
+            commissionAmount: Math.round(refCommissionAmount * 100) / 100, // ✅ Separate — does NOT affect totalPrice
             currency: refCurrency,
             priceListId: refPriceListId,
             hasMissingPrice: refHasMissingPrice,
             available: !refHasMissingPrice,
-            hierarchicalPricing: refundableHierarchies.length > 0 ? refundableHierarchies : null,
           },
           nonRefundable: {
             breakdown: nonRefundableBreakdown,
             totalBasicPrice: Math.round(nonRefTotalBasicPrice * 100) / 100,
             totalTaxes: Math.round(nonRefTotalTaxes * 100) / 100,
-            totalPrice: Math.round(nonRefCalculatedTotal * 100) / 100,
+            totalPrice: Math.round(nonRefCalculatedTotal * 100) / 100,     // ✅ FINAL price after all markup/discount
+            commissionAmount: Math.round(nonRefCommissionAmount * 100) / 100, // ✅ Separate
             currency: nonRefCurrency,
             priceListId: nonRefPriceListId,
             hasMissingPrice: nonRefHasMissingPrice,
             available: !nonRefHasMissingPrice,
-            hierarchicalPricing: nonRefundableHierarchies.length > 0 ? nonRefundableHierarchies : null,
           },
         },
       })
@@ -1870,7 +1890,8 @@ const searchTripsWithPricing = async (params) => {
     userType ,
     partnerHierarchy,
     partnerId,
-    grandparentId, // ✅ ADD THIS - grandparent ID from token for price filtering
+    grandparentId,        // for price-list partner filtering (existing)
+    pricingHierarchy,     // ✅ for markup/discount/commission rules (new)
     category,
     tripType,
     originPort,
@@ -1967,7 +1988,8 @@ const searchTripsWithPricing = async (params) => {
       companyId,
       userType,
       partnerId,
-      grandparentId, // ✅ Pass grandparent ID for price filtering
+      grandparentId,       // for price-list partner filtering
+      pricingHierarchy,    // ✅ for markup/discount/commission rules
       category: normalizedCategory,
       priceListTripType: "one_way", // Use one_way for outbound leg
       departPort: originPort,
@@ -1985,7 +2007,8 @@ const searchTripsWithPricing = async (params) => {
       companyId,
       userType,
       partnerId,
-      grandparentId, // ✅ Pass grandparent ID for price filtering
+      grandparentId,       // for price-list partner filtering
+      pricingHierarchy,    // ✅ for markup/discount/commission rules
       category: normalizedCategory,
       priceListTripType: "one_way", // Use one_way for inbound leg
       departPort: destinationPort,
@@ -2220,7 +2243,8 @@ const searchTripsWithPricing = async (params) => {
       companyId,
       userType,
       partnerId,
-      grandparentId, // ✅ Pass grandparent ID for price filtering
+      grandparentId,       // for price-list partner filtering
+      pricingHierarchy,    // ✅ for markup/discount/commission rules
       category: normalizedCategory,
       priceListTripType,
       departPort: originPort,
