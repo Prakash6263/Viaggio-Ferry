@@ -159,7 +159,7 @@ function calcCommission(price, rule) {
  * - Company layer:  no partner filter
  * - Marine/Commercial: filter by partnerIds using AllChildPartners OR SpecificPartner scope
  */
-async function fetchMDRules(companyId, appliedLayer, partnerIds, today) {
+async function fetchMDRules({ companyId, appliedLayer, providerType, providerPartner, partnerIds, today }) {
   const andConditions = [
     { company: new mongoose.Types.ObjectId(companyId) },
     { appliedLayer },
@@ -169,6 +169,9 @@ async function fetchMDRules(companyId, appliedLayer, partnerIds, today) {
     { effectiveDate: { $lte: today } },
     { $or: [{ expiryDate: null }, { expiryDate: { $gte: today } }] },
   ]
+
+  if (providerType) andConditions.push({ providerType })
+  if (providerPartner) andConditions.push({ providerPartner: new mongoose.Types.ObjectId(providerPartner) })
 
   if (partnerIds && partnerIds.length > 0) {
     const oids = partnerIds.map((id) => new mongoose.Types.ObjectId(id))
@@ -186,7 +189,7 @@ async function fetchMDRules(companyId, appliedLayer, partnerIds, today) {
 /**
  * Fetch CommissionRule records for a given layer (same filter logic as above).
  */
-async function fetchCommRules(companyId, appliedLayer, partnerIds, today) {
+async function fetchCommRules({ companyId, appliedLayer, providerType, providerPartner, partnerIds, today }) {
   const andConditions = [
     { company: new mongoose.Types.ObjectId(companyId) },
     { appliedLayer },
@@ -196,6 +199,9 @@ async function fetchCommRules(companyId, appliedLayer, partnerIds, today) {
     { effectiveDate: { $lte: today } },
     { $or: [{ expiryDate: null }, { expiryDate: { $gte: today } }] },
   ]
+
+  if (providerType) andConditions.push({ providerType })
+  if (providerPartner) andConditions.push({ providerPartner: new mongoose.Types.ObjectId(providerPartner) })
 
   if (partnerIds && partnerIds.length > 0) {
     const oids = partnerIds.map((id) => new mongoose.Types.ObjectId(id))
@@ -248,9 +254,10 @@ async function applyPricingRules({
   originPort,
   destinationPort,
   visaType,
+  partnerId,                // ✅ Selling Agent's own partner ID
   pricingHierarchy = {},
 }) {
-  const { companyParentId, marineParentId, commercialParentId } = pricingHierarchy
+  const { marineParentId, commercialParentId } = pricingHierarchy
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -267,10 +274,16 @@ async function applyPricingRules({
   let marineCommAmt = 0
   let commercialCommAmt = 0
 
-  // ────────── Layer 1: Company ──────────────────────────────────────────────
+  // ────────── Layer 1: Company (FOR Marine Agent) ───────────────────────────
   const priceInCompany = currentPrice
 
-  const companyMDRules = await fetchMDRules(companyId, "Company", null, today)
+  const companyMDRules = await fetchMDRules({
+    companyId,
+    appliedLayer: "Marine Agent",
+    providerType: "Company",
+    partnerIds: marineParentId ? [marineParentId] : null,
+    today,
+  })
   const companyMDQualified = companyMDRules.filter((r) => ruleMatchesBooking(r, ctx))
   const bestCompanyMD = selectBestRule(companyMDRules, ctx)
 
@@ -294,13 +307,19 @@ async function applyPricingRules({
 
   const priceAfterCompanyMD = currentPrice
 
-  const companyCommRules = await fetchCommRules(companyId, "Company", null, today)
+  const companyCommRules = await fetchCommRules({
+    companyId,
+    appliedLayer: "Marine Agent",
+    providerType: "Company",
+    partnerIds: marineParentId ? [marineParentId] : null,
+    today,
+  })
   const companyCommQualified = companyCommRules.filter((r) => ruleMatchesBooking(r, ctx))
   const bestCompanyComm = selectBestRule(companyCommRules, ctx)
   companyCommAmt = calcCommission(currentPrice, bestCompanyComm)
 
   layerDebug.push({
-    layer: "Company",
+    layer: "Company → Marine",
     priceIn: round2(priceInCompany),
     rulesFound: {
       markupDiscount: { total: companyMDRules.length, qualified: companyMDQualified.length },
@@ -329,7 +348,7 @@ async function applyPricingRules({
           commissionAmount: round2(companyCommAmt),
         }
       : null,
-    priceOut: round2(currentPrice), // Commission does NOT change price
+    priceOut: round2(currentPrice),
   })
 
   console.log(
@@ -340,11 +359,17 @@ async function applyPricingRules({
     `priceOut=${round2(currentPrice)}`
   )
 
-  // ────────── Layer 2: Marine Agent ─────────────────────────────────────────
+  // ────────── Layer 2: Marine Agent (FOR Commercial Agent) ─────────────────
   const priceInMarine = currentPrice
 
   if (marineParentId) {
-    const marineMDRules = await fetchMDRules(companyId, "Marine Agent", [marineParentId], today)
+    const marineMDRules = await fetchMDRules({
+      companyId,
+      appliedLayer: "Commercial Agent",
+      providerPartner: marineParentId,
+      partnerIds: commercialParentId ? [commercialParentId] : null,
+      today,
+    })
     const marineMDQualified = marineMDRules.filter((r) => ruleMatchesBooking(r, ctx))
     const bestMarineMD = selectBestRule(marineMDRules, ctx)
 
@@ -368,13 +393,19 @@ async function applyPricingRules({
 
     const priceAfterMarineMD = currentPrice
 
-    const marineCommRules = await fetchCommRules(companyId, "Marine Agent", [marineParentId], today)
+    const marineCommRules = await fetchCommRules({
+      companyId,
+      appliedLayer: "Commercial Agent",
+      providerPartner: marineParentId,
+      partnerIds: commercialParentId ? [commercialParentId] : null,
+      today,
+    })
     const marineCommQualified = marineCommRules.filter((r) => ruleMatchesBooking(r, ctx))
     const bestMarineComm = selectBestRule(marineCommRules, ctx)
     marineCommAmt = calcCommission(currentPrice, bestMarineComm)
 
     layerDebug.push({
-      layer: "Marine Agent",
+      layer: "Marine → Commercial",
       marineParentId,
       priceIn: round2(priceInMarine),
       rulesFound: {
@@ -425,16 +456,17 @@ async function applyPricingRules({
     console.log(`[PricingRules][Marine] SKIPPED — no marineParentId in token`)
   }
 
-  // ────────── Layer 3: Commercial Agent ─────────────────────────────────────
+  // ────────── Layer 3: Commercial Agent (FOR Selling Agent) ─────────────────
   const priceInCommercial = currentPrice
 
   if (commercialParentId) {
-    const commercialMDRules = await fetchMDRules(
+    const commercialMDRules = await fetchMDRules({
       companyId,
-      "Commercial Agent",
-      [commercialParentId],
-      today
-    )
+      appliedLayer: "Selling Agent",
+      providerPartner: commercialParentId,
+      partnerIds: partnerId ? [partnerId] : null,
+      today,
+    })
     const commercialMDQualified = commercialMDRules.filter((r) => ruleMatchesBooking(r, ctx))
     const bestCommercialMD = selectBestRule(commercialMDRules, ctx)
 
@@ -458,18 +490,19 @@ async function applyPricingRules({
 
     const priceAfterCommercialMD = currentPrice
 
-    const commercialCommRules = await fetchCommRules(
+    const commercialCommRules = await fetchCommRules({
       companyId,
-      "Commercial Agent",
-      [commercialParentId],
-      today
-    )
+      appliedLayer: "Selling Agent",
+      providerPartner: commercialParentId,
+      partnerIds: partnerId ? [partnerId] : null,
+      today,
+    })
     const commercialCommQualified = commercialCommRules.filter((r) => ruleMatchesBooking(r, ctx))
     const bestCommercialComm = selectBestRule(commercialCommRules, ctx)
     commercialCommAmt = calcCommission(currentPrice, bestCommercialComm)
 
     layerDebug.push({
-      layer: "Commercial Agent",
+      layer: "Commercial → Selling",
       commercialParentId,
       priceIn: round2(priceInCommercial),
       rulesFound: {
@@ -511,13 +544,12 @@ async function applyPricingRules({
     )
   } else {
     layerDebug.push({
-      layer: "Commercial Agent",
+      layer: "Commercial → Selling",
       skipped: true,
       reason: "No commercialParentId in token",
       priceIn: round2(priceInCommercial),
       priceOut: round2(currentPrice),
     })
-    console.log(`[PricingRules][Commercial] SKIPPED — no commercialParentId in token`)
   }
 
   const totalCommission = round2(companyCommAmt + marineCommAmt + commercialCommAmt)

@@ -1321,6 +1321,7 @@ const searchTripsForDirection = async (params) => {
                 originPort: departPort,
                 destinationPort: arrivePort,
                 visaType,
+                partnerId,          // ✅ ADD
                 pricingHierarchy,
               })
               unitTotalPrice = pricingResult.finalPrice
@@ -1398,6 +1399,7 @@ const searchTripsForDirection = async (params) => {
                 originPort: departPort,
                 destinationPort: arrivePort,
                 visaType,
+                partnerId,          // ✅ ADD
                 pricingHierarchy,
               })
               unitTotalPrice = pricingResult.finalPrice

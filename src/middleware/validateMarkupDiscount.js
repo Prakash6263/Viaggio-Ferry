@@ -91,11 +91,7 @@ const validateMarkupDiscount = async (req, res, next) => {
       // Validate passenger service if provided
       if (Array.isArray(passenger) && passenger.length > 0) {
         for (const service of passenger) {
-          if (!service.cabinId) {
-            errors.push("passenger service items must have cabinId")
-            break
-          }
-          if (!mongoose.Types.ObjectId.isValid(service.cabinId)) {
+          if (service.cabinId && !mongoose.Types.ObjectId.isValid(service.cabinId)) {
             errors.push(`Invalid passenger cabinId: ${service.cabinId}`)
             break
           }
@@ -105,11 +101,7 @@ const validateMarkupDiscount = async (req, res, next) => {
       // Validate cargo service if provided
       if (Array.isArray(cargo) && cargo.length > 0) {
         for (const service of cargo) {
-          if (!service.cabinId) {
-            errors.push("cargo service items must have cabinId")
-            break
-          }
-          if (!mongoose.Types.ObjectId.isValid(service.cabinId)) {
+          if (service.cabinId && !mongoose.Types.ObjectId.isValid(service.cabinId)) {
             errors.push(`Invalid cargo cabinId: ${service.cabinId}`)
             break
           }
@@ -119,11 +111,7 @@ const validateMarkupDiscount = async (req, res, next) => {
       // Validate vehicle service if provided
       if (Array.isArray(vehicle) && vehicle.length > 0) {
         for (const service of vehicle) {
-          if (!service.cabinId) {
-            errors.push("vehicle service items must have cabinId")
-            break
-          }
-          if (!mongoose.Types.ObjectId.isValid(service.cabinId)) {
+          if (service.cabinId && !mongoose.Types.ObjectId.isValid(service.cabinId)) {
             errors.push(`Invalid vehicle cabinId: ${service.cabinId}`)
             break
           }
