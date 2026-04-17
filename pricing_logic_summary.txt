@@ -1,0 +1,73 @@
+========================================================================
+VIAGGIO FERRY - MARKUP, DISCOUNT & COMMISSION PRICING LOGIC
+========================================================================
+
+1. HIERARCHY & DATA FLOW
+------------------------------------------------------------------------
+The pricing engine uses a strict 3-Layer architecture to dynamically stack price changes.
+Rules only ripple downwards through strict parent-child relationships.
+
+The Hierarchy:
+Layer 1: Company -> Marine Agent
+Layer 2: Marine Agent -> Commercial Agent 
+Layer 3: Commercial Agent / Selling Agent -> Selling Agent (Salesman)
+
+* Note: Salesman is NOT a separate hierarchy level. A Salesman is simply an authorized User (`isSalesman: true`) operating underneath the Selling Agent.
+
+
+2. RULE CREATION & PROVIDER OWNERSHIP 
+------------------------------------------------------------------------
+When a rule (Markup/Discount/Commission) is created, its ownership and target are locked in:
+
+- Company Rule: providerType = "Company", appliedLayer = "Marine Agent"
+- Marine Rule: providerPartner = [Marine ID], appliedLayer = "Commercial Agent"
+- Commercial Rule: providerPartner = [Commercial ID], appliedLayer = "Selling Agent"
+- Selling Rule: providerPartner = [Selling ID], appliedLayer = "Selling Agent"
+
+
+3. RULE TARGETING & FILTERING
+------------------------------------------------------------------------
+During a Trip Search, the user's Token is parsed to find their direct upline: `marineParentId`, `commercialParentId`, and their own `partnerId`.
+
+Rules are filtered out unless they perfectly match the booking context:
+- Date Validity: Today falls between Effective and Expiry dates.
+- Route Check: Matches Origin Port and Destination Port.
+- Payload Identity: Matches Passenger/Vehicle type exactly.
+- Cabin Specificity: If the rule specifies a Cabin, the booked Cabin MUST match. (General rules with no Cabin apply to all Cabins).
+- Partner Scope: The rule must have `partnerScope = AllChildPartners` OR the rule must have `partnerScope = SpecificPartner` and contain the respective child's Partner ID.
+
+
+4. THE PRICING PIPELINE EXECUTION (applyPricingRules.js)
+------------------------------------------------------------------------
+The core engine iterates synchronously. Markups/Discounts affect the rolling price. Commissions are logged but do NOT compound or change the rolling price.
+
+INITIALIZATION:
+The pipeline takes the raw `basicPrice` (The Fare) from the PriceList. 
+Taxes are stripped out to protect them from inflation.
+
+STEP 1: MARINE AGENT PRICING
+- Fetches all rules created by the Company.
+- Filters down to rules matching the context.
+- Selects the SINGLE BEST rule based on highest Priority and Specificity.
+- Modifies the price. Logs Marine Commission.
+
+STEP 2: COMMERCIAL AGENT PRICING
+- Fetches all rules created by the specific `marineParentId`.
+- Selects the SINGLE BEST rule and applies it to the modified price from Step 1.
+- Logs Commercial Commission.
+
+STEP 3: SELLING AGENT / SALESMAN PRICING
+- Fetches rules created by the `commercialParentId` AND rules created by the `partnerId` (the Selling Agent themselves).
+- Because they are fetched into the same bucket, the engine selects the SINGLE BEST rule out of both pools based entirely on Priority/Specificity, preventing conflicts or duplicate stacking.
+- Applies to the price from Step 2.
+- Logs Selling Commission.
+
+STEP 4: FINAL RECONSTRUCTION
+- The total compiled Commission is attached to the payload.
+- The original Tax value is successfully attached back onto the final custom fare to form the `unitTotalPrice` presented seamlessly to the end user.
+
+
+5. ACCESS CONTROL & USER VISIBILITY
+------------------------------------------------------------------------
+- Trip Search is gated exclusively to users with `isSalesman: true`.
+- For UI assignments, the `/api/partners/children` endpoint correctly identifies Selling Agents and intercepts standard partner lookups, instead returning their local users, smoothing out assignment panels.

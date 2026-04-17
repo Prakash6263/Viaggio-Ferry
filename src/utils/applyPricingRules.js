@@ -159,7 +159,7 @@ function calcCommission(price, rule) {
  * - Company layer:  no partner filter
  * - Marine/Commercial: filter by partnerIds using AllChildPartners OR SpecificPartner scope
  */
-async function fetchMDRules({ companyId, appliedLayer, providerType, providerPartner, partnerIds, today }) {
+async function fetchMDRules({ companyId, appliedLayer, providerType, providerPartner, providerPartners, partnerIds, today }) {
   const andConditions = [
     { company: new mongoose.Types.ObjectId(companyId) },
     { appliedLayer },
@@ -171,7 +171,13 @@ async function fetchMDRules({ companyId, appliedLayer, providerType, providerPar
   ]
 
   if (providerType) andConditions.push({ providerType })
-  if (providerPartner) andConditions.push({ providerPartner: new mongoose.Types.ObjectId(providerPartner) })
+  if (providerPartner) {
+    andConditions.push({ providerPartner: new mongoose.Types.ObjectId(providerPartner) })
+  } else if (providerPartners && providerPartners.length > 0) {
+    andConditions.push({
+      providerPartner: { $in: providerPartners.map(id => new mongoose.Types.ObjectId(id)) }
+    })
+  }
 
   if (partnerIds && partnerIds.length > 0) {
     const oids = partnerIds.map((id) => new mongoose.Types.ObjectId(id))
@@ -189,7 +195,7 @@ async function fetchMDRules({ companyId, appliedLayer, providerType, providerPar
 /**
  * Fetch CommissionRule records for a given layer (same filter logic as above).
  */
-async function fetchCommRules({ companyId, appliedLayer, providerType, providerPartner, partnerIds, today }) {
+async function fetchCommRules({ companyId, appliedLayer, providerType, providerPartner, providerPartners, partnerIds, today }) {
   const andConditions = [
     { company: new mongoose.Types.ObjectId(companyId) },
     { appliedLayer },
@@ -201,7 +207,13 @@ async function fetchCommRules({ companyId, appliedLayer, providerType, providerP
   ]
 
   if (providerType) andConditions.push({ providerType })
-  if (providerPartner) andConditions.push({ providerPartner: new mongoose.Types.ObjectId(providerPartner) })
+  if (providerPartner) {
+    andConditions.push({ providerPartner: new mongoose.Types.ObjectId(providerPartner) })
+  } else if (providerPartners && providerPartners.length > 0) {
+    andConditions.push({
+      providerPartner: { $in: providerPartners.map(id => new mongoose.Types.ObjectId(id)) }
+    })
+  }
 
   if (partnerIds && partnerIds.length > 0) {
     const oids = partnerIds.map((id) => new mongoose.Types.ObjectId(id))
@@ -226,7 +238,7 @@ async function fetchCommRules({ companyId, appliedLayer, providerType, providerP
  *   Commission: calculated per layer on the price AT that layer — does NOT change finalPrice.
  *
  * @param {Object}  params
- * @param {number}  params.basePrice            - Unit total price from price list (fare + tax)
+ * @param {number}  params.basePrice            - Basic price (Fare only) from price list
  * @param {string}  params.companyId
  * @param {string}  params.category             - passenger / vehicle / cargo
  * @param {string}  params.cabinId
@@ -459,11 +471,15 @@ async function applyPricingRules({
   // ────────── Layer 3: Commercial Agent (FOR Selling Agent) ─────────────────
   const priceInCommercial = currentPrice
 
-  if (commercialParentId) {
+  // We fetch rules created by either the Commercial Parent OR the Selling Agent themselves.
+  // Both compete in this final layer without needing an extra layer.
+  const providerPartners3 = [commercialParentId, partnerId].filter(Boolean)
+
+  if (providerPartners3.length > 0) {
     const commercialMDRules = await fetchMDRules({
       companyId,
       appliedLayer: "Selling Agent",
-      providerPartner: commercialParentId,
+      providerPartners: providerPartners3,
       partnerIds: partnerId ? [partnerId] : null,
       today,
     })
@@ -493,7 +509,7 @@ async function applyPricingRules({
     const commercialCommRules = await fetchCommRules({
       companyId,
       appliedLayer: "Selling Agent",
-      providerPartner: commercialParentId,
+      providerPartners: providerPartners3,
       partnerIds: partnerId ? [partnerId] : null,
       today,
     })
@@ -502,8 +518,9 @@ async function applyPricingRules({
     commercialCommAmt = calcCommission(currentPrice, bestCommercialComm)
 
     layerDebug.push({
-      layer: "Commercial → Selling",
+      layer: "Commercial Agent",
       commercialParentId,
+      sellingPartnerId: partnerId,
       priceIn: round2(priceInCommercial),
       rulesFound: {
         markupDiscount: { total: commercialMDRules.length, qualified: commercialMDQualified.length },
@@ -536,7 +553,7 @@ async function applyPricingRules({
     })
 
     console.log(
-      `[PricingRules][Commercial] commercialParentId=${commercialParentId} | found=${commercialMDRules.length} MD, ${commercialMDQualified.length} qualified | ` +
+      `[PricingRules][Commercial] providers=[${providerPartners3.join(",")}] | found=${commercialMDRules.length} MD, ${commercialMDQualified.length} qualified | ` +
       `markup: ${bestCommercialMD ? `"${bestCommercialMD.ruleName}" (priority=${bestCommercialMD.priority}, spec=${bestCommercialMD._spec}) → ${bestCommercialMD.ruleType} ${round2(commercialMDDelta)}` : 'none matched'} | ` +
       `priceAfterMarkup=${round2(priceAfterCommercialMD)} | ` +
       `commission: ${bestCommercialComm ? `"${bestCommercialComm.ruleName}" → ${round2(commercialCommAmt)}` : 'none matched'} | ` +
@@ -544,9 +561,9 @@ async function applyPricingRules({
     )
   } else {
     layerDebug.push({
-      layer: "Commercial → Selling",
+      layer: "Commercial Agent",
       skipped: true,
-      reason: "No commercialParentId in token",
+      reason: "No commercialParentId or partnerId in token",
       priceIn: round2(priceInCommercial),
       priceOut: round2(currentPrice),
     })
@@ -554,9 +571,7 @@ async function applyPricingRules({
 
   const totalCommission = round2(companyCommAmt + marineCommAmt + commercialCommAmt)
 
-  console.log(
-    `[PricingRules] SUMMARY: base=${round2(basePrice)} → final=${round2(currentPrice)} | totalCommission=${totalCommission} | rulesApplied=${appliedRules.length}`
-  )
+  console.log(`[PricingRules] SUMMARY: base=${round2(basePrice)} → final=${round2(currentPrice)} | totalCommission=${totalCommission} | rulesApplied=${appliedRules.length}`)
 
   return {
     basePrice: round2(basePrice),

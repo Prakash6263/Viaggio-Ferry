@@ -22,10 +22,15 @@ const getUserTypeAndPartnerId = async (req) => {
   if (user && user.layer && user.layer !== "company") {
     userType = "partner"
 
-    const userRecord = await User.findById(user.id).select("agent")
+    const userRecord = await User.findById(user.id).select("agent layer isSalesman")
 
     if (!userRecord || !userRecord.agent) {
-      throw new Error("User does not have partner assigned")
+      throw createHttpError(403, "User does not have partner assigned")
+    }
+
+    // ✅ Restrict trip search access to Salesman users for Selling Agents
+    if (userRecord.layer === "selling-agent" && !userRecord.isSalesman) {
+      throw createHttpError(403, "Access Denied: Only Salesman users can perform trip searches.")
     }
 
     partnerId = userRecord.agent

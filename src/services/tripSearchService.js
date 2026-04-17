@@ -1312,8 +1312,9 @@ const searchTripsForDirection = async (params) => {
           // ✅ Apply markup/discount/commission for selling-agent users ONLY
           if (hasPricingHierarchy && passenger.quantity > 0) {
             try {
+              const taxAmountPerUnit = (price.totalPrice || 0) - (price.basicPrice || 0)
               const pricingResult = await applyPricingRules({
-                basePrice: price.totalPrice,
+                basePrice: price.basicPrice, // ✅ Apply rules to BASIC price (fare)
                 companyId,
                 category,
                 cabinId: cabinId.toString(),
@@ -1321,12 +1322,12 @@ const searchTripsForDirection = async (params) => {
                 originPort: departPort,
                 destinationPort: arrivePort,
                 visaType,
-                partnerId,          // ✅ ADD
+                partnerId,
                 pricingHierarchy,
               })
-              unitTotalPrice = pricingResult.finalPrice
+              unitTotalPrice = pricingResult.finalPrice + taxAmountPerUnit // ✅ Add taxes back to marked-up fare
               pricingRulesInfo = {
-                baseUnitPrice: price.totalPrice,
+                baseUnitPrice: price.basicPrice, // ✅ Show fare transition
                 finalUnitPrice: pricingResult.finalPrice,
                 appliedRules: pricingResult.appliedRules,
                 commissionPerUnit: pricingResult.totalCommission,
@@ -1390,8 +1391,9 @@ const searchTripsForDirection = async (params) => {
           // ✅ Apply markup/discount/commission for selling-agent users ONLY
           if (hasPricingHierarchy && passenger.quantity > 0) {
             try {
+              const taxAmountPerUnit = (price.totalPrice || 0) - (price.basicPrice || 0)
               const pricingResult = await applyPricingRules({
-                basePrice: price.totalPrice,
+                basePrice: price.basicPrice, // ✅ Apply rules to BASIC price (fare)
                 companyId,
                 category,
                 cabinId: cabinId.toString(),
@@ -1399,12 +1401,12 @@ const searchTripsForDirection = async (params) => {
                 originPort: departPort,
                 destinationPort: arrivePort,
                 visaType,
-                partnerId,          // ✅ ADD
+                partnerId,
                 pricingHierarchy,
               })
-              unitTotalPrice = pricingResult.finalPrice
+              unitTotalPrice = pricingResult.finalPrice + taxAmountPerUnit // ✅ Add taxes back to marked-up fare
               pricingRulesInfo = {
-                baseUnitPrice: price.totalPrice,
+                baseUnitPrice: price.basicPrice, // ✅ Show fare transition
                 finalUnitPrice: pricingResult.finalPrice,
                 appliedRules: pricingResult.appliedRules,
                 commissionPerUnit: pricingResult.totalCommission,

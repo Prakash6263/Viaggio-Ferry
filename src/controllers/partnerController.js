@@ -863,21 +863,6 @@ const getChildPartnersByLayer = async (req, res, next) => {
         throw createHttpError(400, "User layer information not found in token")
       }
 
-      // Selling agents have no children — return early
-      if (userLayer === "selling-agent") {
-        return res.json({
-          success: true,
-          message: "Selling agents have no child partners",
-          ...responseMetadata,
-          count: 0,
-          total: 0,
-          page: parseInt(page),
-          limit: parseInt(limit),
-          pages: 0,
-          data: [],
-        })
-      }
-
       // Look up the User record to get user.agent (the partner ObjectId)
       const User = require("../models/User")
       const userRecord = await User.findOne({
@@ -907,6 +892,51 @@ const getChildPartnersByLayer = async (req, res, next) => {
       responseMetadata.parentId = userPartner._id
       responseMetadata.parentLayer = userPartner.layer
       responseMetadata.parentType = "Partner"
+
+      // Selling agents do not have child partners. Instead, return users 
+      // assigned to the same Selling partner with isSalesman = false.
+      if (userLayer === "selling-agent") {
+        const userQuery = {
+            agent: userPartner._id,
+            isDeleted: false,
+            isSalesman: true
+        }
+        
+        if (dataMode === "sort") {
+            const sortUsers = await User.find(userQuery).select("_id fullName").sort({ fullName: 1 })
+            return res.json({
+                success: true,
+                count: sortUsers.length,
+                data: sortUsers.map(u => ({ _id: u._id, name: u.fullName }))
+            })
+        }
+        
+        const totalUsers = await User.countDocuments(userQuery)
+        const sellingUsers = await User.find(userQuery)
+            .skip(skip)
+            .limit(parseInt(limit))
+            .select("-password")
+            .sort({ createdAt: -1 })
+            
+        // Map to ensure 'name' exists in case frontend expects standard partner format
+        const transformedUsers = sellingUsers.map(u => {
+            const obj = u.toObject()
+            obj.name = obj.fullName
+            return obj
+        })
+
+        return res.json({
+          success: true,
+          message: "Returned non-salesman users for the selling partner",
+          ...responseMetadata,
+          count: transformedUsers.length,
+          total: totalUsers,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: totalUsers === 0 ? 0 : Math.ceil(totalUsers / parseInt(limit)),
+          data: transformedUsers,
+        })
+      }
 
       // marine-agent → children are Commercial partners
       if (userLayer === "marine-agent") {
