@@ -1312,7 +1312,6 @@ const searchTripsForDirection = async (params) => {
           // ✅ Apply markup/discount/commission for selling-agent users ONLY
           if (hasPricingHierarchy && passenger.quantity > 0) {
             try {
-              const taxAmountPerUnit = (price.totalPrice || 0) - (price.basicPrice || 0)
               const pricingResult = await applyPricingRules({
                 basePrice: price.basicPrice, // ✅ Apply rules to BASIC price (fare)
                 companyId,
@@ -1324,8 +1323,27 @@ const searchTripsForDirection = async (params) => {
                 visaType,
                 partnerId,
                 pricingHierarchy,
-              })
-              unitTotalPrice = pricingResult.finalPrice + taxAmountPerUnit // ✅ Add taxes back to marked-up fare
+              });
+              
+              let currentBasePrice = pricingResult.finalPrice;
+              let recalculatedTaxAmountPerUnit = 0;
+              
+              // ✅ Recalculate taxes based on the marked-up fare
+              if (price.taxIds && price.taxIds.length > 0) {
+                price.taxIds.forEach((tax) => {
+                  if (tax.type === "%") {
+                    recalculatedTaxAmountPerUnit += (currentBasePrice * tax.value) / 100;
+                  } else if (tax.type === "Fixed" || tax.type === "fixed") {
+                    recalculatedTaxAmountPerUnit += tax.value;
+                  }
+                });
+              } else {
+                // Fallback to original tax amount if tax details are missing
+                recalculatedTaxAmountPerUnit = (price.totalPrice || 0) - (price.basicPrice || 0);
+              }
+              
+              unitTotalPrice = currentBasePrice + recalculatedTaxAmountPerUnit;
+              
               pricingRulesInfo = {
                 baseUnitPrice: price.basicPrice, // ✅ Show fare transition
                 finalUnitPrice: pricingResult.finalPrice,
@@ -1333,19 +1351,20 @@ const searchTripsForDirection = async (params) => {
                 commissionPerUnit: pricingResult.totalCommission,
                 commissionBreakdown: pricingResult.commissionBreakdown,
                 layerDebug: pricingResult.layerDebug,
-              }
-              refCommissionAmount += pricingResult.totalCommission * passenger.quantity
+              };
+              refCommissionAmount += pricingResult.totalCommission * passenger.quantity;
             } catch (pricingErr) {
               console.error("[TripSearch] Pricing rules error (refundable):", pricingErr.message)
               // Fallback: keep raw price on error
             }
           }
 
-          const subtotal = unitTotalPrice * passenger.quantity
-          const taxAmount = (price.totalPrice - price.basicPrice) * passenger.quantity
+          const currentBaseUnitPrice = pricingRulesInfo ? pricingRulesInfo.finalUnitPrice : price.basicPrice;
+          const subtotal = unitTotalPrice * passenger.quantity;
+          const taxAmount = (unitTotalPrice - currentBaseUnitPrice) * passenger.quantity;
 
-          refTotalBasicPrice += price.basicPrice * passenger.quantity
-          refTotalTaxes += taxAmount
+          refTotalBasicPrice += currentBaseUnitPrice * passenger.quantity;
+          refTotalTaxes += taxAmount;
           refTotalPrice += subtotal
           refCurrency = price.priceList?.currency
           refPriceListId = price.priceList?._id
@@ -1353,9 +1372,9 @@ const searchTripsForDirection = async (params) => {
           refundableBreakdown.push({
             payloadType: passengerTypeInfo,
             quantity: passenger.quantity,
-            unitPrice: price.basicPrice,            // fare only (unchanged)
+            unitPrice: currentBaseUnitPrice,        // fare only (updated after markup)
             baseUnitTotalPrice: price.totalPrice,   // raw price from price list (reference)
-            unitTotalPrice,                          // final price after markup/discount
+            unitTotalPrice,                          // final price after markup & tax recalculation
             subtotal: Math.round(subtotal * 100) / 100,
             taxes: price.taxIds || [],
             taxForm: "refundable",
@@ -1391,7 +1410,6 @@ const searchTripsForDirection = async (params) => {
           // ✅ Apply markup/discount/commission for selling-agent users ONLY
           if (hasPricingHierarchy && passenger.quantity > 0) {
             try {
-              const taxAmountPerUnit = (price.totalPrice || 0) - (price.basicPrice || 0)
               const pricingResult = await applyPricingRules({
                 basePrice: price.basicPrice, // ✅ Apply rules to BASIC price (fare)
                 companyId,
@@ -1403,8 +1421,26 @@ const searchTripsForDirection = async (params) => {
                 visaType,
                 partnerId,
                 pricingHierarchy,
-              })
-              unitTotalPrice = pricingResult.finalPrice + taxAmountPerUnit // ✅ Add taxes back to marked-up fare
+              });
+              
+              let currentBasePrice = pricingResult.finalPrice;
+              let recalculatedTaxAmountPerUnit = 0;
+              
+              // ✅ Recalculate taxes based on the marked-up fare
+              if (price.taxIds && price.taxIds.length > 0) {
+                price.taxIds.forEach((tax) => {
+                  if (tax.type === "%") {
+                    recalculatedTaxAmountPerUnit += (currentBasePrice * tax.value) / 100;
+                  } else if (tax.type === "Fixed" || tax.type === "fixed") {
+                    recalculatedTaxAmountPerUnit += tax.value;
+                  }
+                });
+              } else {
+                recalculatedTaxAmountPerUnit = (price.totalPrice || 0) - (price.basicPrice || 0);
+              }
+              
+              unitTotalPrice = currentBasePrice + recalculatedTaxAmountPerUnit;
+              
               pricingRulesInfo = {
                 baseUnitPrice: price.basicPrice, // ✅ Show fare transition
                 finalUnitPrice: pricingResult.finalPrice,
@@ -1412,19 +1448,20 @@ const searchTripsForDirection = async (params) => {
                 commissionPerUnit: pricingResult.totalCommission,
                 commissionBreakdown: pricingResult.commissionBreakdown,
                 layerDebug: pricingResult.layerDebug,
-              }
-              nonRefCommissionAmount += pricingResult.totalCommission * passenger.quantity
+              };
+              nonRefCommissionAmount += pricingResult.totalCommission * passenger.quantity;
             } catch (pricingErr) {
               console.error("[TripSearch] Pricing rules error (non-refundable):", pricingErr.message)
               // Fallback: keep raw price on error
             }
           }
 
-          const subtotal = unitTotalPrice * passenger.quantity
-          const taxAmount = (price.totalPrice - price.basicPrice) * passenger.quantity
+          const currentBaseUnitPrice = pricingRulesInfo ? pricingRulesInfo.finalUnitPrice : price.basicPrice;
+          const subtotal = unitTotalPrice * passenger.quantity;
+          const taxAmount = (unitTotalPrice - currentBaseUnitPrice) * passenger.quantity;
 
-          nonRefTotalBasicPrice += price.basicPrice * passenger.quantity
-          nonRefTotalTaxes += taxAmount
+          nonRefTotalBasicPrice += currentBaseUnitPrice * passenger.quantity;
+          nonRefTotalTaxes += taxAmount;
           nonRefTotalPrice += subtotal
           nonRefCurrency = price.priceList?.currency
           nonRefPriceListId = price.priceList?._id
@@ -1432,9 +1469,9 @@ const searchTripsForDirection = async (params) => {
           nonRefundableBreakdown.push({
             payloadType: passengerTypeInfo,
             quantity: passenger.quantity,
-            unitPrice: price.basicPrice,            // fare only (unchanged)
+            unitPrice: currentBaseUnitPrice,        // fare only (updated after markup)
             baseUnitTotalPrice: price.totalPrice,   // raw price from price list (reference)
-            unitTotalPrice,                          // final price after markup/discount
+            unitTotalPrice,                          // final price after markup & tax recalculation
             subtotal: Math.round(subtotal * 100) / 100,
             taxes: price.taxIds || [],
             taxForm: "non_refundable",

@@ -285,6 +285,7 @@ async function applyPricingRules({
   let companyCommAmt = 0
   let marineCommAmt = 0
   let commercialCommAmt = 0
+  let sellingCommAmt = 0
 
   // ────────── Layer 1: Company (FOR Marine Agent) ───────────────────────────
   const priceInCompany = currentPrice
@@ -471,15 +472,11 @@ async function applyPricingRules({
   // ────────── Layer 3: Commercial Agent (FOR Selling Agent) ─────────────────
   const priceInCommercial = currentPrice
 
-  // We fetch rules created by either the Commercial Parent OR the Selling Agent themselves.
-  // Both compete in this final layer without needing an extra layer.
-  const providerPartners3 = [commercialParentId, partnerId].filter(Boolean)
-
-  if (providerPartners3.length > 0) {
+  if (commercialParentId) {
     const commercialMDRules = await fetchMDRules({
       companyId,
       appliedLayer: "Selling Agent",
-      providerPartners: providerPartners3,
+      providerPartner: commercialParentId,
       partnerIds: partnerId ? [partnerId] : null,
       today,
     })
@@ -509,7 +506,7 @@ async function applyPricingRules({
     const commercialCommRules = await fetchCommRules({
       companyId,
       appliedLayer: "Selling Agent",
-      providerPartners: providerPartners3,
+      providerPartner: commercialParentId,
       partnerIds: partnerId ? [partnerId] : null,
       today,
     })
@@ -553,7 +550,7 @@ async function applyPricingRules({
     })
 
     console.log(
-      `[PricingRules][Commercial] providers=[${providerPartners3.join(",")}] | found=${commercialMDRules.length} MD, ${commercialMDQualified.length} qualified | ` +
+      `[PricingRules][Commercial] provider=${commercialParentId} | found=${commercialMDRules.length} MD, ${commercialMDQualified.length} qualified | ` +
       `markup: ${bestCommercialMD ? `"${bestCommercialMD.ruleName}" (priority=${bestCommercialMD.priority}, spec=${bestCommercialMD._spec}) → ${bestCommercialMD.ruleType} ${round2(commercialMDDelta)}` : 'none matched'} | ` +
       `priceAfterMarkup=${round2(priceAfterCommercialMD)} | ` +
       `commission: ${bestCommercialComm ? `"${bestCommercialComm.ruleName}" → ${round2(commercialCommAmt)}` : 'none matched'} | ` +
@@ -563,13 +560,111 @@ async function applyPricingRules({
     layerDebug.push({
       layer: "Commercial Agent",
       skipped: true,
-      reason: "No commercialParentId or partnerId in token",
+      reason: "No commercialParentId in token",
       priceIn: round2(priceInCommercial),
       priceOut: round2(currentPrice),
     })
+    console.log(`[PricingRules][Commercial] SKIPPED — no commercialParentId in token`)
   }
 
-  const totalCommission = round2(companyCommAmt + marineCommAmt + commercialCommAmt)
+  // ────────── Layer 4: Selling Agent (FOR self / own users) ─────────────────
+  const priceInSelling = currentPrice
+
+  if (partnerId) {
+    const sellingMDRules = await fetchMDRules({
+      companyId,
+      appliedLayer: "Selling Agent",
+      providerPartner: partnerId,
+      partnerIds: [partnerId],
+      today,
+    })
+    const sellingMDQualified = sellingMDRules.filter((r) => ruleMatchesBooking(r, ctx))
+    const bestSellingMD = selectBestRule(sellingMDRules, ctx)
+
+    let sellingMDDelta = 0
+    if (bestSellingMD) {
+      const { newPrice, delta } = applyMarkupDiscount(currentPrice, bestSellingMD)
+      sellingMDDelta = delta
+      currentPrice = newPrice
+      appliedRules.push({
+        layer: "Selling Agent",
+        ruleType: bestSellingMD.ruleType,
+        ruleName: bestSellingMD.ruleName,
+        ruleId: bestSellingMD._id,
+        valueType: bestSellingMD.valueType,
+        ruleValue: bestSellingMD.ruleValue,
+        priority: bestSellingMD.priority,
+        appliedAmount: round2(delta),
+        priceAfter: round2(currentPrice),
+      })
+    }
+
+    const priceAfterSellingMD = currentPrice
+
+    const sellingCommRules = await fetchCommRules({
+      companyId,
+      appliedLayer: "Selling Agent",
+      providerPartner: partnerId,
+      partnerIds: [partnerId],
+      today,
+    })
+    const sellingCommQualified = sellingCommRules.filter((r) => ruleMatchesBooking(r, ctx))
+    const bestSellingComm = selectBestRule(sellingCommRules, ctx)
+    sellingCommAmt = calcCommission(currentPrice, bestSellingComm)
+
+    layerDebug.push({
+      layer: "Selling Agent",
+      sellingPartnerId: partnerId,
+      priceIn: round2(priceInSelling),
+      rulesFound: {
+        markupDiscount: { total: sellingMDRules.length, qualified: sellingMDQualified.length },
+        commission: { total: sellingCommRules.length, qualified: sellingCommQualified.length },
+      },
+      markupDiscountRule: bestSellingMD
+        ? {
+            ruleId: bestSellingMD._id,
+            ruleName: bestSellingMD.ruleName,
+            ruleType: bestSellingMD.ruleType,
+            valueType: bestSellingMD.valueType,
+            ruleValue: bestSellingMD.ruleValue,
+            priority: bestSellingMD.priority,
+            specificity: bestSellingMD._spec,
+            appliedAmount: round2(sellingMDDelta),
+          }
+        : null,
+      priceAfterMarkup: round2(priceAfterSellingMD),
+      commissionRule: bestSellingComm
+        ? {
+            ruleId: bestSellingComm._id,
+            ruleName: bestSellingComm.ruleName,
+            commissionType: bestSellingComm.commissionType,
+            commissionValue: bestSellingComm.commissionValue,
+            priority: bestSellingComm.priority,
+            commissionAmount: round2(sellingCommAmt),
+          }
+        : null,
+      priceOut: round2(currentPrice),
+    })
+
+    console.log(
+      `[PricingRules][Selling] provider=${partnerId} | found=${sellingMDRules.length} MD, ${sellingMDQualified.length} qualified | ` +
+      `markup: ${bestSellingMD ? `"${bestSellingMD.ruleName}" (priority=${bestSellingMD.priority}, spec=${bestSellingMD._spec}) → ${bestSellingMD.ruleType} ${round2(sellingMDDelta)}` : 'none matched'} | ` +
+      `priceAfterMarkup=${round2(priceAfterSellingMD)} | ` +
+      `commission: ${bestSellingComm ? `"${bestSellingComm.ruleName}" → ${round2(sellingCommAmt)}` : 'none matched'} | ` +
+      `priceOut=${round2(currentPrice)}`
+    )
+  } else {
+    layerDebug.push({
+      layer: "Selling Agent",
+      skipped: true,
+      reason: "No partnerId in token",
+      priceIn: round2(priceInSelling),
+      priceOut: round2(currentPrice),
+    })
+    console.log(`[PricingRules][Selling] SKIPPED — no partnerId in token`)
+  }
+
+  const totalCommission = round2(companyCommAmt + marineCommAmt + commercialCommAmt + sellingCommAmt)
 
   console.log(`[PricingRules] SUMMARY: base=${round2(basePrice)} → final=${round2(currentPrice)} | totalCommission=${totalCommission} | rulesApplied=${appliedRules.length}`)
 
@@ -581,6 +676,7 @@ async function applyPricingRules({
       company: round2(companyCommAmt),
       marine: round2(marineCommAmt),
       commercial: round2(commercialCommAmt),
+      selling: round2(sellingCommAmt),
     },
     appliedRules,
     layerDebug,
