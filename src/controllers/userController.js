@@ -11,6 +11,44 @@ const { generateTemporaryPassword } = require("../utils/passwordGenerator")
 const path = require("path")
 
 /**
+ * Helper to build hierarchy filter for user queries ensuring
+ * users only see their own partner's users and descendants' users.
+ */
+const buildHierarchyFilter = async (req) => {
+  const userRole = req.user?.role
+  const userId = req.user?.id || req.userId
+  const companyId = req.companyId
+
+  if (userRole === "user") {
+    const userRecord = await User.findOne({ _id: userId, isDeleted: false }).select("layer agent")
+    if (userRecord && userRecord.layer !== "company") {
+      if (!userRecord.agent) {
+        return { agent: null }
+      }
+
+      const ownPartnerId = userRecord.agent
+      const directChildrenIds = await Partner.distinct("_id", {
+        parentAccount: ownPartnerId,
+        company: companyId,
+        isDeleted: false,
+      })
+
+      const grandChildrenIds =
+        directChildrenIds.length > 0
+          ? await Partner.distinct("_id", {
+              parentAccount: { $in: directChildrenIds },
+              company: companyId,
+              isDeleted: false,
+            })
+          : []
+
+      return { agent: { $in: [ownPartnerId, ...directChildrenIds, ...grandChildrenIds] } }
+    }
+  }
+  return {}
+}
+
+/**
  * POST /api/users
  * Create a new user with automatic layer resolution and module access assignment
  *
@@ -290,9 +328,11 @@ const getAllUsers = async (req, res, next) => {
     const limitNum = Math.min(100, Math.max(1, Number.parseInt(limit) || 10)) // Max 100 results per page
 
     // Build filter object
+    const hierarchyFilter = await buildHierarchyFilter(req)
     const filter = {
       company: companyId,
       isDeleted: false,
+      ...hierarchyFilter,
     }
 
     if (status && ["Active", "Inactive"].includes(status)) {
@@ -376,10 +416,12 @@ const getUserById = async (req, res, next) => {
     const { userId } = req.params
     const { companyId } = req
 
+    const hierarchyFilter = await buildHierarchyFilter(req)
     const user = await User.findOne({
       _id: userId,
       company: companyId,
       isDeleted: false,
+      ...hierarchyFilter,
     })
       .populate({
         path: "moduleAccess.accessGroupId",
@@ -438,10 +480,12 @@ const updateUser = async (req, res, next) => {
     const { companyId } = req
     const { fullName, position, remarks, status, moduleAccess } = req.body
 
+    const hierarchyFilter = await buildHierarchyFilter(req)
     const user = await User.findOne({
       _id: userId,
       company: companyId,
       isDeleted: false,
+      ...hierarchyFilter,
     })
 
     if (!user) {
@@ -582,10 +626,12 @@ const getUsersByStatus = async (req, res, next) => {
     const limitNum = Math.min(100, Math.max(1, Number.parseInt(limit) || 10)) // Max 100 results per page
 
     // Build filter object
+    const hierarchyFilter = await buildHierarchyFilter(req)
     const filter = {
       company: companyId,
       status: status,
       isDeleted: false,
+      ...hierarchyFilter,
     }
 
     // Build sort object
@@ -664,10 +710,12 @@ const getSalesmanUsers = async (req, res, next) => {
     const pageNum = Math.max(1, Number.parseInt(page) || 1)
     const limitNum = Math.min(100, Math.max(1, Number.parseInt(limit) || 10)) // Max 100 results per page
 
+    const hierarchyFilter = await buildHierarchyFilter(req)
     const filter = {
       company: companyId,
       isSalesman: true,
       isDeleted: false,
+      ...hierarchyFilter,
     }
 
     if (status && ["Active", "Inactive"].includes(status)) {
@@ -1126,10 +1174,12 @@ const deleteUser = async (req, res, next) => {
     }
 
     // Find the user to delete
+    const hierarchyFilter = await buildHierarchyFilter(req)
     const userToDelete = await User.findOne({
       _id: userId,
       company: companyId,
       isDeleted: false,
+      ...hierarchyFilter,
     })
 
     if (!userToDelete) {
